@@ -62,11 +62,9 @@ def csv_to_fasta(input_csv, output_fasta):
             fasta_file.write(f"{sequence}\n")  # Write the sequence line
 
 
-folder = (
-    "/Users/gmgao/Dropbox/Caltech_PostDoc_GuttmanLab/constructs_and_smiFISH/C9orf72"
-)
-fname_xlsx = "Probes_C9orf72.xlsx"
-fname_csv = "Probes_C9orf72-final.csv"
+folder = "/Users/gmgao/Dropbox/Caltech_PostDoc_GuttmanLab/constructs_and_smiFISH/Malat1"
+fname_xlsx = "CandidateProbes_humanMalat1.xlsx"
+# fname_csv = "Probes_C9orf72-final.csv"
 os.chdir(folder)
-# xlsx_to_fasta(fname_xlsx, fname_xlsx[:-5] + ".fasta")
-csv_to_fasta(fname_csv, fname_csv[:-4] + ".fasta")
+xlsx_to_fasta(fname_xlsx, fname_xlsx[:-5] + ".fasta")
+# csv_to_fasta(fname_csv, fname_csv[:-4] + ".fasta")
