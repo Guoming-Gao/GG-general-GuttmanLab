@@ -82,6 +82,7 @@ for fpath in track(file_paths, description="Processing files"):
             print("Skipping file due to missing essential metadata")
             continue
 
+        mip_list = []
         for channel_idx in range(num_channels):
             # Read and process channel data
             single_color_img, _ = czi_for_img.read_image(C=channel_idx)
@@ -93,6 +94,18 @@ for fpath in track(file_paths, description="Processing files"):
                 channel_folder / f"{Path(fpath).stem}_ch{channel_idx}.tif",
                 single_color_img[0, 0, 0, 0, :, :],
                 imagej=True,
+                resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+            )
+            mip_list.append(single_color_img[0, 0, 0, 0, :, :])
+
+        # Create composite stack
+        if mip_list:
+            composite_stack = np.stack(mip_list[::-1], axis=0)
+            tifffile.imwrite(
+                parent_dir / f"{Path(fpath).stem}_composite.tif",
+                composite_stack.astype(np.float32),
+                imagej=True,
+                metadata={"axes": "CYX"},
                 resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
             )
 
