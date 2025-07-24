@@ -17,9 +17,9 @@ def parse_blast_results(blast_text):
     records = []
 
     for query in queries:
-        # Extract probe name (first word in the query)
-        probe_name_search = re.search(r"^(\S+)", query)
-        probe_name = probe_name_search.group(1) if probe_name_search else None
+        # Extract full probe name (everything before "Query ID:")
+        probe_name_search = re.search(r"^(.+?)\s+Query ID:", query)
+        probe_name = probe_name_search.group(1).strip() if probe_name_search else None
 
         # CORRECTED: Count alignment sections starting with ">"
         # This counts actual genomic hits, not table entries
