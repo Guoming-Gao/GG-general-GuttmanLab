@@ -63,6 +63,7 @@ parent_dir = Path(file_paths[0]).parent
 
 for fpath in track(file_paths, description="Processing files"):
     czi_for_img = czi_ai(fpath)
+
     with CziFile(fpath) as czi:
         # Get metadata as a string and extract resolution
         metadata_string = czi.metadata()
