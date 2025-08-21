@@ -11,6 +11,8 @@ import re
 from czifile import CziFile
 from aicspylibczi import CziFile as czi_ai
 
+N_threshold = 45
+
 
 def get_czi_resolution(metadata_string, num_xpixels, num_ypixels):
     """Extract pixel size using simple string methods"""
@@ -84,55 +86,166 @@ for fpath in track(file_paths, description="Processing files"):
             print("Skipping file due to missing essential metadata")
             continue
 
-        mip_list = []
+        # Check if any channel needs sectioned processing
+        has_large_z_stack = False
+        for channel_idx in range(num_channels):
+            single_color_stack, _ = czi_for_img.read_image(C=channel_idx)
+            squeezed_stack = single_color_stack.squeeze()
+            if squeezed_stack.shape[0] > N_threshold:
+                has_large_z_stack = True
+                break
+
+        mip_list_top = []
+        mip_list_middle = []
+        mip_list_bottom = []
 
         for channel_idx in range(num_channels):
             # Read and process channel data
             single_color_stack, _ = czi_for_img.read_image(C=channel_idx)
-            max_proj = np.max(single_color_stack.squeeze(), axis=0)
+            squeezed_stack = single_color_stack.squeeze()
+            num_z_slices = squeezed_stack.shape[0]
 
-            # Save individual MIP
             channel_folder = parent_dir / f"ch{channel_idx}"
             channel_folder.mkdir(exist_ok=True)
 
-            tifffile.imwrite(
-                channel_folder / f"{Path(fpath).stem}_ch{channel_idx}_MIP.tif",
-                max_proj,
-                imagej=True,
-                resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
-            )
+            if num_z_slices > N_threshold:
+                # Create three sectioned MIPs
+                # Top 25 slices
+                top_mip = np.max(squeezed_stack[0:25], axis=0)
+                tifffile.imwrite(
+                    channel_folder / f"{Path(fpath).stem}_ch{channel_idx}_MIP_top.tif",
+                    top_mip,
+                    imagej=True,
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
 
-            mip_list.append(max_proj)
+                # Bottom 25 slices
+                bottom_mip = np.max(squeezed_stack[-25:], axis=0)
+                tifffile.imwrite(
+                    channel_folder
+                    / f"{Path(fpath).stem}_ch{channel_idx}_MIP_bottom.tif",
+                    bottom_mip,
+                    imagej=True,
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
 
-        # Create composite stack
-        if mip_list:
-            composite_stack = np.stack(mip_list[::-1], axis=0)
+                # Middle 25 slices
+                middle_start = (num_z_slices - 25) // 2
+                middle_end = middle_start + 25
+                middle_mip = np.max(squeezed_stack[middle_start:middle_end], axis=0)
+                tifffile.imwrite(
+                    channel_folder
+                    / f"{Path(fpath).stem}_ch{channel_idx}_MIP_middle.tif",
+                    middle_mip,
+                    imagej=True,
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
 
-            # Create composite folder and save composite
-            composite_folder = parent_dir / "composite"
-            composite_folder.mkdir(exist_ok=True)
+                mip_list_top.append(top_mip)
+                mip_list_bottom.append(bottom_mip)
+                mip_list_middle.append(middle_mip)
+            else:
+                max_proj = np.max(squeezed_stack, axis=0)
+                # Save single MIP
+                tifffile.imwrite(
+                    channel_folder / f"{Path(fpath).stem}_ch{channel_idx}_MIP.tif",
+                    max_proj,
+                    imagej=True,
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
 
-            tifffile.imwrite(
-                composite_folder / f"{Path(fpath).stem}_composite_stack.tif",
-                composite_stack.astype(np.float32),
-                imagej=True,
-                metadata={"axes": "CYX"},
-                resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
-            )
+                # Append same max_proj to all mip_lists so it's consistent for composite and average
+                mip_list_top.append(max_proj)
+                mip_list_bottom.append(max_proj)
+                mip_list_middle.append(max_proj)
 
-            # Create average projection
-            avg_proj = np.mean(composite_stack[1:], axis=0)  # only non DAPI channel
+        # Use original composite and ave_proj folders
+        composite_folder = parent_dir / "composite"
+        composite_folder.mkdir(exist_ok=True)
+        ave_proj_folder = parent_dir / "ave_proj"
+        ave_proj_folder.mkdir(exist_ok=True)
 
-            # Create ave_proj folder and save average projection
-            ave_proj_folder = parent_dir / "ave_proj"
-            ave_proj_folder.mkdir(exist_ok=True)
+        if has_large_z_stack:
+            # Create sectioned composite and average projections
+            if mip_list_top:
+                composite_stack_top = np.stack(mip_list_top[::-1], axis=0)
+                tifffile.imwrite(
+                    composite_folder / f"{Path(fpath).stem}_composite_stack_top.tif",
+                    composite_stack_top.astype(np.float32),
+                    imagej=True,
+                    metadata={"axes": "CYX"},
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
 
-            tifffile.imwrite(
-                ave_proj_folder / f"{Path(fpath).stem}_ave_proj.tif",
-                avg_proj.astype(np.float32),
-                imagej=True,
-                resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
-            )
+                ave_proj_top = np.mean(
+                    composite_stack_top[1:], axis=0
+                )  # only non DAPI channel
+                tifffile.imwrite(
+                    ave_proj_folder / f"{Path(fpath).stem}_ave_proj_top.tif",
+                    ave_proj_top.astype(np.float32),
+                    imagej=True,
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
+
+            if mip_list_middle:
+                composite_stack_middle = np.stack(mip_list_middle[::-1], axis=0)
+                tifffile.imwrite(
+                    composite_folder / f"{Path(fpath).stem}_composite_stack_middle.tif",
+                    composite_stack_middle.astype(np.float32),
+                    imagej=True,
+                    metadata={"axes": "CYX"},
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
+
+                ave_proj_middle = np.mean(
+                    composite_stack_middle[1:], axis=0
+                )  # only non DAPI channel
+                tifffile.imwrite(
+                    ave_proj_folder / f"{Path(fpath).stem}_ave_proj_middle.tif",
+                    ave_proj_middle.astype(np.float32),
+                    imagej=True,
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
+
+            if mip_list_bottom:
+                composite_stack_bottom = np.stack(mip_list_bottom[::-1], axis=0)
+                tifffile.imwrite(
+                    composite_folder / f"{Path(fpath).stem}_composite_stack_bottom.tif",
+                    composite_stack_bottom.astype(np.float32),
+                    imagej=True,
+                    metadata={"axes": "CYX"},
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
+
+                ave_proj_bottom = np.mean(
+                    composite_stack_bottom[1:], axis=0
+                )  # only non DAPI channel
+                tifffile.imwrite(
+                    ave_proj_folder / f"{Path(fpath).stem}_ave_proj_bottom.tif",
+                    ave_proj_bottom.astype(np.float32),
+                    imagej=True,
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
+        else:
+            # Create single composite and average projection (original behavior)
+            if mip_list_top:  # All lists contain the same data for ≤N_threshold slices
+                composite_stack = np.stack(mip_list_top[::-1], axis=0)
+                tifffile.imwrite(
+                    composite_folder / f"{Path(fpath).stem}_composite_stack.tif",
+                    composite_stack.astype(np.float32),
+                    imagej=True,
+                    metadata={"axes": "CYX"},
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
+
+                ave_proj = np.mean(composite_stack[1:], axis=0)  # only non DAPI channel
+                tifffile.imwrite(
+                    ave_proj_folder / f"{Path(fpath).stem}_ave_proj.tif",
+                    ave_proj.astype(np.float32),
+                    imagej=True,
+                    resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+                )
+
 
 # Move original files to rawdata folder
 rawdata_folder = parent_dir / "rawdata"
