@@ -1,3 +1,4 @@
+# czi2MIPtif.py
 import numpy as np
 import tifffile
 from pathlib import Path
@@ -62,6 +63,7 @@ parent_dir = Path(file_paths[0]).parent
 
 for fpath in track(file_paths, description="Processing files"):
     czi_for_img = czi_ai(fpath)
+
     with CziFile(fpath) as czi:
         # Get metadata as a string and extract resolution
         metadata_string = czi.metadata()
@@ -83,35 +85,53 @@ for fpath in track(file_paths, description="Processing files"):
             continue
 
         mip_list = []
+
         for channel_idx in range(num_channels):
             # Read and process channel data
-            single_color_img, _ = czi_for_img.read_image(C=channel_idx)
+            single_color_stack, _ = czi_for_img.read_image(C=channel_idx)
+            squeezed_stack = single_color_stack.squeeze()
+            num_z_slices = squeezed_stack.shape[0]
 
-            # Save individual MIP
             channel_folder = parent_dir / f"ch{channel_idx}"
             channel_folder.mkdir(exist_ok=True)
-            tifffile.imwrite(
-                channel_folder / f"{Path(fpath).stem}_ch{channel_idx}.tif",
-                single_color_img[0, 0, 0, 0, :, :],
-                imagej=True,
-                resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
-            )
-            mip_list.append(single_color_img[0, 0, 0, 0, :, :])
 
-        # Create composite stack
-        if mip_list:
-            composite_stack = np.stack(mip_list[::-1], axis=0)
+            max_proj = np.max(squeezed_stack, axis=0)
+            # Save single MIP
             tifffile.imwrite(
-                parent_dir / f"{Path(fpath).stem}_composite.tif",
-                composite_stack.astype(np.float32),
+                channel_folder / f"{Path(fpath).stem}_ch{channel_idx}_MIP.tif",
+                max_proj,
                 imagej=True,
-                metadata={"axes": "CYX"},
                 resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
             )
+            mip_list.append(max_proj)
+
+        # Use original composite and ave_proj folders
+        composite_folder = parent_dir / "composite"
+        composite_folder.mkdir(exist_ok=True)
+        ave_proj_folder = parent_dir / "ave_proj"
+        ave_proj_folder.mkdir(exist_ok=True)
+
+        composite_stack = np.stack(mip_list[::-1], axis=0)
+        tifffile.imwrite(
+            composite_folder / f"{Path(fpath).stem}_composite_stack.tif",
+            composite_stack.astype(np.float32),
+            imagej=True,
+            metadata={"axes": "CYX"},
+            resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+        )
+
+        ave_proj = np.mean(composite_stack[1:], axis=0)  # only non DAPI channel
+        tifffile.imwrite(
+            ave_proj_folder / f"{Path(fpath).stem}_ave_proj.tif",
+            ave_proj.astype(np.float32),
+            imagej=True,
+            resolution=(1 / x_micron_per_pxl, 1 / y_micron_per_pxl),
+        )
 
 
 # Move original files to rawdata folder
 rawdata_folder = parent_dir / "rawdata"
 rawdata_folder.mkdir(exist_ok=True)
+
 for fpath in file_paths:
     shutil.move(fpath, rawdata_folder / Path(fpath).name)
