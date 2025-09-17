@@ -1,4 +1,4 @@
-# Proposed filename: tif_montage_gui.py
+# tif_montage_gui.py
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
