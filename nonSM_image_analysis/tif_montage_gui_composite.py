@@ -319,7 +319,12 @@ class TifMontageGUI:
 
             # Save the montage with proper metadata
             save_path = os.path.join(self.save_folder, filename + ".tif")
-            tifffile.imwrite(save_path, final_montage, metadata={"axes": "CYX"})
+            tifffile.imwrite(
+                save_path,
+                final_montage.astype(np.float32),
+                imagej=True,
+                metadata={"axes": "CYX"},
+            )
 
             messagebox.showinfo(
                 "Success", f"Multi-channel montage saved to:\n{save_path}"
