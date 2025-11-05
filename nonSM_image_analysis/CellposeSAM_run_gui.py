@@ -1,16 +1,12 @@
 #!/usr/bin/env python3
 """
-run_CellposeSAM_GUI.py
+CellposeSAM_run_gui.py
 
 GUI application for batch Cellpose-SAM segmentation with optimized storage.
 Creates compact pickle files by storing cropped bounding boxes per nucleus.
 
 FIXED: Proper dtype handling to prevent normalization truncation issue.
 
-Usage:
-    python run_CellposeSAM_GUI.py
-
-Author: Generated for Cellpose-SAM batch processing
 Date: 2025-11-05
 """
 
