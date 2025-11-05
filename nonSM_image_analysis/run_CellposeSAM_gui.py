@@ -5,11 +5,13 @@ run_CellposeSAM_GUI.py
 GUI application for batch Cellpose-SAM segmentation with optimized storage.
 Creates compact pickle files by storing cropped bounding boxes per nucleus.
 
+FIXED: Proper dtype handling to prevent normalization truncation issue.
+
 Usage:
     python run_CellposeSAM_GUI.py
 
 Author: Generated for Cellpose-SAM batch processing
-Date: 2025-11-04
+Date: 2025-11-05
 """
 
 import numpy as np
@@ -284,7 +286,7 @@ class CellposeSAMGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Cellpose-SAM Batch Segmentation")
-        self.root.geometry("700x1050")  # Reduced width from 1000px to 700px
+        self.root.geometry("700x1050")
 
         # Data storage
         self.selected_files = []
@@ -755,7 +757,7 @@ class CellposeSAMGUI:
                     self.result_queue.put(
                         {
                             "type": "log",
-                            "message": f"Loaded {file_path.name}: shape={img.shape}",
+                            "message": f"Loaded {file_path.name}: shape={img.shape}, dtype={img.dtype}",
                         }
                     )
 
@@ -770,7 +772,8 @@ class CellposeSAMGUI:
                         seg_start = time.time()
 
                         selected_channels = [cyto_ch, nuc_ch]
-                        img_selected = np.zeros_like(img)
+                        # FIXED: Use float32 dtype to preserve normalized values
+                        img_selected = np.zeros(img.shape, dtype=np.float32)
                         img_selected[:2, :, :] = normalize_img(
                             img[selected_channels, :, :]
                         )
@@ -801,7 +804,8 @@ class CellposeSAMGUI:
                         )
                         seg_start = time.time()
 
-                        img_nuc_only = np.zeros_like(img)
+                        # FIXED: Use float32 dtype to preserve normalized values
+                        img_nuc_only = np.zeros(img.shape, dtype=np.float32)
                         img_nuc_only[0, :, :] = normalize_img(img[nuc_ch, :, :])
 
                         masks_nuclei, _, _ = model.eval(
@@ -835,7 +839,8 @@ class CellposeSAMGUI:
                         )
                         seg_start = time.time()
 
-                        img_nuc_only = np.zeros_like(img)
+                        # FIXED: Use float32 dtype to preserve normalized values
+                        img_nuc_only = np.zeros(img.shape, dtype=np.float32)
                         img_nuc_only[0, :, :] = normalize_img(img[nuc_ch, :, :])
 
                         masks_nuclei, _, _ = model.eval(
