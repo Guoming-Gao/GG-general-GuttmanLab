@@ -22,7 +22,6 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 import threading
 import queue
 import time
-from scipy import ndimage
 
 
 # =============================================================================
@@ -97,7 +96,9 @@ def calculate_padding(mask):
     return padding
 
 
-def create_nucleus_data_dict(masks_cells, masks_nuclei, original_image):
+def create_nucleus_data_dict(
+    masks_cells, masks_nuclei, original_image, has_cyto_channel
+):
     """
     Create optimized data structure with cropped bounding boxes per nucleus.
 
@@ -114,6 +115,8 @@ def create_nucleus_data_dict(masks_cells, masks_nuclei, original_image):
         Nucleus segmentation masks
     original_image : array (C, H, W)
         Original multi-channel image
+    has_cyto_channel : bool
+        Whether cytoplasm channel was provided
 
     Returns:
     --------
@@ -129,12 +132,61 @@ def create_nucleus_data_dict(masks_cells, masks_nuclei, original_image):
     nucleus_to_cell_map = {}
 
     fov_shape = masks_cells.shape
-    cell_ids = np.unique(masks_cells)[1:]
     nucleus_ids = np.unique(masks_nuclei)[1:]
 
-    # First pass: Match nuclei to cells
+    if not has_cyto_channel:
+        # Fast path: All nuclei are unmatched (no cell segmentation)
+        # Skip the expensive overlap calculations
+        for nucleus_id in nucleus_ids:
+            nucleus_to_cell_map[int(nucleus_id)] = None
+
+            nucleus_mask = masks_nuclei == nucleus_id
+
+            # Use NUCLEUS mask for bounding box
+            padding = calculate_padding(nucleus_mask)
+            bbox = get_bbox_with_padding(nucleus_mask, padding, fov_shape)
+
+            if bbox is None:
+                continue
+
+            y_min, y_max, x_min, x_max = bbox
+
+            # Crop masks
+            nucleus_mask_crop = nucleus_mask[y_min:y_max, x_min:x_max]
+            cell_mask_crop = np.zeros_like(nucleus_mask_crop, dtype=bool)
+
+            # Crop original image (all channels)
+            image_crop = original_image[:, y_min:y_max, x_min:x_max]
+
+            # Calculate statistics
+            nucleus_area = int(np.sum(nucleus_mask))
+
+            # Get centroid
+            coords = np.where(nucleus_mask)
+            centroid = (int(np.mean(coords[0])), int(np.mean(coords[1])))
+
+            # Store data
+            nucleus_data[int(nucleus_id)] = {
+                "cell_id": None,
+                "is_matched": False,
+                "bbox": bbox,
+                "bbox_size": (y_max - y_min, x_max - x_min),
+                "padding_used": padding,
+                "nucleus_mask_crop": nucleus_mask_crop,
+                "cell_mask_crop": cell_mask_crop,
+                "image_crop": image_crop,
+                "nucleus_area": nucleus_area,
+                "cell_area": 0,
+                "centroid": centroid,
+            }
+
+        return nucleus_data, cell_to_nucleus_map, nucleus_to_cell_map
+
+    # Normal path: Match nuclei to cells
+    cell_ids = np.unique(masks_cells)[1:]
     matched_nuclei = set()
 
+    # First pass: Match nuclei to cells
     for cell_id in cell_ids:
         cell_mask = masks_cells == cell_id
 
@@ -232,7 +284,7 @@ class CellposeSAMGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Cellpose-SAM Batch Segmentation")
-        self.root.geometry("900x1050")
+        self.root.geometry("700x1050")  # Reduced width from 1000px to 700px
 
         # Data storage
         self.selected_files = []
@@ -259,12 +311,12 @@ class CellposeSAMGUI:
 
         # ===== FILE SELECTION =====
         ttk.Label(main_frame, text="Input Files", font=("Arial", 12, "bold")).grid(
-            row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 5)
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=(0, 5)
         )
         row += 1
 
         ttk.Button(main_frame, text="Select Files...", command=self.select_files).grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5)
+            row=row, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 5)
         )
         row += 1
 
@@ -273,7 +325,7 @@ class CellposeSAMGUI:
         list_frame.grid(
             row=row,
             column=0,
-            columnspan=2,
+            columnspan=3,
             sticky=(tk.W, tk.E, tk.N, tk.S),
             pady=(0, 10),
         )
@@ -289,7 +341,7 @@ class CellposeSAMGUI:
 
         # ===== OUTPUT DIRECTORY =====
         ttk.Label(main_frame, text="Output Directory", font=("Arial", 12, "bold")).grid(
-            row=row, column=0, columnspan=2, sticky=tk.W, pady=(10, 5)
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=(10, 5)
         )
         row += 1
 
@@ -301,27 +353,27 @@ class CellposeSAMGUI:
             foreground="gray",
         )
         explanation_label.grid(
-            row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 5)
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=(0, 5)
         )
         row += 1
 
         ttk.Button(
             main_frame, text="Select Output Folder...", command=self.select_output
-        ).grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 5))
+        ).grid(row=row, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 5))
         row += 1
 
         self.output_label = ttk.Label(
             main_frame, text="No folder selected", foreground="gray"
         )
         self.output_label.grid(
-            row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 10)
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=(0, 10)
         )
         row += 1
 
         # ===== CHANNEL CONFIGURATION =====
         ttk.Label(
             main_frame, text="Channel Configuration", font=("Arial", 12, "bold")
-        ).grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
+        ).grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=(10, 5))
         row += 1
 
         ttk.Label(main_frame, text="Cytoplasm Channel:").grid(
@@ -331,7 +383,7 @@ class CellposeSAMGUI:
             main_frame, values=["None", "1", "2", "3", "4"], state="readonly", width=10
         )
         self.cyto_channel.set("2")
-        self.cyto_channel.grid(row=row, column=1, sticky=tk.W, pady=2)
+        self.cyto_channel.grid(row=row, column=1, sticky=tk.W, pady=2, padx=(5, 10))
         row += 1
 
         ttk.Label(main_frame, text="Nucleus Channel:").grid(
@@ -341,52 +393,88 @@ class CellposeSAMGUI:
             main_frame, values=["1", "2", "3", "4"], state="readonly", width=10
         )
         self.nuc_channel.set("3")
-        self.nuc_channel.grid(row=row, column=1, sticky=tk.W, pady=(2, 10))
+        self.nuc_channel.grid(
+            row=row, column=1, sticky=tk.W, pady=(2, 10), padx=(5, 10)
+        )
         row += 1
 
-        # ===== SEGMENTATION PARAMETERS =====
+        # ===== SEGMENTATION PARAMETERS (3-COLUMN LAYOUT) =====
         ttk.Label(
             main_frame, text="Segmentation Parameters", font=("Arial", 12, "bold")
-        ).grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=(10, 5))
+        ).grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=(10, 5))
         row += 1
 
-        # Cell parameters
-        ttk.Label(main_frame, text="Cell Diameter (pixels):").grid(
+        # Cell Diameter
+        ttk.Label(main_frame, text="Cell Diameter:").grid(
             row=row, column=0, sticky=tk.W, pady=2
         )
         self.cell_diameter = ttk.Entry(main_frame, width=10)
         self.cell_diameter.insert(0, "70")
-        self.cell_diameter.grid(row=row, column=1, sticky=tk.W, pady=2)
+        self.cell_diameter.grid(row=row, column=1, sticky=tk.W, pady=2, padx=(5, 10))
+        ttk.Label(
+            main_frame,
+            text="Expected cell diameter in pixels. Measure typical cells in ImageJ to estimate.",
+            font=("Arial", 9, "italic"),
+            foreground="gray",
+            wraplength=400,
+            justify=tk.LEFT,
+        ).grid(row=row, column=2, sticky=tk.W, pady=2)
         row += 1
 
+        # Cell Flow Threshold
         ttk.Label(main_frame, text="Cell Flow Threshold:").grid(
             row=row, column=0, sticky=tk.W, pady=2
         )
         self.cell_flow = ttk.Entry(main_frame, width=10)
         self.cell_flow.insert(0, "0.5")
-        self.cell_flow.grid(row=row, column=1, sticky=tk.W, pady=2)
+        self.cell_flow.grid(row=row, column=1, sticky=tk.W, pady=2, padx=(5, 10))
+        ttk.Label(
+            main_frame,
+            text="Max flow error (0-1). Default 0.4-0.5 works well. Increase to 0.6-0.8 if too few masks detected, decrease to 0.2-0.3 if getting ill-shaped masks.",
+            font=("Arial", 9, "italic"),
+            foreground="gray",
+            wraplength=400,
+            justify=tk.LEFT,
+        ).grid(row=row, column=2, sticky=tk.W, pady=2)
         row += 1
 
-        # Nucleus parameters
-        ttk.Label(main_frame, text="Nucleus Diameter (pixels):").grid(
+        # Nucleus Diameter
+        ttk.Label(main_frame, text="Nucleus Diameter:").grid(
             row=row, column=0, sticky=tk.W, pady=2
         )
         self.nuc_diameter = ttk.Entry(main_frame, width=10)
         self.nuc_diameter.insert(0, "50")
-        self.nuc_diameter.grid(row=row, column=1, sticky=tk.W, pady=2)
+        self.nuc_diameter.grid(row=row, column=1, sticky=tk.W, pady=2, padx=(5, 10))
+        ttk.Label(
+            main_frame,
+            text="Expected nucleus diameter in pixels. Measure typical nuclei in ImageJ to estimate.",
+            font=("Arial", 9, "italic"),
+            foreground="gray",
+            wraplength=400,
+            justify=tk.LEFT,
+        ).grid(row=row, column=2, sticky=tk.W, pady=2)
         row += 1
 
+        # Nucleus Flow Threshold
         ttk.Label(main_frame, text="Nucleus Flow Threshold:").grid(
             row=row, column=0, sticky=tk.W, pady=2
         )
         self.nuc_flow = ttk.Entry(main_frame, width=10)
         self.nuc_flow.insert(0, "0.5")
-        self.nuc_flow.grid(row=row, column=1, sticky=tk.W, pady=(2, 10))
+        self.nuc_flow.grid(row=row, column=1, sticky=tk.W, pady=(2, 10), padx=(5, 10))
+        ttk.Label(
+            main_frame,
+            text="Max flow error (0-1). Default 0.4-0.5 works well. Increase to 0.6-0.8 if too few masks detected, decrease to 0.2-0.3 if getting ill-shaped masks.",
+            font=("Arial", 9, "italic"),
+            foreground="gray",
+            wraplength=400,
+            justify=tk.LEFT,
+        ).grid(row=row, column=2, sticky=tk.W, pady=(2, 10))
         row += 1
 
         # ===== CONTROL BUTTONS =====
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=row, column=0, columnspan=2, pady=(10, 10))
+        button_frame.grid(row=row, column=0, columnspan=3, pady=(10, 10))
 
         self.start_button = ttk.Button(
             button_frame,
@@ -408,27 +496,27 @@ class CellposeSAMGUI:
 
         # ===== PROGRESS =====
         ttk.Label(main_frame, text="Progress", font=("Arial", 12, "bold")).grid(
-            row=row, column=0, columnspan=2, sticky=tk.W, pady=(10, 5)
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=(10, 5)
         )
         row += 1
 
         self.progress_label = ttk.Label(main_frame, text="Ready to process")
-        self.progress_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=2)
+        self.progress_label.grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=2)
         row += 1
 
         self.progress_bar = ttk.Progressbar(main_frame, mode="determinate", length=400)
         self.progress_bar.grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=2
+            row=row, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=2
         )
         row += 1
 
         self.eta_label = ttk.Label(main_frame, text="")
-        self.eta_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=(2, 10))
+        self.eta_label.grid(row=row, column=0, columnspan=3, sticky=tk.W, pady=(2, 10))
         row += 1
 
         # ===== RESULTS TABLE =====
         ttk.Label(main_frame, text="Results Summary", font=("Arial", 12, "bold")).grid(
-            row=row, column=0, columnspan=2, sticky=tk.W, pady=(10, 5)
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=(10, 5)
         )
         row += 1
 
@@ -437,24 +525,24 @@ class CellposeSAMGUI:
         tree_frame.grid(
             row=row,
             column=0,
-            columnspan=2,
+            columnspan=3,
             sticky=(tk.W, tk.E, tk.N, tk.S),
             pady=(0, 10),
         )
 
         self.results_tree = ttk.Treeview(
             tree_frame,
-            columns=("File", "Cells", "Matched", "Unmatched"),
+            columns=("File", "Nuclei", "Matched", "Unmatched"),
             show="headings",
             height=6,
         )
         self.results_tree.heading("File", text="Image File")
-        self.results_tree.heading("Cells", text="Cells")
+        self.results_tree.heading("Nuclei", text="Nuclei")
         self.results_tree.heading("Matched", text="Matched")
         self.results_tree.heading("Unmatched", text="Unmatched")
 
         self.results_tree.column("File", width=300)
-        self.results_tree.column("Cells", width=80, anchor=tk.CENTER)
+        self.results_tree.column("Nuclei", width=80, anchor=tk.CENTER)
         self.results_tree.column("Matched", width=80, anchor=tk.CENTER)
         self.results_tree.column("Unmatched", width=100, anchor=tk.CENTER)
 
@@ -470,30 +558,31 @@ class CellposeSAMGUI:
         # Total row
         self.total_label = ttk.Label(
             main_frame,
-            text="Total: 0 cells, 0 matched, 0 unmatched",
+            text="Total: 0 nuclei, 0 matched, 0 unmatched",
             font=("Arial", 10, "bold"),
         )
         self.total_label.grid(
-            row=row, column=0, columnspan=2, sticky=tk.W, pady=(5, 10)
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=(5, 10)
         )
         row += 1
 
         # ===== LOG WINDOW =====
         ttk.Label(main_frame, text="Log", font=("Arial", 12, "bold")).grid(
-            row=row, column=0, columnspan=2, sticky=tk.W, pady=(10, 5)
+            row=row, column=0, columnspan=3, sticky=tk.W, pady=(10, 5)
         )
         row += 1
 
         self.log_text = scrolledtext.ScrolledText(
-            main_frame, height=8, width=80, wrap=tk.WORD, state=tk.DISABLED
+            main_frame, height=8, width=70, wrap=tk.WORD, state=tk.DISABLED
         )
         self.log_text.grid(
-            row=row, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S)
+            row=row, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S)
         )
 
         # Configure grid weights for resizing
-        main_frame.columnconfigure(0, weight=1)
-        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(0, weight=0)  # Labels - fixed width
+        main_frame.columnconfigure(1, weight=0)  # Input boxes - fixed width
+        main_frame.columnconfigure(2, weight=1)  # Descriptions - expandable
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
 
@@ -566,7 +655,7 @@ class CellposeSAMGUI:
         # Clear previous results
         for item in self.results_tree.get_children():
             self.results_tree.delete(item)
-        self.total_label.configure(text="Total: 0 cells, 0 matched, 0 unmatched")
+        self.total_label.configure(text="Total: 0 nuclei, 0 matched, 0 unmatched")
         self.progress_bar["value"] = 0
 
         # Disable controls
@@ -673,21 +762,19 @@ class CellposeSAMGUI:
                     # Segment based on whether cytoplasm channel is provided
                     if cyto_ch is not None:
                         # === CASE 1: Both cytoplasm and nucleus channels ===
-                        self.result_queue.put(
-                            {
-                                "type": "log",
-                                "message": "Segmenting cells using cytoplasm channel...",
-                            }
-                        )
 
-                        # Prepare two-channel image
+                        # Segment cells
+                        self.result_queue.put(
+                            {"type": "log", "message": "Starting cell segmentation..."}
+                        )
+                        seg_start = time.time()
+
                         selected_channels = [cyto_ch, nuc_ch]
                         img_selected = np.zeros_like(img)
                         img_selected[:2, :, :] = normalize_img(
                             img[selected_channels, :, :]
                         )
 
-                        # Segment cells
                         masks_cells, _, _ = model.eval(
                             img_selected,
                             batch_size=32,
@@ -697,14 +784,23 @@ class CellposeSAMGUI:
                             normalize={"tile_norm_blocksize": 0},
                         )
 
+                        seg_elapsed = time.time() - seg_start
                         self.result_queue.put(
                             {
                                 "type": "log",
-                                "message": "Segmenting nuclei using nucleus channel...",
+                                "message": f"Cell segmentation completed in {seg_elapsed:.1f} sec",
                             }
                         )
 
                         # Segment nuclei
+                        self.result_queue.put(
+                            {
+                                "type": "log",
+                                "message": "Starting nucleus segmentation...",
+                            }
+                        )
+                        seg_start = time.time()
+
                         img_nuc_only = np.zeros_like(img)
                         img_nuc_only[0, :, :] = normalize_img(img[nuc_ch, :, :])
 
@@ -716,17 +812,29 @@ class CellposeSAMGUI:
                             cellprob_threshold=0.0,
                             normalize={"tile_norm_blocksize": 0},
                         )
+
+                        seg_elapsed = time.time() - seg_start
+                        self.result_queue.put(
+                            {
+                                "type": "log",
+                                "message": f"Nucleus segmentation completed in {seg_elapsed:.1f} sec",
+                            }
+                        )
+
+                        has_cyto = True
 
                     else:
                         # === CASE 2: Only nucleus channel (no cytoplasm) ===
+
+                        # Segment nuclei only
                         self.result_queue.put(
                             {
                                 "type": "log",
-                                "message": "No cytoplasm channel - segmenting nuclei only...",
+                                "message": "Starting nucleus segmentation...",
                             }
                         )
+                        seg_start = time.time()
 
-                        # Segment nuclei only
                         img_nuc_only = np.zeros_like(img)
                         img_nuc_only[0, :, :] = normalize_img(img[nuc_ch, :, :])
 
@@ -739,30 +847,74 @@ class CellposeSAMGUI:
                             normalize={"tile_norm_blocksize": 0},
                         )
 
-                        # Use nucleus masks as cell masks (no separate cell segmentation)
-                        masks_cells = masks_nuclei.copy()
-
+                        seg_elapsed = time.time() - seg_start
                         self.result_queue.put(
                             {
                                 "type": "log",
-                                "message": "Using nucleus masks as cell masks (all nuclei marked as 'unmatched')",
+                                "message": f"Nucleus segmentation completed in {seg_elapsed:.1f} sec",
                             }
                         )
 
-                    # Create optimized nucleus data structure
+                        # Use nucleus masks as cell masks
+                        masks_cells = masks_nuclei.copy()
+
+                        has_cyto = False
+
+                    # Process nucleus data
+                    self.result_queue.put(
+                        {"type": "log", "message": "Processing nucleus data..."}
+                    )
+                    process_start = time.time()
+
                     nucleus_data, cell_to_nucleus_map, nucleus_to_cell_map = (
-                        create_nucleus_data_dict(masks_cells, masks_nuclei, img)
+                        create_nucleus_data_dict(
+                            masks_cells, masks_nuclei, img, has_cyto
+                        )
                     )
 
+                    process_elapsed = time.time() - process_start
+                    self.result_queue.put(
+                        {
+                            "type": "log",
+                            "message": f"Data processing completed in {process_elapsed:.1f} sec",
+                        }
+                    )
+
+                    # Save results
+                    self.result_queue.put(
+                        {"type": "log", "message": "Saving results..."}
+                    )
+                    save_start = time.time()
+
                     # Save masks as TIFF
-                    io.imsave(
-                        str(self.output_dir / (file_path.stem + "_masks_cells.tif")),
-                        masks_cells,
-                    )
-                    io.imsave(
-                        str(self.output_dir / (file_path.stem + "_masks_nuclei.tif")),
-                        masks_nuclei,
-                    )
+                    if has_cyto:
+                        # Save both cell and nucleus masks
+                        io.imsave(
+                            str(
+                                self.output_dir / (file_path.stem + "_masks_cells.tif")
+                            ),
+                            masks_cells,
+                        )
+                        io.imsave(
+                            str(
+                                self.output_dir / (file_path.stem + "_masks_nuclei.tif")
+                            ),
+                            masks_nuclei,
+                        )
+                    else:
+                        # Only save nucleus masks (no duplicate cell mask)
+                        io.imsave(
+                            str(
+                                self.output_dir / (file_path.stem + "_masks_nuclei.tif")
+                            ),
+                            masks_nuclei,
+                        )
+                        self.result_queue.put(
+                            {
+                                "type": "log",
+                                "message": "Skipping cell mask save (no cytoplasm channel)",
+                            }
+                        )
 
                     # Calculate statistics
                     n_nuclei_total = len(nucleus_data)
@@ -822,7 +974,8 @@ class CellposeSAMGUI:
                             ),
                             "note_no_cyto": (
                                 "If cyto_channel='None', only nucleus segmentation was performed. "
-                                "masks_cells and masks_nuclei are identical. "
+                                "masks_cells and masks_nuclei are identical in pickle. "
+                                "Only nucleus mask TIFF was saved (no duplicate cell mask). "
                                 "All nuclei are marked as 'unmatched'."
                             ),
                         },
@@ -833,12 +986,20 @@ class CellposeSAMGUI:
                     ) as f:
                         pickle.dump(pickle_data, f)
 
+                    save_elapsed = time.time() - save_start
+                    self.result_queue.put(
+                        {
+                            "type": "log",
+                            "message": f"Save completed in {save_elapsed:.1f} sec",
+                        }
+                    )
+
                     # Send result
                     self.result_queue.put(
                         {
                             "type": "result",
                             "file": file_path.name,
-                            "n_cells": n_cells,
+                            "n_nuclei": n_nuclei_total,
                             "n_matched": n_nuclei_matched,
                             "n_unmatched": n_nuclei_unmatched,
                         }
@@ -916,7 +1077,7 @@ class CellposeSAMGUI:
                         tk.END,
                         values=(
                             item["file"],
-                            item["n_cells"],
+                            item["n_nuclei"],
                             item["n_matched"],
                             item["n_unmatched"],
                         ),
@@ -924,7 +1085,7 @@ class CellposeSAMGUI:
                     self.results_tree.yview_moveto(1)
                     self.update_totals()
                     self.log(
-                        f"Completed: {item['file']} - {item['n_cells']} cells, {item['n_matched']} matched"
+                        f"Completed: {item['file']} - {item['n_nuclei']} nuclei, {item['n_matched']} matched"
                     )
 
                 elif item["type"] == "error":
@@ -941,18 +1102,18 @@ class CellposeSAMGUI:
 
     def update_totals(self):
         """Update total statistics."""
-        total_cells = 0
+        total_nuclei = 0
         total_matched = 0
         total_unmatched = 0
 
         for item in self.results_tree.get_children():
             values = self.results_tree.item(item)["values"]
-            total_cells += int(values[1])
+            total_nuclei += int(values[1])
             total_matched += int(values[2])
             total_unmatched += int(values[3])
 
         self.total_label.configure(
-            text=f"Total: {total_cells} cells, {total_matched} matched, {total_unmatched} unmatched"
+            text=f"Total: {total_nuclei} nuclei, {total_matched} matched, {total_unmatched} unmatched"
         )
 
     def processing_complete(self):
