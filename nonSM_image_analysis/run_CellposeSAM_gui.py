@@ -547,8 +547,9 @@ class CellposeSAMGUI:
 
         # Validate numeric parameters
         try:
-            float(self.cell_diameter.get())
-            float(self.cell_flow.get())
+            if self.cyto_channel.get() != "None":
+                float(self.cell_diameter.get())
+                float(self.cell_flow.get())
             float(self.nuc_diameter.get())
             float(self.nuc_flow.get())
         except ValueError:
@@ -580,7 +581,6 @@ class CellposeSAMGUI:
 
         self.log("=" * 60)
         self.log("Processing started")
-        self.log("Using optimized storage (cropped bounding boxes)")
 
     def cancel_processing(self):
         """Request cancellation of processing."""
@@ -599,8 +599,10 @@ class CellposeSAMGUI:
             cyto_ch = None if cyto_ch_str == "None" else int(cyto_ch_str) - 1
             nuc_ch = int(self.nuc_channel.get()) - 1
 
-            cell_diam = float(self.cell_diameter.get())
-            cell_flow_th = float(self.cell_flow.get())
+            # Get segmentation parameters
+            if cyto_ch is not None:
+                cell_diam = float(self.cell_diameter.get())
+                cell_flow_th = float(self.cell_flow.get())
             nuc_diam = float(self.nuc_diameter.get())
             nuc_flow_th = float(self.nuc_flow.get())
 
@@ -612,6 +614,28 @@ class CellposeSAMGUI:
             self.result_queue.put(
                 {"type": "log", "message": "Model loaded successfully"}
             )
+
+            # Log channel configuration
+            if cyto_ch is not None:
+                self.result_queue.put(
+                    {
+                        "type": "log",
+                        "message": f"Channel config: Cyto=Ch{cyto_ch_str} (index {cyto_ch}), Nuc=Ch{self.nuc_channel.get()} (index {nuc_ch})",
+                    }
+                )
+            else:
+                self.result_queue.put(
+                    {
+                        "type": "log",
+                        "message": f"Channel config: Cyto=None, Nuc=Ch{self.nuc_channel.get()} (index {nuc_ch})",
+                    }
+                )
+                self.result_queue.put(
+                    {
+                        "type": "log",
+                        "message": "No cytoplasm channel - cell parameters will be ignored",
+                    }
+                )
 
             # Process files
             total_files = len(self.selected_files)
@@ -639,21 +663,31 @@ class CellposeSAMGUI:
                 try:
                     # Load image
                     img = io.imread(str(file_path))
-
-                    # Channel selection
-                    selected_channels = []
-                    if cyto_ch is not None:
-                        selected_channels.append(cyto_ch)
-                    selected_channels.append(nuc_ch)
-
-                    # Normalize channels
-                    img_selected = np.zeros_like(img)
-                    img_selected[: len(selected_channels), :, :] = normalize_img(
-                        img[selected_channels, :, :]
+                    self.result_queue.put(
+                        {
+                            "type": "log",
+                            "message": f"Loaded {file_path.name}: shape={img.shape}",
+                        }
                     )
 
-                    # Segment cells
+                    # Segment based on whether cytoplasm channel is provided
                     if cyto_ch is not None:
+                        # === CASE 1: Both cytoplasm and nucleus channels ===
+                        self.result_queue.put(
+                            {
+                                "type": "log",
+                                "message": "Segmenting cells using cytoplasm channel...",
+                            }
+                        )
+
+                        # Prepare two-channel image
+                        selected_channels = [cyto_ch, nuc_ch]
+                        img_selected = np.zeros_like(img)
+                        img_selected[:2, :, :] = normalize_img(
+                            img[selected_channels, :, :]
+                        )
+
+                        # Segment cells
                         masks_cells, _, _ = model.eval(
                             img_selected,
                             batch_size=32,
@@ -662,31 +696,58 @@ class CellposeSAMGUI:
                             cellprob_threshold=0.0,
                             normalize={"tile_norm_blocksize": 0},
                         )
-                    else:
-                        img_nuc_as_cell = np.zeros_like(img)
-                        img_nuc_as_cell[0, :, :] = normalize_img(img[nuc_ch, :, :])
-                        masks_cells, _, _ = model.eval(
-                            img_nuc_as_cell,
+
+                        self.result_queue.put(
+                            {
+                                "type": "log",
+                                "message": "Segmenting nuclei using nucleus channel...",
+                            }
+                        )
+
+                        # Segment nuclei
+                        img_nuc_only = np.zeros_like(img)
+                        img_nuc_only[0, :, :] = normalize_img(img[nuc_ch, :, :])
+
+                        masks_nuclei, _, _ = model.eval(
+                            img_nuc_only,
                             batch_size=32,
-                            diameter=cell_diam,
-                            flow_threshold=cell_flow_th,
+                            diameter=nuc_diam,
+                            flow_threshold=nuc_flow_th,
                             cellprob_threshold=0.0,
                             normalize={"tile_norm_blocksize": 0},
                         )
 
-                    # Segment nuclei
-                    img_nuc_only = np.zeros_like(img_selected)
-                    nuc_idx = 1 if cyto_ch is not None else 0
-                    img_nuc_only[0, :, :] = img_selected[nuc_idx, :, :]
+                    else:
+                        # === CASE 2: Only nucleus channel (no cytoplasm) ===
+                        self.result_queue.put(
+                            {
+                                "type": "log",
+                                "message": "No cytoplasm channel - segmenting nuclei only...",
+                            }
+                        )
 
-                    masks_nuclei, _, _ = model.eval(
-                        img_nuc_only,
-                        batch_size=32,
-                        diameter=nuc_diam,
-                        flow_threshold=nuc_flow_th,
-                        cellprob_threshold=0.0,
-                        normalize={"tile_norm_blocksize": 0},
-                    )
+                        # Segment nuclei only
+                        img_nuc_only = np.zeros_like(img)
+                        img_nuc_only[0, :, :] = normalize_img(img[nuc_ch, :, :])
+
+                        masks_nuclei, _, _ = model.eval(
+                            img_nuc_only,
+                            batch_size=32,
+                            diameter=nuc_diam,
+                            flow_threshold=nuc_flow_th,
+                            cellprob_threshold=0.0,
+                            normalize={"tile_norm_blocksize": 0},
+                        )
+
+                        # Use nucleus masks as cell masks (no separate cell segmentation)
+                        masks_cells = masks_nuclei.copy()
+
+                        self.result_queue.put(
+                            {
+                                "type": "log",
+                                "message": "Using nucleus masks as cell masks (all nuclei marked as 'unmatched')",
+                            }
+                        )
 
                     # Create optimized nucleus data structure
                     nucleus_data, cell_to_nucleus_map, nucleus_to_cell_map = (
@@ -724,10 +785,13 @@ class CellposeSAMGUI:
                             "nuc_channel": self.nuc_channel.get(),
                             "cyto_channel_0based": cyto_ch,
                             "nuc_channel_0based": nuc_ch,
-                            "cell_diameter": cell_diam,
-                            "cell_flow_threshold": cell_flow_th,
+                            "cell_diameter": cell_diam if cyto_ch is not None else None,
+                            "cell_flow_threshold": (
+                                cell_flow_th if cyto_ch is not None else None
+                            ),
                             "nucleus_diameter": nuc_diam,
                             "nucleus_flow_threshold": nuc_flow_th,
+                            "has_cytoplasm_channel": cyto_ch is not None,
                         },
                         # Full FOV masks (small, for visualization)
                         "masks_cells": masks_cells,
@@ -743,6 +807,7 @@ class CellposeSAMGUI:
                             "n_nuclei_matched": n_nuclei_matched,
                             "n_nuclei_unmatched": n_nuclei_unmatched,
                             "n_cells": n_cells,
+                            "has_cytoplasm_channel": cyto_ch is not None,
                         },
                         # Documentation
                         "readme": {
@@ -755,16 +820,11 @@ class CellposeSAMGUI:
                                 "Padding based on 10% of object size (min 7px). "
                                 "Matched nuclei use cell boundary, unmatched use nucleus boundary."
                             ),
-                            "nucleus_data_keys": [
-                                "cell_id: matched cell ID or None",
-                                "is_matched: True/False",
-                                "bbox: (y_min, y_max, x_min, x_max)",
-                                "nucleus_mask_crop: cropped boolean mask",
-                                "cell_mask_crop: cropped boolean mask (all False if unmatched)",
-                                "image_crop: cropped original image (all channels)",
-                                "nucleus_area, cell_area: areas in pixels",
-                                "centroid: (y, x) in full FOV coordinates",
-                            ],
+                            "note_no_cyto": (
+                                "If cyto_channel='None', only nucleus segmentation was performed. "
+                                "masks_cells and masks_nuclei are identical. "
+                                "All nuclei are marked as 'unmatched'."
+                            ),
                         },
                     }
 
@@ -809,8 +869,11 @@ class CellposeSAMGUI:
                     )
 
                 except Exception as e:
+                    import traceback
+
+                    error_msg = f"{str(e)}\n{traceback.format_exc()}"
                     self.result_queue.put(
-                        {"type": "error", "file": file_path.name, "error": str(e)}
+                        {"type": "error", "file": file_path.name, "error": error_msg}
                     )
 
             # Save log file
@@ -821,7 +884,10 @@ class CellposeSAMGUI:
             self.result_queue.put({"type": "done"})
 
         except Exception as e:
-            self.result_queue.put({"type": "error", "error": f"Fatal error: {str(e)}"})
+            import traceback
+
+            error_msg = f"Fatal error: {str(e)}\n{traceback.format_exc()}"
+            self.result_queue.put({"type": "error", "error": error_msg})
             self.result_queue.put({"type": "done"})
 
     def poll_queue(self):
@@ -900,12 +966,8 @@ class CellposeSAMGUI:
         self.log("=" * 60)
         self.log("Processing complete")
         self.log(f"Results saved to: {self.output_dir}")
-        self.log("Pickle files use optimized storage (~30-50x smaller than before)")
 
-        messagebox.showinfo(
-            "Complete",
-            "Processing finished successfully!\nPickle files use optimized cropped storage.",
-        )
+        messagebox.showinfo("Complete", "Processing finished successfully!")
 
 
 # =============================================================================
