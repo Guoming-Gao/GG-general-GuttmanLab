@@ -1,12 +1,19 @@
 from tifffile import TiffFile, TiffWriter
 from tkinter import filedialog as fd
-from rich.progress import track, Progress
+from rich.progress import Progress
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue
 import threading
 import psutil
 import gc
 import time
+
+"""
+Parallel TIFF Splitter - Splits large TIFF stacks vertically into left and right halves.
+
+Uses chunked parallel I/O and processing pipeline to handle large files efficiently
+while managing memory usage based on available system RAM.
+"""
 
 
 class ChunkProcessor:
@@ -75,8 +82,8 @@ class ChunkProcessor:
                 f"Processing {len(chunks_info)} chunks with {self.max_concurrent_chunks} parallel I/O operations"
             )
 
-            with TiffWriter(left_path, imagej=True) as writer_left, TiffWriter(
-                right_path, imagej=True
+            with TiffWriter(left_path, bigtiff=True) as writer_left, TiffWriter(
+                right_path, bigtiff=True
             ) as writer_right:
 
                 # Phase 1: Parallel I/O Loading + Parallel Processing Pipeline
@@ -207,7 +214,8 @@ def process_files_parallel():
     print("Choose the tif files for crop")
     lst_files = list(fd.askopenfilenames())
 
-    for fpath in track(lst_files, description="Processing files..."):
+    for i, fpath in enumerate(lst_files, 1):
+        print(f"\n[{i}/{len(lst_files)}] Processing files...")
         try:
             print(f"\n🚀 Starting parallel processing: {fpath}")
             start_time = time.time()
