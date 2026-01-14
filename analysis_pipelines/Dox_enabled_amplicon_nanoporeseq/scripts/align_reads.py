@@ -4,7 +4,7 @@ import glob
 import subprocess
 
 DATA_DIR = "data"
-REF_FILE = "ref_seq/xist_amplicon_ref.fa"
+REF_FILE = "ref_seq/target_amplicon.fa"
 OUTPUT_DIR = "aligned"
 FASTQ_FILES = glob.glob(os.path.join(DATA_DIR, "*.fastq"))
 

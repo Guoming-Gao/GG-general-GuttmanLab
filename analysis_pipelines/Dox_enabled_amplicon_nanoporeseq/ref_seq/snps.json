@@ -1,0 +1,52 @@
+[
+    {
+        "genomic_pos": 103466630,
+        "ref": "G",
+        "alt": [
+            "A"
+        ],
+        "b6": "G/G",
+        "cast": "A/A",
+        "local_pos": 28
+    },
+    {
+        "genomic_pos": 103466669,
+        "ref": "T",
+        "alt": [
+            "C"
+        ],
+        "b6": "T/T",
+        "cast": "C/C",
+        "local_pos": 67
+    },
+    {
+        "genomic_pos": 103466673,
+        "ref": "C",
+        "alt": [
+            "G"
+        ],
+        "b6": "C/C",
+        "cast": "G/G",
+        "local_pos": 71
+    },
+    {
+        "genomic_pos": 103466936,
+        "ref": "G",
+        "alt": [
+            "A"
+        ],
+        "b6": "G/G",
+        "cast": "A/A",
+        "local_pos": 334
+    },
+    {
+        "genomic_pos": 103467155,
+        "ref": "G",
+        "alt": [
+            "A"
+        ],
+        "b6": "G/G",
+        "cast": "A/A",
+        "local_pos": 553
+    }
+]
