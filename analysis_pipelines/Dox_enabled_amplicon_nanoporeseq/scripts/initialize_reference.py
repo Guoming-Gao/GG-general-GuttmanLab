@@ -1,7 +1,8 @@
-
 import os
 import subprocess
 import pysam
+import argparse
+import json
 from Bio import SeqIO
 from Bio.Seq import Seq
 from pathlib import Path
@@ -15,11 +16,7 @@ PRIMER_FILE = "ValidatedPrimers.fa"
 
 def find_primer_genomic(primer_seq):
     """Finds the first genomic occurrence of a primer sequence in chrX mm10."""
-    # We restrict to chrX as per Xist context
-    cmd = ["samtools", "faidx", GENOME_FASTA, "chrX"]
-    # For efficiency in a script, it's better to fetch the whole chrX or use mapping tools
-    # But since it's a small amplicon we likely already have the region.
-    # We will search the known Xist locus +/- 10kb
+    # We search the known Xist locus +/- 10kb
     start, end = 103460373 - 10000, 103483233 + 10000
     region = f"chrX:{start}-{end}"
 
@@ -40,13 +37,11 @@ def find_primer_genomic(primer_seq):
 def get_vcf_snps(chrom, start, end):
     """Identifies all B6 vs Cast SNPs in a genomic region."""
     vcf = pysam.VariantFile(VCF_FILE)
-    # Handle chrX vs X
     target_chrom = chrom.replace("chr", "") if "chr" in chrom else chrom
     if target_chrom not in vcf.header.contigs:
         target_chrom = "chr" + target_chrom
 
     snps = []
-    # vcf.fetch is 0-based
     for record in vcf.fetch(target_chrom, start - 1, end):
         b6_gt = record.samples[B6_SAMPLE].alleles
         cast_gt = record.samples[CAST_SAMPLE].alleles
@@ -64,13 +59,27 @@ def get_vcf_snps(chrom, start, end):
                 })
     return snps
 
-def main(primer_f_name, primer_r_name):
-    # 1. Load Primers
-    primers = list(SeqIO.parse(PRIMER_FILE, "fasta"))
-    f_seq = str(next(p for p in primers if p.id == primer_f_name).seq).upper()
-    r_seq = str(next(p for p in primers if p.id == primer_r_name).seq).upper()
+def main():
+    parser = argparse.ArgumentParser(description="Initialize reference sequence and SNPs from primers.")
+    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--f_primer", default="AC_XistExAmp_5SNPs-F", help="Forward primer ID in ValidatedPrimers.fa")
+    parser.add_argument("--r_primer", default="AC_XistExAmp_5SNPs-R", help="Reverse primer ID in ValidatedPrimers.fa")
+    args = parser.parse_args()
 
-    print(f"Targeting: {primer_f_name} / {primer_r_name}")
+    # 1. Load Primers
+    if not os.path.exists(PRIMER_FILE):
+        print(f"Error: {PRIMER_FILE} not found.")
+        return
+
+    primers = list(SeqIO.parse(PRIMER_FILE, "fasta"))
+    try:
+        f_seq = str(next(p for p in primers if p.id == args.f_primer).seq).upper()
+        r_seq = str(next(p for p in primers if p.id == args.r_primer).seq).upper()
+    except StopIteration:
+        print("Error: Primers not found in file.")
+        return
+
+    print(f"Targeting: {args.f_primer} / {args.r_primer}")
 
     # 2. Map primers
     strand_f, pos_f = find_primer_genomic(f_seq)
@@ -82,7 +91,6 @@ def main(primer_f_name, primer_r_name):
 
     # Amplicon range
     start_genomic = min(pos_f, pos_r)
-    # The end should include the full length of the primer at the larger coordinate
     if pos_f > pos_r:
         end_genomic = pos_f + len(f_seq) - 1
     else:
@@ -100,23 +108,31 @@ def main(primer_f_name, primer_r_name):
     print(f"Found {len(snps)} B6/Cast SNPs in amplicon.")
 
     # 5. Output
-    os.makedirs("ref_seq", exist_ok=True)
-    with open("ref_seq/target_amplicon.fa", "w") as f:
+    results_ref_dir = os.path.join(args.output_dir, "results", "ref_seq")
+    os.makedirs(results_ref_dir, exist_ok=True)
+
+    fasta_path = os.path.join(results_ref_dir, "target_amplicon.fa")
+    with open(fasta_path, "w") as f:
         f.write(f">Xist_Amplicon chrX:{start_genomic}-{end_genomic}\n")
         f.write(ref_seq + "\n")
 
-    import json
-    with open("ref_seq/snps.json", "w") as f:
-        # map to local amplicon coords (1-indexed)
+    snp_path = os.path.join(results_ref_dir, "snps.json")
+    with open(snp_path, "w") as f:
         for s in snps:
             s["local_pos"] = s["genomic_pos"] - start_genomic + 1
         json.dump(snps, f, indent=4)
 
-    print("Reference and SNP files created in ref_seq/")
+    # 6. Align back to genome for validation (SAM)
+    print("Aligning amplicon back to genome for validation...")
+    sam_path = os.path.join(results_ref_dir, "amplicon_to_genome.sam")
+    minimap_cmd = [
+        "minimap2", "-ax", "sr",
+        GENOME_FASTA, fasta_path
+    ]
+    with open(sam_path, "w") as f:
+        subprocess.run(minimap_cmd, stdout=f, check=True)
+
+    print(f"Reference, SNPs, and SAM validation created in {results_ref_dir}/")
 
 if __name__ == "__main__":
-    import sys
-    # Defaults for user request
-    f = "AC_XistExAmp_5SNPs-F"
-    r = "AC_XistExAmp_5SNPs-R"
-    main(f, r)
+    main()

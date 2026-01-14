@@ -1,12 +1,9 @@
-
 import pysam
 import os
 import glob
 import pandas as pd
 import numpy as np
-
-DATA_DIR = "data"
-FASTQ_FILES = glob.glob(os.path.join(DATA_DIR, "*.fastq"))
+import argparse
 
 def analyze_fastq(file_path):
     stats = {
@@ -40,13 +37,28 @@ def analyze_fastq(file_path):
     return stats
 
 def main():
+    parser = argparse.ArgumentParser(description="Analyze FASTQ quality metrics.")
+    parser.add_argument("--data_dir", default="data", help="Directory containing input FASTQ files (default: data)")
+    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    args = parser.parse_args()
+
+    results_dir = os.path.join(args.output_dir, "results")
+    csv_dir = os.path.join(results_dir, "csv")
+
+    fastq_files = glob.glob(os.path.join(args.data_dir, "*.fastq"))
+
+    if not fastq_files:
+        print(f"No FASTQ files found in {args.data_dir}")
+        return
+
     all_stats = []
-    for f in FASTQ_FILES:
+    for f in fastq_files:
         print(f"Analyzing {f}...")
         all_stats.append(analyze_fastq(f))
 
     df = pd.DataFrame(all_stats)
-    df.to_csv("preprocessing_stats.csv", index=False)
+    os.makedirs(csv_dir, exist_ok=True)
+    df.to_csv(os.path.join(csv_dir, "preprocessing_stats.csv"), index=False)
     print("\nQC Summary:")
     print(df.to_string())
 

@@ -1,16 +1,10 @@
-
 import pysam
 import os
 import glob
 import pandas as pd
 import json
-
-ALIGN_DIR = "/Users/gmgao/GGscripts/GG-general-GuttmanLab/analysis_pipelines/Dox_enabled_amplicon_nanoporeseq/aligned"
-SNP_FILE = "/Users/gmgao/GGscripts/GG-general-GuttmanLab/analysis_pipelines/Dox_enabled_amplicon_nanoporeseq/ref_seq/snps.json"
-BAM_FILES = glob.glob(os.path.join(ALIGN_DIR, "*.sorted.bam"))
-
-with open(SNP_FILE, "r") as f:
-    SNPS = json.load(f)
+import argparse
+from collections import Counter
 
 def get_base(read, pos_0):
     for q_pos, r_pos in read.get_aligned_pairs():
@@ -19,7 +13,7 @@ def get_base(read, pos_0):
             return read.query_sequence[q_pos]
     return "N"
 
-def diagnostic(bam_path):
+def diagnostic(bam_path, snps):
     sample = os.path.basename(bam_path)
     print(f"\n--- Diagnostic for {sample} ---")
 
@@ -33,9 +27,9 @@ def diagnostic(bam_path):
             if read.is_secondary or read.is_supplementary or read.is_unmapped:
                 continue
 
-            bases = [get_base(read, s["local_pos"] - 1) for s in SNPS]
-            b6_vals = [s["b6"].split("/")[0] for s in SNPS]
-            cast_vals = [s["cast"].split("/")[0] for s in SNPS]
+            bases = [get_base(read, s["local_pos"] - 1) for s in snps]
+            b6_vals = [s["b6"].split("/")[0] for s in snps]
+            cast_vals = [s["cast"].split("/")[0] for s in snps]
 
             b6_hits = sum(1 for i, b in enumerate(bases) if b == b6_vals[i])
             cast_hits = sum(1 for i, b in enumerate(bases) if b == cast_vals[i])
@@ -48,13 +42,36 @@ def diagnostic(bam_path):
             count += 1
 
     # Frequency of hits
-    from collections import Counter
     print("\nB6 Hit Distribution (Sample-wide):")
     print(dict(sorted(Counter(all_hits_b6).items())))
     print("\nCast Hit Distribution (Sample-wide):")
     print(dict(sorted(Counter(all_hits_cast).items())))
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(description="Run diagnostics on stoichiometry.")
+    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--snp_file", default=None, help="Path to SNP JSON (default: results/ref_seq/snps.json)")
+    args = parser.parse_args()
+
+    results_dir = os.path.join(args.output_dir, "results")
+    align_dir = os.path.join(results_dir, "aligned")
+    snp_file = args.snp_file if args.snp_file else os.path.join(results_dir, "ref_seq", "snps.json")
+
+    if not os.path.exists(snp_file):
+        print(f"Error: {snp_file} not found.")
+        return
+
+    with open(snp_file, "r") as f:
+        snps = json.load(f)
+
+    bam_files = glob.glob(os.path.join(align_dir, "*.sorted.bam"))
+    if not bam_files:
+        print(f"No sorted BAM files found in {align_dir}")
+        return
+
     # Test on WT (diff) and WT (Dox)
-    for b in BAM_FILES[:2]:
-        diagnostic(b)
+    for b in bam_files[:2]:
+        diagnostic(b, snps)
+
+if __name__ == "__main__":
+    main()

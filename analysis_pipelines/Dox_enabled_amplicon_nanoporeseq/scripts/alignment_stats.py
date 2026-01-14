@@ -1,12 +1,9 @@
-
 import pysam
 import os
 import glob
 import pandas as pd
 import numpy as np
-
-ALIGN_DIR = "aligned"
-BAM_FILES = glob.glob(os.path.join(ALIGN_DIR, "*.sorted.bam"))
+import argparse
 
 def analyze_bam(file_path):
     stats = {
@@ -25,6 +22,9 @@ def analyze_bam(file_path):
 
     with pysam.AlignmentFile(file_path, "rb") as sam:
         # Check reference name
+        if not sam.references:
+            return stats
+
         ref_name = sam.references[0] # Xist_Amplicon
         ref_len = sam.lengths[0]
 
@@ -46,32 +46,37 @@ def analyze_bam(file_path):
 
         # Coverage
         depths = []
-        # pileup() result depends on reads being present
         for pileupcolumn in sam.pileup(ref_name):
             depths.append(pileupcolumn.n)
 
         if depths:
-            # We want mean coverage across the WHOLE reference
-            # padding with zeros if no reads at some positions
-            full_depths = np.zeros(ref_len)
-            # pileupcolumn.pos is 0-indexed position
-            for i, d in enumerate(depths):
-                # This is actually complex if positions are skipped
-                pass
-
-            # Simple average of what we have, but really should be sum/ref_len
             stats["Mean_Coverage"] = sum(depths) / ref_len
 
     return stats
 
 def main():
+    parser = argparse.ArgumentParser(description="Analyze alignment statistics from BAM files.")
+    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    args = parser.parse_args()
+
+    results_dir = os.path.join(args.output_dir, "results")
+    align_dir = os.path.join(results_dir, "aligned")
+    csv_dir = os.path.join(results_dir, "csv")
+
+    bam_files = glob.glob(os.path.join(align_dir, "*.sorted.bam"))
+
+    if not bam_files:
+        print(f"No sorted BAM files found in {align_dir}")
+        return
+
     all_stats = []
-    for f in BAM_FILES:
+    for f in bam_files:
         print(f"Analyzing {f}...")
         all_stats.append(analyze_bam(f))
 
     df = pd.DataFrame(all_stats)
-    df.to_csv("alignment_stats.csv", index=False)
+    os.makedirs(csv_dir, exist_ok=True)
+    df.to_csv(os.path.join(csv_dir, "alignment_stats.csv"), index=False)
     print("\nAlignment Summary:")
     print(df.to_string())
 

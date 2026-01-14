@@ -1,12 +1,7 @@
-
 import os
 import glob
 import subprocess
-
-DATA_DIR = "data"
-REF_FILE = "ref_seq/target_amplicon.fa"
-OUTPUT_DIR = "aligned"
-FASTQ_FILES = glob.glob(os.path.join(DATA_DIR, "*.fastq"))
+import argparse
 
 def run_command(cmd):
     print(f"Running: {' '.join(cmd)}")
@@ -16,25 +11,39 @@ def run_command(cmd):
     return result
 
 def main():
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
+    parser = argparse.ArgumentParser(description="Align Nanopore reads to amplicon reference.")
+    parser.add_argument("--data_dir", default="data", help="Directory containing input FASTQ files (default: data)")
+    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--ref_file", default=None, help="Path to reference FASTA (default: results/ref_seq/target_amplicon.fa)")
+    args = parser.parse_args()
 
-    for fastq in FASTQ_FILES:
+    results_dir = os.path.join(args.output_dir, "results")
+    align_dir = os.path.join(results_dir, "aligned")
+    ref_file = args.ref_file if args.ref_file else os.path.join(results_dir, "ref_seq", "target_amplicon.fa")
+
+    fastq_files = glob.glob(os.path.join(args.data_dir, "*.fastq"))
+
+    if not fastq_files:
+        print(f"No FASTQ files found in {args.data_dir}")
+        return
+
+    if not os.path.exists(align_dir):
+        os.makedirs(align_dir, exist_ok=True)
+
+    for fastq in fastq_files:
         base_name = os.path.basename(fastq).replace(".fastq", "")
-        bam_output = os.path.join(OUTPUT_DIR, f"{base_name}.bam")
-        sorted_bam = os.path.join(OUTPUT_DIR, f"{base_name}.sorted.bam")
+        bam_output = os.path.join(align_dir, f"{base_name}.bam")
+        sorted_bam = os.path.join(align_dir, f"{base_name}.sorted.bam")
 
         # Alignment
         # -ax map-ont for Nanopore
         # -t 4 for threads
         minimap_cmd = [
             "minimap2", "-ax", "map-ont", "-t", "4",
-            REF_FILE, fastq
+            ref_file, fastq
         ]
 
-        # We'll pipe to samtools view to get BAM directly if possible,
-        # but let's just do it in steps for robustness
-        sam_output = os.path.join(OUTPUT_DIR, f"{base_name}.sam")
+        sam_output = os.path.join(align_dir, f"{base_name}.sam")
         with open(sam_output, "w") as f:
             subprocess.run(minimap_cmd, stdout=f, check=True)
 
