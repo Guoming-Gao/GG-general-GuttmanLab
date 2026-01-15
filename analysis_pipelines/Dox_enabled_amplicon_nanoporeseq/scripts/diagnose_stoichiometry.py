@@ -49,11 +49,11 @@ def diagnostic(bam_path, snps):
 
 def main():
     parser = argparse.ArgumentParser(description="Run diagnostics on stoichiometry.")
-    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--results_dir", default=None, help="Results directory (default: ./results)")
     parser.add_argument("--snp_file", default=None, help="Path to SNP JSON (default: results/ref_seq/snps.json)")
     args = parser.parse_args()
 
-    results_dir = os.path.join(args.output_dir, "results")
+    results_dir = args.results_dir if args.results_dir else os.path.join(".", "results")
     align_dir = os.path.join(results_dir, "aligned")
     snp_file = args.snp_file if args.snp_file else os.path.join(results_dir, "ref_seq", "snps.json")
 

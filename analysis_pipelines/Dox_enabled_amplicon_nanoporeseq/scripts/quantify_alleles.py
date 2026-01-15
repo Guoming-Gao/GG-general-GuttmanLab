@@ -15,8 +15,8 @@ def get_base_at_pos(read, ref_pos):
             return read.query_sequence[q_pos]
     return "N"
 
-def assign_allele(snp_bases, snps):
-    """Assign allele based on SNP matches using majority rule."""
+def assign_allele(snp_bases, snps, min_matches=None):
+    """Assign allele based on SNP matches using a configurable threshold."""
     if not snps:
         return "Unknown"
 
@@ -29,8 +29,11 @@ def assign_allele(snp_bases, snps):
         elif base == snps[i]["cast"]:
             cast_matches += 1
 
-    # Majority rule threshold
-    threshold = (len(snps) // 2) + 1
+    # Majority rule threshold or custom
+    if min_matches is not None:
+        threshold = min_matches
+    else:
+        threshold = (len(snps) // 2) + 1
 
     if b6_matches > cast_matches:
         if b6_matches >= threshold:
@@ -45,7 +48,7 @@ def assign_allele(snp_bases, snps):
             return "Ambiguous"
         return "Noise/Unknown"
 
-def process_bam(file_path, output_dir, snps):
+def process_bam(file_path, output_dir, snps, min_matches=None):
     sample_name = os.path.basename(file_path).replace(".sorted.bam", "")
     results = []
 
@@ -55,11 +58,12 @@ def process_bam(file_path, output_dir, snps):
                 continue
 
             bases = [get_base_at_pos(read, s["pos"] - 1) for s in snps]
-            allele = assign_allele(bases, snps)
+            allele = assign_allele(bases, snps, min_matches=min_matches)
 
             res = {"ReadID": read.query_name, "Allele": allele}
             for i, b in enumerate(bases):
-                res[f"SNP{i+1}"] = b
+                label = snps[i].get("label", f"SNP{i+1}")
+                res[label] = b
             results.append(res)
 
     if not results:
@@ -94,11 +98,13 @@ def process_bam(file_path, output_dir, snps):
 
 def main():
     parser = argparse.ArgumentParser(description="Quantify alleles from aligned BAM files.")
-    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--results_dir", default=None, help="Results directory (default: ./results)")
     parser.add_argument("--snp_file", default=None, help="Path to SNP JSON (default: results/ref_seq/snps.json)")
+    parser.add_argument("--omit_snps", type=str, default=None, help="Comma-separated SNP indices to omit (1-based, e.g., '2')")
+    parser.add_argument("--min_matches", type=int, default=None, help="Minimum SNP matches for high-confidence assignment")
     args = parser.parse_args()
 
-    results_dir = os.path.join(args.output_dir, "results")
+    results_dir = args.results_dir if args.results_dir else os.path.join(".", "results")
     align_dir = os.path.join(results_dir, "aligned")
     quant_dir = os.path.join(results_dir, "quantification")
     snp_file = args.snp_file if args.snp_file else os.path.join(results_dir, "ref_seq", "snps.json")
@@ -113,13 +119,23 @@ def main():
     if os.path.exists(snp_file):
         with open(snp_file, "r") as f:
             snp_data = json.load(f)
+
+        omit = []
+        if args.omit_snps:
+            omit = [int(i.strip()) for i in args.omit_snps.split(",")]
+
         snps = []
         for i, s in enumerate(snp_data):
+            idx = i + 1
+            if idx in omit:
+                print(f"Omit SNP {idx} at local pos {s['local_pos']}")
+                continue
+
             snps.append({
                 "pos": s["local_pos"],
                 "b6": s["b6"].split("/")[0], # GT 0/0 -> 0
                 "cast": s["cast"].split("/")[0],
-                "label": f"SNP{i+1}_{s['local_pos']}"
+                "label": f"SNP{idx}_{s['local_pos']}"
             })
     else:
         print(f"Error: {snp_file} not found.")
@@ -128,7 +144,7 @@ def main():
     all_summaries = []
     for f in bam_files:
         print(f"Processing {f}...")
-        all_summaries.append(process_bam(f, quant_dir, snps))
+        all_summaries.append(process_bam(f, quant_dir, snps, min_matches=args.min_matches))
 
     summary_df = pd.DataFrame(all_summaries)
     print("\nAllele Quantification Summary:")

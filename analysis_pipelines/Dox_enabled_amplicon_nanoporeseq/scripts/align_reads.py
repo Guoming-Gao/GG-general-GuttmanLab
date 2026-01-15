@@ -13,11 +13,11 @@ def run_command(cmd):
 def main():
     parser = argparse.ArgumentParser(description="Align Nanopore reads to amplicon reference.")
     parser.add_argument("--data_dir", default="data", help="Directory containing input FASTQ files (default: data)")
-    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--results_dir", default=None, help="Results directory (default: ./results)")
     parser.add_argument("--ref_file", default=None, help="Path to reference FASTA (default: results/ref_seq/target_amplicon.fa)")
     args = parser.parse_args()
 
-    results_dir = os.path.join(args.output_dir, "results")
+    results_dir = args.results_dir if args.results_dir else os.path.join(".", "results")
     align_dir = os.path.join(results_dir, "aligned")
     ref_file = args.ref_file if args.ref_file else os.path.join(results_dir, "ref_seq", "target_amplicon.fa")
 

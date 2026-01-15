@@ -61,10 +61,16 @@ def get_vcf_snps(chrom, start, end):
 
 def main():
     parser = argparse.ArgumentParser(description="Initialize reference sequence and SNPs from primers.")
-    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--results_dir", default=None, help="Results directory (default: ./results/ref_seq)")
     parser.add_argument("--f_primer", default="AC_XistExAmp_5SNPs-F", help="Forward primer ID in ValidatedPrimers.fa")
     parser.add_argument("--r_primer", default="AC_XistExAmp_5SNPs-R", help="Reverse primer ID in ValidatedPrimers.fa")
     args = parser.parse_args()
+
+    # Define results_ref_dir
+    if args.results_dir:
+        results_ref_dir = os.path.join(args.results_dir, "ref_seq")
+    else:
+        results_ref_dir = os.path.join(".", "results", "ref_seq")
 
     # 1. Load Primers
     if not os.path.exists(PRIMER_FILE):
@@ -108,7 +114,6 @@ def main():
     print(f"Found {len(snps)} B6/Cast SNPs in amplicon.")
 
     # 5. Output
-    results_ref_dir = os.path.join(args.output_dir, "results", "ref_seq")
     os.makedirs(results_ref_dir, exist_ok=True)
 
     fasta_path = os.path.join(results_ref_dir, "target_amplicon.fa")

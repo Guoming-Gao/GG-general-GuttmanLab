@@ -56,12 +56,12 @@ def analyze_bam(file_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze alignment statistics from BAM files.")
-    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--results_dir", default=None, help="Results directory (default: ./results)")
     args = parser.parse_args()
 
-    results_dir = os.path.join(args.output_dir, "results")
+    results_dir = args.results_dir if args.results_dir else os.path.join(".", "results")
     align_dir = os.path.join(results_dir, "aligned")
-    csv_dir = os.path.join(results_dir, "csv")
+    reports_dir = os.path.join(results_dir, "reports")
 
     bam_files = glob.glob(os.path.join(align_dir, "*.sorted.bam"))
 
@@ -75,9 +75,9 @@ def main():
         all_stats.append(analyze_bam(f))
 
     df = pd.DataFrame(all_stats)
-    os.makedirs(csv_dir, exist_ok=True)
-    df.to_csv(os.path.join(csv_dir, "alignment_stats.csv"), index=False)
-    print("\nAlignment Summary:")
+    os.makedirs(reports_dir, exist_ok=True)
+    df.to_csv(os.path.join(reports_dir, "alignment_stats.csv"), index=False)
+    print("\nAlignment Summary (saved to reports/):")
     print(df.to_string())
 
 if __name__ == "__main__":

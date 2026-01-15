@@ -3,8 +3,10 @@ import pandas as pd
 import json
 import glob
 
-def generate_consolidated_report(output_dir="."):
-    results_dir = os.path.join(output_dir, "results")
+def generate_consolidated_report(results_dir=None, omit_snps=None):
+    if results_dir is None:
+        results_dir = os.path.join(".", "results")
+
     ref_dir = os.path.join(results_dir, "ref_seq")
     quant_dir = os.path.join(results_dir, "quantification")
     stoich_dir = os.path.join(results_dir, "stoichiometry")
@@ -20,20 +22,19 @@ def generate_consolidated_report(output_dir="."):
         with open(snp_file, "r") as f:
             snps = json.load(f)
 
-    # 2. Gather Quantification Results
-    # Since we removed the summary CSV from the script, we aggregate here
     quant_files = glob.glob(os.path.join(quant_dir, "*_quant.csv"))
     quant_data = []
     for f in quant_files:
         df = pd.read_csv(f)
         sample = os.path.basename(f).replace("_quant.csv", "")
-        total = len(df)
-        b6 = len(df[df['Allele'] == 'B6'])
-        cast = len(df[df['Allele'] == 'Cast'])
-        ratio = cast / total if total > 0 else 0
+        # Consistent with quantify_alleles.py and compare_datasets.py
+        b6 = len(df[df['Allele'].str.startswith('B6', na=False)])
+        cast = len(df[df['Allele'].str.startswith('Cast', na=False)])
+        denom = b6+cast
+        ratio = cast / denom if denom > 0 else 0
         quant_data.append({
             "Sample": sample,
-            "Total Reads": total,
+            "Total Reads": len(df),
             "B6": b6,
             "Cast": cast,
             "Cast Ratio": f"{ratio:.3f}"
@@ -41,8 +42,10 @@ def generate_consolidated_report(output_dir="."):
     quant_df = pd.DataFrame(quant_data)
 
     # 3. Gather Stoichiometry Results
-    # This might still be in a summary CSV if the script outputted one to its local stoich_dir
-    # However, for a standalone report, we can just print the aggregated quantification data
+    stoich_file = os.path.join(stoich_dir, "stoichiometry_summary.csv")
+    stoich_df = pd.DataFrame()
+    if os.path.exists(stoich_file):
+        stoich_df = pd.read_csv(stoich_file)
 
     # Build Markdown
     lines = [
@@ -57,8 +60,16 @@ def generate_consolidated_report(output_dir="."):
         "| :--- | :--- | :--- | :--- |"
     ]
 
+    omit = []
+    if omit_snps:
+        omit = [int(i.strip()) for i in omit_snps.split(",")]
+
     for i, s in enumerate(snps):
-        lines.append(f"| SNP {i+1} | {s['local_pos']} | **{s['b6']}** | **{s['cast']}** |")
+        idx = i + 1
+        if idx in omit:
+            lines.append(f"| ~~SNP {idx}~~ | ~~{s['local_pos']}~~ | ~~{s['b6']}~~ | ~~{s['cast']}~~ | (Omitted)")
+        else:
+            lines.append(f"| SNP {idx} | {s['local_pos']} | **{s['b6']}** | **{s['cast']}** |")
 
     lines.extend([
         "",
@@ -66,9 +77,14 @@ def generate_consolidated_report(output_dir="."):
         "",
         quant_df.to_markdown(index=False),
         "",
-        "## 3. Analysis Parameters",
-        "- **Data Directory**: `data/`",
-        f"- **Reference**: `{os.path.join('results/ref_seq', 'target_amplicon.fa')}`",
+        "## 3. Stoichiometry & Co-occurrence",
+        "Higher values in 'ALL_SNPS' indicate higher confidence in amplicon-specific allele assignment.",
+        "",
+        stoich_df.to_markdown(index=False) if not stoich_df.empty else "No stoichiometry data found.",
+        "",
+        "## 4. Analysis Parameters",
+        "- **Results Directory**: " + results_dir,
+        f"- **Reference**: `{os.path.join(results_dir, 'ref_seq', 'target_amplicon.fa')}`",
         "- **Toolchain**: minimap2, samtools, pysam",
         "",
         "---",
@@ -81,4 +97,9 @@ def generate_consolidated_report(output_dir="."):
     print(f"Report generated: {report_path}")
 
 if __name__ == "__main__":
-    generate_consolidated_report()
+    import argparse
+    parser = argparse.ArgumentParser(description="Generate consolidated report.")
+    parser.add_argument("--results_dir", default=None, help="Results directory (default: ./results)")
+    parser.add_argument("--omit_snps", type=str, default=None, help="Comma-separated SNP indices to omit (1-based)")
+    args = parser.parse_args()
+    generate_consolidated_report(results_dir=args.results_dir, omit_snps=args.omit_snps)

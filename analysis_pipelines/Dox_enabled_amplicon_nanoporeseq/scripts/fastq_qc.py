@@ -39,11 +39,11 @@ def analyze_fastq(file_path):
 def main():
     parser = argparse.ArgumentParser(description="Analyze FASTQ quality metrics.")
     parser.add_argument("--data_dir", default="data", help="Directory containing input FASTQ files (default: data)")
-    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--results_dir", default=None, help="Results directory (default: ./results)")
     args = parser.parse_args()
 
-    results_dir = os.path.join(args.output_dir, "results")
-    csv_dir = os.path.join(results_dir, "csv")
+    results_dir = args.results_dir if args.results_dir else os.path.join(".", "results")
+    reports_dir = os.path.join(results_dir, "reports")
 
     fastq_files = glob.glob(os.path.join(args.data_dir, "*.fastq"))
 
@@ -57,9 +57,9 @@ def main():
         all_stats.append(analyze_fastq(f))
 
     df = pd.DataFrame(all_stats)
-    os.makedirs(csv_dir, exist_ok=True)
-    df.to_csv(os.path.join(csv_dir, "preprocessing_stats.csv"), index=False)
-    print("\nQC Summary:")
+    os.makedirs(reports_dir, exist_ok=True)
+    df.to_csv(os.path.join(reports_dir, "preprocessing_stats.csv"), index=False)
+    print("\nQC Summary (saved to reports/):")
     print(df.to_string())
 
 if __name__ == "__main__":

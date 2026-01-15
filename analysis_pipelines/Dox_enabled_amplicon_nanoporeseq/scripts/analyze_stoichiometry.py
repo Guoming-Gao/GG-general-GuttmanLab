@@ -6,9 +6,10 @@ import argparse
 from collections import Counter
 import itertools
 
-def analyze_stoichiometry(file_path, num_snps, target_bases):
+def analyze_stoichiometry(file_path, snps, target_bases):
     sample_name = os.path.basename(file_path).replace("_quant.csv", "")
     df = pd.read_csv(file_path)
+    num_snps = len(snps)
 
     results = []
 
@@ -23,8 +24,8 @@ def analyze_stoichiometry(file_path, num_snps, target_bases):
         # 1. SNP Hit Distribution
         def count_hits(row):
             hits = 0
-            for i in range(num_snps):
-                if row[f"SNP{i+1}"] == group_target_bases[i]:
+            for i, s in enumerate(snps):
+                if row[s["label"]] == group_target_bases[i]:
                     hits += 1
             return hits
 
@@ -35,23 +36,24 @@ def analyze_stoichiometry(file_path, num_snps, target_bases):
         # 2. Co-occurrence frequencies
         co_occ = {}
         # Individual bits
-        for i in range(num_snps):
-            count = len(group_df[group_df[f"SNP{i+1}"] == group_target_bases[i]])
-            co_occ[f"SNP{i+1}_only"] = count / group_size
+        for i, s in enumerate(snps):
+            count = len(group_df[group_df[s["label"]] == group_target_bases[i]])
+            co_occ[f"{s['label']}_only"] = count / group_size
 
-        # Pairs (top 3 pairs for brevity if many SNPs, but let's do all if few)
+        # Pairs
         if num_snps >= 2:
             pairs = list(itertools.combinations(range(num_snps), 2))
             for p in pairs:
                 idx1, idx2 = p
-                mask = (group_df[f"SNP{idx1+1}"] == group_target_bases[idx1]) & (group_df[f"SNP{idx2+1}"] == group_target_bases[idx2])
+                label1, label2 = snps[idx1]["label"], snps[idx2]["label"]
+                mask = (group_df[label1] == group_target_bases[idx1]) & (group_df[label2] == group_target_bases[idx2])
                 count = len(group_df[mask])
-                co_occ[f"SNP{idx1+1}_&_SNP{idx2+1}"] = count / group_size
+                co_occ[f"{label1}_&_{label2}"] = count / group_size
 
         # All
         mask_all = True
-        for i in range(num_snps):
-            mask_all &= (group_df[f"SNP{i+1}"] == group_target_bases[i])
+        for i, s in enumerate(snps):
+            mask_all &= (group_df[s["label"]] == group_target_bases[i])
         count_all = len(group_df[mask_all])
         co_occ["ALL_SNPS"] = count_all / group_size
 
@@ -69,11 +71,12 @@ def analyze_stoichiometry(file_path, num_snps, target_bases):
 
 def main():
     parser = argparse.ArgumentParser(description="Analyze stoichiometry and co-occurrence from quantification results.")
-    parser.add_argument("--output_dir", default=".", help="Project output directory (default: current directory)")
+    parser.add_argument("--results_dir", default=None, help="Results directory (default: ./results)")
     parser.add_argument("--snp_file", default=None, help="Path to SNP JSON (default: results/ref_seq/snps.json)")
+    parser.add_argument("--omit_snps", type=str, default=None, help="Comma-separated SNP indices to omit (1-based, e.g., '2')")
     args = parser.parse_args()
 
-    results_dir = os.path.join(args.output_dir, "results")
+    results_dir = args.results_dir if args.results_dir else os.path.join(".", "results")
     quant_dir = os.path.join(results_dir, "quantification")
     stoic_dir = os.path.join(results_dir, "stoichiometry")
     snp_file = args.snp_file if args.snp_file else os.path.join(results_dir, "ref_seq", "snps.json")
@@ -88,9 +91,25 @@ def main():
     if os.path.exists(snp_file):
         with open(snp_file, "r") as f:
             snp_data = json.load(f)
-        b6_bases = [s["b6"].split("/")[0] for s in snp_data]
-        cast_bases = [s["cast"].split("/")[0] for s in snp_data]
-        num_snps = len(snp_data)
+
+        omit = []
+        if args.omit_snps:
+            omit = [int(i.strip()) for i in args.omit_snps.split(",")]
+
+        snps = []
+        for i, s in enumerate(snp_data):
+            idx = i + 1
+            if idx in omit:
+                continue
+            snps.append({
+                "label": f"SNP{idx}_{s['local_pos']}",
+                "b6": s["b6"].split("/")[0],
+                "cast": s["cast"].split("/")[0]
+            })
+
+        b6_bases = [s["b6"] for s in snps]
+        cast_bases = [s["cast"] for s in snps]
+        num_snps = len(snps)
         target_bases = {"B6": b6_bases, "Cast": cast_bases}
     else:
         print(f"Error: {snp_file} not found.")
@@ -105,10 +124,12 @@ def main():
 
     for f in quant_files:
         print(f"Analyzing stoichiometry for {f}...")
-        all_results.extend(analyze_stoichiometry(f, num_snps, target_bases))
+        all_results.extend(analyze_stoichiometry(f, snps, target_bases))
 
     summary_df = pd.DataFrame(all_results)
-    print("\nStoichiometry & Co-occurrence Summary:")
+    summary_path = os.path.join(stoic_dir, "stoichiometry_summary.csv")
+    summary_df.to_csv(summary_path, index=False)
+    print(f"\nStoichiometry & Co-occurrence Summary saved to {summary_path}")
     print(summary_df.to_string())
 
 if __name__ == "__main__":
