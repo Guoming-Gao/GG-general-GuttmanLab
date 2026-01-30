@@ -1,0 +1,40 @@
+Refactor: Whole-genome Nanopore pipeline with clear naming and documentation
+
+- Rename scripts with numbered workflow convention (01-07)
+  * 01_fastq_quality_metrics.py (was fastq_qc_new.py)
+  * 02_align_to_genome.py (was align_mode1.py)
+  * 03_extract_snps_from_vcf.py (was extract_snps.py)
+  * 04_quantify_alleles.py (was quantify_mode1.py)
+  * 05_plot_stoichiometry_heatmap.py (was plot_snp_heatmap.py)
+  * 06_compare_multiple_datasets.py (from legacy)
+  * 07_generate_summary_report.py (from legacy)
+  * trim_umi_adapters.py (was trim_mode2.py)
+
+- Remove legacy code (15 files in scripts/legacy/)
+  * Deleted obsolete alignment, QC, and diagnostic scripts
+  * Preserved and refactored compare_datasets.py and generate_reports.py
+
+- Add comprehensive README with usage examples
+  * Step-by-step workflow for Mode 1 (no UMI)
+  * Installation requirements and conda environment
+  * Output file structure and descriptions
+  * Note on experimental Mode 2 (UMI) limitations
+
+- Delete obsolete notebooks and documentation
+  * comparative_pipeline.ipynb
+  * pipeline.ipynb
+  * current_pipeline_walkthrough.md
+  * research_output.md
+  * nano_amplicon_pipeline.py (monolithic old script)
+  * report_style.css
+
+- Implement Mode 1 complete workflow:
+  * FASTQ QC with N50 and length distributions
+  * Whole-genome alignment (minimap2)
+  * VCF-based SNP extraction (101 B6/Cast SNPs)
+  * Per-read allelic quantification
+  * Stoichiometry heatmap visualization
+  * Multi-dataset comparison
+  * Automated report generation
+
+Breaking changes: Script names and directory structure updated
