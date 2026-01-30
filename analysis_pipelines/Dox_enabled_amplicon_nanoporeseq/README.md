@@ -134,9 +134,29 @@ python scripts/07_generate_summary_report.py \
 
 ---
 
-## UMI-Based Analysis (Experimental)
+## UMI-Based Analysis (Mode 2) - FAILED LIBRARY PREP
 
-For UMI-containing libraries, use `trim_umi_adapters.py` to extract 6bp UMIs and trim adapters before alignment.
+> [!CAUTION]
+> **Mode 2 library preparation failed with 98.5% off-target rate**. Only 55 out of 11,436 genome-mapped reads (0.48%) mapped to the Xist locus, yielding just 24 unique molecules across 8 samples. This is **400-500x worse** than Mode 1.
+
+### What Happened
+
+The Mode 2 library has catastrophic off-target amplification:
+- **Trimming worked**: 100% adapter/UMI detection
+- **Alignment worked**: 82% genome mapping rate
+- **Target filtering revealed failure**: Only 0.2-1.7% of mapped reads are Xist amplicons
+- **Most reads are off-target**: 99.5% map to chr11, chr17, chrM, chr13, etc.
+
+### Root Cause
+
+**Library prep issue, not pipeline issue**:
+- Non-specific primer binding across genome
+- Excessive amplification of primer-dimers and off-target products
+- Lack of size selection or target enrichment
+
+### Trimming Script (For Reference)
+
+The `trim_umi_adapters.py` script successfully extracts 6bp UMIs and trims adapters:
 
 ```bash
 python scripts/trim_umi_adapters.py \
@@ -146,7 +166,27 @@ python scripts/trim_umi_adapters.py \
   --r_primer GCAGTCTGGTGTGAGGAACGGC
 ```
 
-**Note**: Current UMI libraries show <2% on-target rate. This workflow is included for reference but **not recommended for production use** until library prep issues are resolved.
+**Outputs**: Trimmed FASTQ with UMIs appended to read headers
+
+### Diagnostic Report
+
+See detailed analysis: `/Volumes/guttman/users/gmgao/Data_seq/20260129-DoxSeqRep1_12mix_UMI/results/mode_2/reports/Mode_2_Diagnostic_Report.md`
+
+**Key findings**:
+- 13,953 raw reads → 11,436 genome-mapped (82%)
+- 11,436 genome-mapped → **55 Xist reads (0.48%)**
+- 55 Xist reads → 24 unique molecules (56% dedup rate)
+- Off-target reads scattered across chr11, chr17, chrM, chr13, chrY
+
+### Recommendations
+
+**Do not use Mode 2 libraries until library prep is optimized**:
+1. Redesign primers for higher Xist specificity
+2. Optimize PCR conditions (lower cycle number, higher annealing temp)
+3. Implement pre-PCR size selection to remove primer-dimers
+4. Validate with qPCR before sequencing
+
+**Use Mode 1 (no UMI) instead**: 80-95% on-target rate, thousands of molecules per sample.
 
 ---
 
