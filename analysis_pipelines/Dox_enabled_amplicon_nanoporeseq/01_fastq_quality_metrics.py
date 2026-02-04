@@ -73,6 +73,9 @@ def run_qc(fastq_dir, output_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_dir", required=True)
-    parser.add_argument("--output_dir", required=True)
+    parser.add_argument("--results_dir", required=True)
     args = parser.parse_args()
-    run_qc(args.data_dir, args.output_dir)
+
+    output_dir = os.path.join(args.results_dir, "qc")
+    print(f"Saving QC results to: {output_dir}")
+    run_qc(args.data_dir, output_dir)

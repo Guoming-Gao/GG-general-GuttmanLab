@@ -40,7 +40,7 @@ def assign_allele(snp_bases, snp_list):
             return "Ambiguous", b6_matches, cast_matches
         return "Noise", b6_matches, cast_matches
 
-def quantify_alleles(bam_dir, snp_file, output_dir):
+def quantify_alleles(bam_dir, snp_file, output_dir, region=None):
     os.makedirs(output_dir, exist_ok=True)
 
     # Load SNPs
@@ -53,17 +53,40 @@ def quantify_alleles(bam_dir, snp_file, output_dir):
             'cast': row['CAST_BASE']
         })
 
+    # Try to find Xist-specific BAMs first
     bam_files = [f for f in os.listdir(bam_dir) if f.endswith(".xist.primary.bam")]
+    suffix = ".xist.primary.bam"
+
+    # Fallback to sorted BAMs if no Xist BAMs found
+    if not bam_files:
+        bam_files = [f for f in os.listdir(bam_dir) if f.endswith(".sorted.bam")]
+        suffix = ".sorted.bam"
+
+    if not bam_files:
+        print(f"Error: No suitable BAM files found in {bam_dir}")
+        return pd.DataFrame()
 
     all_summaries = []
 
     for f in bam_files:
-        sample = f.replace(".xist.primary.bam", "")
-        print(f"Quantifying alleles for {sample}...")
+        sample = f.replace(suffix, "")
+        print(f"Quantifying alleles for {sample} using {f}...")
         results = []
 
         with pysam.AlignmentFile(os.path.join(bam_dir, f), "rb") as sam:
-            for read in sam.fetch():
+            # Handle region fetching
+            fetch_args = {}
+            if region:
+                try:
+                    chrom = region.split(":")[0]
+                    start = int(region.split(":")[1].split("-")[0])
+                    end = int(region.split("-")[1])
+                    fetch_args = {"contig": chrom, "start": start, "stop": end}
+                    print(f"  Filtering for region: {region}")
+                except Exception as e:
+                    print(f"  Warning: Could not parse region {region}. Fetching all reads. Error: {e}")
+
+            for read in sam.fetch(**fetch_args):
                 if read.is_secondary or read.is_supplementary or read.is_unmapped:
                     continue
 
@@ -98,6 +121,12 @@ def quantify_alleles(bam_dir, snp_file, output_dir):
                 "Noise": summary.get("Noise", 0),
                 "Cast_Ratio": summary.get("Cast", 0) / (summary.get("B6", 0) + summary.get("Cast", 0)) if (summary.get("B6", 0) + summary.get("Cast", 0)) > 0 else 0
             })
+        else:
+            print(f"  Warning: No reads found for sample {sample} in the specified region.")
+
+    if not all_summaries:
+        print("Warning: No allelic data quantified for any sample.")
+        return pd.DataFrame()
 
     summary_df = pd.DataFrame(all_summaries)
     summary_df.to_csv(os.path.join(output_dir, "allele_quantification_summary.csv"), index=False)
@@ -108,6 +137,7 @@ if __name__ == "__main__":
     parser.add_argument("--bam_dir", required=True)
     parser.add_argument("--snp_file", required=True)
     parser.add_argument("--output_dir", required=True)
+    parser.add_argument("--region", default=None, help="Genomic region to fetch (e.g. chrX:103460373-103483233)")
     args = parser.parse_args()
 
-    quantify_alleles(args.bam_dir, args.snp_file, args.output_dir)
+    quantify_alleles(args.bam_dir, args.snp_file, args.output_dir, args.region)
