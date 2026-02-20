@@ -1,0 +1,19 @@
+name: smFISHquant
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - tifffile
+  - scipy
+  - pandas
+  - matplotlib
+  - jupyter
+  - ipykernel
+  - scikit-image
+  - pytorch
+  - torchvision
+  - pip
+  - pip:
+      - cellpose
+      - "-e /Users/gmgao/GGscripts/spotiflow"
