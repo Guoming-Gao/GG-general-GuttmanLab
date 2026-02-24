@@ -69,8 +69,8 @@ def batch_process(param_sets):
 if __name__ == "__main__":
     # Define your parameter sets here
     PARAMETER_SETS = [
-        (2, 5),
-        # (1, 3),
+        # (2, 5),
+        (1, 3),
     ]
 
     batch_process(PARAMETER_SETS)
