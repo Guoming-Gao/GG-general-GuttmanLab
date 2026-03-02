@@ -204,7 +204,7 @@ def main():
             left_on="ProbeID",
             right_on="ProbeFullID",
             how="left"
-        )
+        ).drop(columns=["ProbeFullID"], errors="ignore")
 
         # Add parameters to the results dataframe for documentation
         # This fulfills the user request to include parameters in the CSV

@@ -47,6 +47,15 @@ def add_rtbc_barcode(input_file: str, output_file: str, rtbc_sequence: str):
     # Calculate new lengths
     df["Full_Oligo_Length"] = df["Full_Oligo_Seq"].str.len()
 
+    # Reorder columns
+    desired_order = [
+        "ProbeID", "GeneName", "Chromosome", "RegionType",
+        "SNP_Count", "Probe_Start", "Probe_End", "Probe_Seq", "Full_Oligo_Seq"
+    ]
+    first_cols = [col for col in desired_order if col in df.columns]
+    remaining_cols = [col for col in df.columns if col not in first_cols]
+    df = df[first_cols + remaining_cols]
+
     # Save output
     df.to_csv(output_file, index=False)
     print(f"✅ Saved {len(df)} probes to {output_file}")
