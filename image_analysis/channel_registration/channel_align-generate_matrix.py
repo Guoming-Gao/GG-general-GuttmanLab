@@ -7,21 +7,23 @@ import numpy as np
 
 
 # For ONI:
-# path = fd.askopenfilename(title="Choose a combined bead image:")
-# img = imread(path)
-# img_left = img[:, 0:428]
-# img_right = img[:, 428:]
-# imwrite(path[:-4] + "-left.tif", img_left, imagej=True)
-# imwrite(path[:-4] + "-right.tif", img_right, imagej=True)
-# img_left = cv2.imread(path[:-4] + "-left.tif", cv2.IMREAD_GRAYSCALE)
-# img_right = cv2.imread(path[:-4] + "-right.tif", cv2.IMREAD_GRAYSCALE)
+path = fd.askopenfilename(title="Choose a combined bead image:")
+img = imread(path)
+img_left = img[:, 0:428]
+img_right = img[:, 428:]
+path_green = path[:-4] + "-left.tif"
+path_red = path[:-4] + "-right.tif"
+imwrite(path_green, img_left, imagej=True)
+imwrite(path_red, img_right, imagej=True)
+img_green = cv2.imread(path_green, cv2.IMREAD_GRAYSCALE)
+img_red = cv2.imread(path_red, cv2.IMREAD_GRAYSCALE)
 
 
 # For mannual chosen images
-path_red = fd.askopenfilename(title="Choose the red bead image:")
-img_red = cv2.imread(path_red, cv2.IMREAD_GRAYSCALE)
-path_green = fd.askopenfilename(title="Choose the green bead image:")
-img_green = cv2.imread(path_green, cv2.IMREAD_GRAYSCALE)
+# path_red = fd.askopenfilename(title="Choose the red bead image:")
+# img_red = cv2.imread(path_red, cv2.IMREAD_GRAYSCALE)
+# path_green = fd.askopenfilename(title="Choose the green bead image:")
+# img_green = cv2.imread(path_green, cv2.IMREAD_GRAYSCALE)
 
 # Find size of image1
 sz = img_red.shape
