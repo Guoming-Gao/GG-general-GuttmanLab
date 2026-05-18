@@ -231,7 +231,7 @@ class ActivationProcessor:
                 ordered_frames.extend(all_chunk_results[cid][cam])
 
             arr = np.stack(ordered_frames, axis=0)
-            imwrite(out_paths[cam], arr, imagej=True)
+            imwrite(out_paths[cam], arr, imagej=True, metadata={'axes': 'TYX'})
             del arr
             gc.collect()
             progress.advance(task)   # one tick per output file written
