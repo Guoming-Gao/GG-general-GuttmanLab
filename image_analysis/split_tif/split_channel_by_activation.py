@@ -1,8 +1,6 @@
-from tifffile import TiffFile, imwrite
+from tifffile import TiffFile, TiffWriter
 from tkinter import filedialog as fd
 from rich.progress import Progress
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from queue import Queue
 import numpy as np
 import psutil
 import gc
@@ -99,14 +97,17 @@ def _validate_scheme(scheme):
             )
 
 
-def _calculate_chunk_size(max_concurrent_chunks=4):
-    """Calculate chunk size based on available system RAM."""
-    available_ram_gb = psutil.virtual_memory().available / (1024**3)
-    usable_ram_gb = available_ram_gb * 0.8
-    ram_per_chunk = usable_ram_gb / (max_concurrent_chunks + 1)
-    frame_size_mb = 1.4
-    frames_per_chunk = int((ram_per_chunk * 1024) / frame_size_mb)
-    return max(500, min(frames_per_chunk, 3000))
+def _calculate_chunk_size(frame_bytes):
+    """Calculate chunk size based on available RAM and actual frame size.
+
+    Peak memory per activation = 2 × chunk (full frames + two halves).
+    We target at most 50% of available RAM.
+    """
+    available_ram = psutil.virtual_memory().available
+    usable_ram = available_ram * 0.5
+    memory_per_frame = frame_bytes * 2   # full + left_half + right_half ≈ 2× full
+    frames_per_chunk = int(usable_ram / memory_per_frame)
+    return max(100, min(frames_per_chunk, 3000))
 
 
 class ActivationProcessor:
@@ -120,42 +121,18 @@ class ActivationProcessor:
       4. Writes one output TIFF per kept camera, named with the corresponding label.
     """
 
-    def __init__(self, fpath, scheme, max_concurrent_chunks=4):
+    def __init__(self, fpath, scheme):
         self.fpath = fpath
         self.scheme = scheme
-        self.max_concurrent_chunks = max_concurrent_chunks
-        self.chunk_size = _calculate_chunk_size(max_concurrent_chunks)
 
-    # ------------------------------------------------------------------
-    # Low-level workers
-    # ------------------------------------------------------------------
 
-    def _load_frames(self, tif, frame_indices):
-        """Load a list of frame indices from an open TiffFile."""
-        return [tif.pages[idx].asarray() for idx in frame_indices]
-
-    def _split_frames(self, frames, halfwidth, cameras):
+    def _process_activation(self, activation, halfwidth, frame_bytes, act_index, total_acts, progress, task):
         """
-        Split frames vertically and return only the requested camera halves.
+        Load, split, and save frames for a single activation entry using
+        sequential chunked I/O and streaming TiffWriter appends.
 
-        Returns a dict: {camera_side: [frames]}
-        """
-        result = {cam: [] for cam in cameras}
-        for frame in frames:
-            if "left" in cameras:
-                result["left"].append(frame[:, :halfwidth])
-            if "right" in cameras:
-                result["right"].append(frame[:, halfwidth:])
-        return result
-
-    # ------------------------------------------------------------------
-    # Per-activation processing
-    # ------------------------------------------------------------------
-
-    def _process_activation(self, tif, activation, halfwidth, act_index, total_acts, progress, task):
-        """
-        Load, split, and save frames for a single activation entry.
-        Uses chunked parallel I/O to stay memory-efficient.
+        Each chunk opens a fresh TiffFile handle to avoid file-handle sharing.
+        Frames are written immediately after splitting — no full accumulation.
         Advances `task` in the shared `progress` bar once per output file written.
         """
         frame_start = activation["frame_start"] - 1   # convert to 0-based
@@ -166,12 +143,14 @@ class ActivationProcessor:
         num_frames = frame_end - frame_start
         cam_to_label = dict(zip(cameras, labels))
 
-        # Build output paths (no frame-range suffix)
+        # Build output paths
         stem = self.fpath[:-4] if self.fpath.lower().endswith(".tif") else self.fpath
         out_paths = {
             cam: f"{stem}-{cam_to_label[cam]}.tif"
             for cam in cameras
         }
+
+        chunk_size = _calculate_chunk_size(frame_bytes)
 
         print(
             f"  Activation {act_index}/{total_acts}: "
@@ -181,62 +160,56 @@ class ActivationProcessor:
         for cam, path in out_paths.items():
             print(f"    → {cam}: {path.split('/')[-1]}")
 
-        # ---- chunked parallel I/O ----------------------------------------
-        all_chunk_results = {}   # chunk_id -> {cam: [frames]}
+        # ---- streaming write per camera ----------------------------------
+        # Open one TiffWriter per camera output for this activation
+        writers = {
+            cam: TiffWriter(out_paths[cam], bigtiff=True)
+            for cam in cameras
+        }
+        first_written = {cam: True for cam in cameras}
 
-        frame_indices_all = list(range(frame_start, frame_end))
-        chunks_info = []
-        for i in range(0, num_frames, self.chunk_size):
-            chunk_indices = frame_indices_all[i: i + self.chunk_size]
-            chunks_info.append((len(chunks_info), chunk_indices))
+        try:
+            # Sequential chunked I/O
+            for chunk_start in range(0, num_frames, chunk_size):
+                chunk_end = min(chunk_start + chunk_size, num_frames)
+                abs_start = frame_start + chunk_start
+                abs_end   = frame_start + chunk_end
 
-        with ThreadPoolExecutor(
-            max_workers=self.max_concurrent_chunks,
-            thread_name_prefix="IO-Loader",
-        ) as io_executor, ThreadPoolExecutor(
-            max_workers=min(4, psutil.cpu_count() or 1),
-            thread_name_prefix="Processor",
-        ) as proc_executor:
+                with TiffFile(self.fpath) as tif:
+                    for j in range(abs_start, abs_end):
+                        frame = tif.pages[j].asarray()
 
-            # Submit I/O jobs
-            io_futures = {
-                io_executor.submit(self._load_frames, tif, ci[1]): ci[0]
-                for ci in chunks_info
-            }
+                        for cam in cameras:
+                            half = frame[:, :halfwidth] if cam == "left" else frame[:, halfwidth:]
 
-            proc_futures = {}
-            for completed_io in as_completed(io_futures):
-                chunk_id = io_futures[completed_io]
-                try:
-                    frames = completed_io.result()
-                    pf = proc_executor.submit(
-                        self._split_frames, frames, halfwidth, cameras
-                    )
-                    proc_futures[pf] = chunk_id
-                except Exception as e:
-                    print(f"    ✗ Error loading chunk {chunk_id}: {e}")
+                            if first_written[cam]:
+                                # First frame: embed ImageJ-compatible TYX axes metadata
+                                writers[cam].write(
+                                    half,
+                                    contiguous=True,
+                                    metadata={'axes': 'TYX'},
+                                )
+                                first_written[cam] = False
+                            else:
+                                writers[cam].write(
+                                    half,
+                                    contiguous=True,
+                                    metadata=None,
+                                )
 
-            for completed_proc in as_completed(proc_futures):
-                chunk_id = proc_futures[completed_proc]
-                try:
-                    split_result = completed_proc.result()
-                    all_chunk_results[chunk_id] = split_result
-                except Exception as e:
-                    print(f"    ✗ Error processing chunk {chunk_id}: {e}")
+                            del half
 
-        # ---- assemble & write (advances shared progress bar per output file) ----
-        for cam in cameras:
-            ordered_frames = []
-            for cid in sorted(all_chunk_results.keys()):
-                ordered_frames.extend(all_chunk_results[cid][cam])
+                        del frame
 
-            arr = np.stack(ordered_frames, axis=0)
-            imwrite(out_paths[cam], arr, imagej=True, metadata={'axes': 'TYX'})
-            del arr
-            gc.collect()
-            progress.advance(task)   # one tick per output file written
+                gc.collect()
 
-        del all_chunk_results
+        finally:
+            # Close all writers and advance progress bar
+            for cam in cameras:
+                writers[cam].close()
+                progress.advance(task)   # one tick per output file written
+
+        del writers
         gc.collect()
 
     # ------------------------------------------------------------------
@@ -247,24 +220,28 @@ class ActivationProcessor:
         """Process the file, reporting progress into the shared progress bar."""
         with TiffFile(self.fpath) as tif:
             num_frames = len(tif.pages)
-            first_frame = tif.pages[0].asarray()
-            height, width = first_frame.shape
+            page0 = tif.pages[0]
+            height, width = page0.shape
             halfwidth = width // 2
+            dtype = page0.dtype
 
-            print(f"  File: {self.fpath.split('/')[-1]}")
-            print(f"  Frames: {num_frames} | Resolution: {width}×{height} | Halfwidth: {halfwidth}")
+        frame_bytes = height * width * np.dtype(dtype).itemsize
 
-            # Validate frame indices against actual file length
-            for act in self.scheme:
-                if act["frame_end"] > num_frames:
-                    raise ValueError(
-                        f"Activation frame_end={act['frame_end']} exceeds "
-                        f"total frames in file ({num_frames})."
-                    )
+        print(f"  File: {self.fpath.split('/')[-1]}")
+        print(f"  Frames: {num_frames} | Resolution: {width}×{height} | Halfwidth: {halfwidth}")
+        print(f"  Frame size: {frame_bytes / (1024**2):.2f} MB | Available RAM: {psutil.virtual_memory().available / (1024**3):.1f} GB")
 
-            total_acts = len(self.scheme)
-            for idx, activation in enumerate(self.scheme, start=1):
-                self._process_activation(tif, activation, halfwidth, idx, total_acts, progress, task)
+        # Validate frame indices against actual file length
+        for act in self.scheme:
+            if act["frame_end"] > num_frames:
+                raise ValueError(
+                    f"Activation frame_end={act['frame_end']} exceeds "
+                    f"total frames in file ({num_frames})."
+                )
+
+        total_acts = len(self.scheme)
+        for idx, activation in enumerate(self.scheme, start=1):
+            self._process_activation(activation, halfwidth, frame_bytes, idx, total_acts, progress, task)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -296,7 +273,6 @@ def process_files():
                 processor = ActivationProcessor(
                     fpath,
                     ACTIVATION_SCHEME,
-                    max_concurrent_chunks=4,
                 )
                 processor.process(progress, task)
 

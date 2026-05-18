@@ -1,8 +1,6 @@
-from tifffile import TiffFile, imwrite
+from tifffile import TiffFile, TiffWriter
 from tkinter import filedialog as fd
 from rich.progress import Progress
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from queue import Queue
 import numpy as np
 import psutil
 import gc
@@ -10,165 +8,143 @@ import time
 
 
 """
-Parallel TIFF Splitter - Splits large TIFF stacks vertically into left and right halves.
+TIFF Splitter - Splits large TIFF stacks vertically into left and right halves.
 
-Uses chunked parallel I/O and processing pipeline to handle large files efficiently
-while managing memory usage based on available system RAM.
+Uses sequential chunked I/O with streaming writes to handle arbitrarily large
+files while keeping memory usage bounded based on available system RAM.
+
+Architecture:
+  For each chunk (sequential):
+    1. Open a fresh TiffFile handle (avoids thread-safety issues)
+    2. Load chunk_size frames sequentially
+    3. Split each frame into left and right halves
+    4. Append halves to output TiffWriters (streaming, no accumulation)
+    5. Free chunk memory
 """
 
 
 class ChunkProcessor:
-    def __init__(self, fpath, max_concurrent_chunks=4):
+    def __init__(self, fpath):
         self.fpath = fpath
-        self.max_concurrent_chunks = max_concurrent_chunks
-        self.chunk_queue = Queue(maxsize=max_concurrent_chunks + 1)
-        self.results_queue = Queue()
-        self.chunk_size = self._calculate_chunk_size()
 
-    def _calculate_chunk_size(self):
-        """Calculate chunk size allowing for multiple chunks in memory"""
-        available_ram_gb = psutil.virtual_memory().available / (1024**3)
-        usable_ram_gb = available_ram_gb * 0.8  # Use 80% of available RAM
+    def _calculate_chunk_size(self, frame_bytes):
+        """Calculate chunk size based on available RAM and actual frame size.
 
-        # Reserve memory for multiple chunks + processing overhead
-        ram_per_chunk = usable_ram_gb / (self.max_concurrent_chunks + 1)
-        frame_size_mb = 1.4
-        frames_per_chunk = int((ram_per_chunk * 1024) / frame_size_mb)
+        We need memory for:
+          - 1 chunk of full frames (loaded from disk)
+          - 1 chunk of left halves (before writing)
+          - 1 chunk of right halves (before writing)
+        So peak memory ≈ 2× chunk of full frames (halves sum to 1 full).
+        We target using at most 50% of available RAM.
+        """
+        available_ram = psutil.virtual_memory().available
+        usable_ram = available_ram * 0.5  # Conservative: use 50% of available
 
-        return max(500, min(frames_per_chunk, 3000))  # 500-3000 frames per chunk
+        # Each frame held in memory: full + left_half + right_half = 2× full
+        memory_per_frame = frame_bytes * 2
+        frames_per_chunk = int(usable_ram / memory_per_frame)
 
-    def load_chunk_worker(self, tif, chunk_info):
-        """Worker function to load a single chunk"""
-        chunk_id, start_idx, end_idx = chunk_info
+        # Clamp to reasonable range: 100-3000 frames per chunk
+        chunk_size = max(100, min(frames_per_chunk, 3000))
+        return chunk_size
 
-        chunk_frames = []
-        for j in range(start_idx, end_idx):
-            chunk_frames.append(tif.pages[j].asarray())
+    def process_file(self):
+        """Process the TIFF file: split into left and right halves with streaming writes."""
 
-        return chunk_id, chunk_frames
-
-    def process_chunk_worker(self, chunk_data, halfwidth):
-        """Worker function to process a single chunk"""
-        chunk_id, chunk_frames = chunk_data
-
-        processed_left = []
-        processed_right = []
-
-        for frame in chunk_frames:
-            left_half = frame[:, :halfwidth]
-            right_half = frame[:, halfwidth:]
-            processed_left.append(left_half)
-            processed_right.append(right_half)
-
-        return chunk_id, processed_left, processed_right
-
-    def process_file_parallel(self):
+        # --- Phase 1: Read metadata (lightweight, no frame data loaded) ---
         with TiffFile(self.fpath) as tif:
             num_frames = len(tif.pages)
-            first_frame = tif.pages[0].asarray()
-            height, width = first_frame.shape
+            page0 = tif.pages[0]
+            height, width = page0.shape
+            dtype = page0.dtype
             halfwidth = width // 2
 
-            # Create output paths
-            left_path = self.fpath[:-4] + "-cropped-left.tif"
-            right_path = self.fpath[:-4] + "-cropped-right.tif"
+        frame_bytes = height * width * np.dtype(dtype).itemsize
+        chunk_size = self._calculate_chunk_size(frame_bytes)
 
-            # Calculate chunks
-            chunks_info = []
-            for i in range(0, num_frames, self.chunk_size):
-                end_idx = min(i + self.chunk_size, num_frames)
-                chunks_info.append((len(chunks_info), i, end_idx))
+        # Create output paths
+        left_path = self.fpath[:-4] + "-cropped-left.tif"
+        right_path = self.fpath[:-4] + "-cropped-right.tif"
 
+        # Calculate chunk boundaries
+        chunks = []
+        for start in range(0, num_frames, chunk_size):
+            end = min(start + chunk_size, num_frames)
+            chunks.append((start, end))
 
-            # Accumulate all processed frames keyed by chunk_id
-            all_chunks = {}  # chunk_id -> (left_frames, right_frames)
+        n_chunks = len(chunks)
+        print(f"  {num_frames} frames, {height}×{width} {dtype}")
+        print(f"  Chunk size: {chunk_size} frames, {n_chunks} chunks")
+        print(f"  Available RAM: {psutil.virtual_memory().available / (1024**3):.1f} GB")
 
-            with ThreadPoolExecutor(
-                max_workers=self.max_concurrent_chunks,
-                thread_name_prefix="IO-Loader",
-            ) as io_executor, ThreadPoolExecutor(
-                max_workers=min(4, psutil.cpu_count()),
-                thread_name_prefix="Processor",
-            ) as process_executor:
+        # --- Phase 2: Sequential load → split → stream-write ---
+        with TiffWriter(left_path, bigtiff=True) as writer_left, \
+             TiffWriter(right_path, bigtiff=True) as writer_right:
 
-                with Progress() as progress:
-                    load_task = progress.add_task(
-                        "[cyan]Loading   ", total=len(chunks_info)
-                    )
-                    process_task = progress.add_task(
-                        "[yellow]Processing", total=len(chunks_info)
-                    )
-
-                    # Submit all I/O jobs
-                    io_futures = {}
-                    for chunk_info in chunks_info:
-                        future = io_executor.submit(
-                            self.load_chunk_worker, tif, chunk_info
-                        )
-                        io_futures[future] = chunk_info[0]  # chunk_id
-
-                    # As I/O completes, submit processing jobs
-                    process_futures = {}
-                    for completed_io in as_completed(io_futures):
-                        try:
-                            chunk_id, chunk_frames = completed_io.result()
-                            progress.advance(load_task)
-
-                            process_future = process_executor.submit(
-                                self.process_chunk_worker,
-                                (chunk_id, chunk_frames),
-                                halfwidth,
-                            )
-                            process_futures[process_future] = chunk_id
-
-                        except Exception as e:
-                            print(f"Error loading chunk {io_futures[completed_io]}: {e}")
-
-                    # Collect all processing results
-                    for completed_process in as_completed(process_futures):
-                        try:
-                            p_chunk_id, left_frames, right_frames = completed_process.result()
-                            all_chunks[p_chunk_id] = (left_frames, right_frames)
-                            progress.advance(process_task)
-                        except Exception as e:
-                            print(f"Error in processing: {e}")
-
-            # Assemble frames in order and write as ImageJ-compatible TIFF
             with Progress() as progress:
-                write_task = progress.add_task("[green]Writing   ", total=4)
+                task = progress.add_task(
+                    "[cyan]Processing", total=num_frames
+                )
 
-                all_left = []
-                all_right = []
-                for chunk_id in sorted(all_chunks.keys()):
-                    left_frames, right_frames = all_chunks[chunk_id]
-                    all_left.extend(left_frames)
-                    all_right.extend(right_frames)
-                    del all_chunks[chunk_id]
+                first_frame_written = True  # flag to write ImageJ metadata on first frame only
+
+                for chunk_idx, (start, end) in enumerate(chunks):
+
+                    # Load chunk: open a fresh TiffFile handle for each chunk
+                    # to avoid any file-handle sharing issues
+                    with TiffFile(self.fpath) as tif:
+                        for j in range(start, end):
+                            frame = tif.pages[j].asarray()
+                            left_half = frame[:, :halfwidth]
+                            right_half = frame[:, halfwidth:]
+
+                            if first_frame_written:
+                                # First frame: embed ImageJ-compatible TYX axes metadata
+                                # so Fiji interprets the stack as a time-series
+                                writer_left.write(
+                                    left_half,
+                                    contiguous=True,
+                                    metadata={'axes': 'TYX'},
+                                )
+                                writer_right.write(
+                                    right_half,
+                                    contiguous=True,
+                                    metadata={'axes': 'TYX'},
+                                )
+                                first_frame_written = False
+                            else:
+                                # Subsequent frames: contiguous=True reuses the same IFD
+                                writer_left.write(
+                                    left_half,
+                                    contiguous=True,
+                                    metadata=None,
+                                )
+                                writer_right.write(
+                                    right_half,
+                                    contiguous=True,
+                                    metadata=None,
+                                )
+
+                            del frame, left_half, right_half
+                            progress.advance(task)
+
                     gc.collect()
 
-                left_array = np.stack(all_left, axis=0)
-                del all_left
-                gc.collect()
-                progress.advance(write_task)  # 1/4 stacked left
+        # --- Phase 3: Verify output frame count ---
+        with TiffFile(left_path) as tif:
+            n_left = len(tif.pages)
+        with TiffFile(right_path) as tif:
+            n_right = len(tif.pages)
 
-                imwrite(left_path, left_array, imagej=True)
-                del left_array
-                gc.collect()
-                progress.advance(write_task)  # 2/4 wrote left
-
-                right_array = np.stack(all_right, axis=0)
-                del all_right
-                gc.collect()
-                progress.advance(write_task)  # 3/4 stacked right
-
-                imwrite(right_path, right_array, imagej=True)
-                del right_array
-                gc.collect()
-                progress.advance(write_task)  # 4/4 wrote right
+        if n_left != num_frames or n_right != num_frames:
+            print(f"  ⚠️  Frame count mismatch! Expected {num_frames}, "
+                  f"got left={n_left}, right={n_right}")
+        else:
+            print(f"  ✅ Verified: {n_left} left + {n_right} right frames written")
 
 
 # Main processing function
-def process_files_parallel():
+def process_files():
     print("Choose the tif files for crop")
     lst_files = list(fd.askopenfilenames())
 
@@ -178,15 +154,15 @@ def process_files_parallel():
         try:
             start_time = time.time()
 
-            processor = ChunkProcessor(fpath, max_concurrent_chunks=4)
-            processor.process_file_parallel()
+            processor = ChunkProcessor(fpath)
+            processor.process_file()
 
             end_time = time.time()
-            print(f"✅ Done in {end_time - start_time:.1f}s")
+            print(f"  ✅ Done in {end_time - start_time:.1f}s")
 
         except Exception as e:
-            print(f"❌ Error processing {fpath}: {str(e)}")
+            print(f"  ❌ Error processing {fpath}: {str(e)}")
 
 
 if __name__ == "__main__":
-    process_files_parallel()
+    process_files()
