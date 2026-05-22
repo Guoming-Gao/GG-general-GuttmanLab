@@ -1,0 +1,68 @@
+input_dir: data
+output_dir: results
+object_pattern: '*-SACD-left.tif'
+intensity_pattern: '*-SACD-right.tif'
+pixel_size_nm: 58.5
+radius_nm: 1000
+radius_px: 26
+max_fovs: 1
+cellpose:
+  use_existing_masks: true
+  diameter: 120
+  flow_threshold: 0.4
+  cellprob_threshold: 0.0
+  device: cpu
+  downsample: 0.5
+  preprocess:
+    method: sacd_percentile
+    lower_percentile: 1
+    upper_percentile: 99.8
+    background_percentile: 1
+    gamma: 1.0
+    gaussian_sigma: 0
+spotiflow:
+  use_existing_spots: true
+  pretrained_model: general
+  probability_threshold: 0.4
+  min_distance: 1
+  exclude_border: 1
+  normalizer: auto
+  device: cpu
+nucleus_filter:
+  enabled: true
+  min_nucleus_area_px: 15000
+  min_edge_distance_px: 20
+rdf:
+  mode: per_hub_annular
+  radius_nm: 1000
+  bin_width_nm: 100
+  bin_step_nm: 50
+  normalization: local_intensity_mean
+  tail_normalization:
+    enabled: false
+    last_n_bins: 5
+  aggregation:
+    plot_column: h3k27ac_rdf_local_norm
+hub_filter:
+  enabled: true
+  metric: spotiflow_intensity
+  threshold_source: nucleus_spen_median_plus_std
+  std_multiplier: 2.0
+  rule: greater_equal
+hub_filter_comparison:
+  enabled: true
+  std_multipliers:
+  - 1
+  - 2
+  - 3
+  output_root: results/hub_filter_comparison
+qc:
+  make_overlays: true
+  max_points_draw: 5000
+  contrast_lower_percentile: 1
+  contrast_upper_percentile: 99.8
+  nucleus_crop_padding_px: 25
+  hub_circle_size: 36
+  scale_bar_um: 1.0
+progress:
+  enabled: true

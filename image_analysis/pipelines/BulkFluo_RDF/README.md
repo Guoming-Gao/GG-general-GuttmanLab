@@ -8,6 +8,9 @@ Lightweight per-hub RDF pipeline for paired SPEN/H3K27ac SACD images.
 - `intensity channel`: H3K27ac `*-SACD-right.tif`; Cellpose segments nuclei and RDF measures H3K27ac intensity around hubs.
 - `nucleus`: labeled mask defining valid pixels for local per-hub RDF.
 
+Pairing also supports SACDpy filenames such as `*-SACDpy-left.tif` and
+`*-SACDpy-right.tif`; both suffix styles resolve to the same FOV key.
+
 The main RDF method is per-hub annular RDF. Each retained SPEN hub gets its own
 H3K27ac radial profile using overlapping physical bins clipped to the hub's
 parent nucleus. The older Sofi summed-source model was tested but is not the
@@ -17,21 +20,26 @@ nucleus contains many SPEN hubs and H3K27ac has other biological determinants.
 
 ## Environment
 
-Run everything in `smlm`:
+The main user workflow is `BulkFluoRDF_pipeline.ipynb`. Set paths and analysis
+parameters in the notebook parameter cell; the notebook writes
+`<output_dir>/run_config.generated.yaml` so the exact run can be repeated from
+the terminal.
+
+Run command-line checks in `smlm`:
 
 ```bash
 conda run -n smlm python BulkFluoRDF.py check
-conda run -n smlm python BulkFluoRDF.py pair --config config.yaml
-conda run -n smlm python BulkFluoRDF.py run --config config.yaml
-conda run -n smlm python BulkFluoRDF.py compare-hub-filters --config config.yaml
-conda run -n smlm python BulkFluoRDF.py compare-detectors --config config.yaml
-conda run -n smlm python BulkFluoRDF.py screen-spotiflow --config config.yaml
+conda run -n smlm python BulkFluoRDF.py pair --config results/run_config.generated.yaml
+conda run -n smlm python BulkFluoRDF.py run --config results/run_config.generated.yaml
+conda run -n smlm python BulkFluoRDF.py compare-hub-filters --config results/run_config.generated.yaml
 ```
 
 Installed/required key packages: `cellpose`, `spotiflow`, `torch`, `numpy`, `pandas`, `scipy`, `scikit-image`, `matplotlib`, `tifffile`, `pyyaml`.
 
-`config.yaml` currently points at the full `undiff` SACD dataset and uses saved
-masks/spots when available. CellposeSAM is called in the same nuclei-only style as
+`config.yaml` is now a minimal CLI/demo example for backward compatibility. It
+points at the bundled `data/` sample pair and writes to `results/`; users should
+normally edit the notebook parameter cell instead of hand-editing YAML.
+CellposeSAM is called in the same nuclei-only style as
 `/Users/gmgao/GGscripts/GG-general-GuttmanLab/image_analysis/segmentation/gui_CellposeSAM_run.py`.
 For SACD images, the default Cellpose input preprocessing uses percentile
 background subtraction/rescaling rather than max-only normalization, because the
@@ -48,10 +56,11 @@ Distance defaults are `pixel_size_nm: 58.5`, `rdf.radius_nm: 1000`,
 `0-100 nm`, `50-150 nm`, `100-200 nm`.
 
 Hub filtering compares Spotiflow's `object_intensity` value, reported as
-`spotiflow_intensity`, against the median plus one STD of SPEN pixel intensities
-inside that hub's own nucleus. This uses the raw SPEN nucleus pixel distribution,
-not the detected spot intensity distribution. Use `compare-hub-filters` to
-generate median + 1/2/3 STD comparison result folders.
+`spotiflow_intensity`, against the median plus the configured STD multiplier of
+SPEN pixel intensities inside that hub's own nucleus. The default multiplier is
+2.0. This uses the raw SPEN nucleus pixel distribution, not the detected spot
+intensity distribution. Use `compare-hub-filters` to generate median + 1/2/3 STD
+comparison result folders.
 
 QC overlays use robust percentile contrast controlled by
 `qc.contrast_lower_percentile` and `qc.contrast_upper_percentile`. One PNG is
@@ -67,7 +76,8 @@ bars.
 
 - `BulkFluoRDF.py`: reusable functions and CLI.
 - `BulkFluoRDF_pipeline.ipynb`: notebook wrapper for running and QC.
-- `config.yaml`: paths and parameters.
+- `config.yaml`: minimal CLI/demo example.
+- `config.exploratory.yaml`: optional detector-comparison and Spotiflow-screen settings.
 - `results/`: generated outputs.
 
 Main outputs:
@@ -75,7 +85,6 @@ Main outputs:
 - `results/paired_inputs.csv`
 - `results/nucleus_masks/`
 - `results/nucleus_qc.csv`
-- `results/spotiflow_cache/`
 - `results/hub_properties.csv`
 - `results/hub_rdf_results.csv`
 - `results/aggregated_rdf_summary.csv`
@@ -84,6 +93,14 @@ Main outputs:
 - `results/qc_overlays/overlays/`
 
 Set `cellpose.use_existing_masks` or `spotiflow.use_existing_spots` to `true` to reuse saved outputs.
+Spotiflow pretrained models are cached once under `cache/spotiflow_models/`
+inside this repo, while Matplotlib runtime files are cached under
+`<output_dir>/.cache/matplotlib`; users do not need to choose separate cache
+paths.
+Pipeline runs show a Rich progress bar with elapsed time and estimated time
+remaining when `progress.enabled: true`.
+Use notebook `compute_device: auto` to let both Cellpose and Spotiflow use GPU
+when available (`mps` on Apple Silicon, CUDA on NVIDIA, CPU otherwise).
 
 Current RDF defaults use Spotiflow `probability_threshold: 0.4`,
 `min_distance: 1`, per-hub annular RDF, local-intensity H3K27ac normalization,
@@ -101,7 +118,13 @@ SPEN hub puncta.
 The default Spotiflow comparison keeps `min_distance: 3` fixed and sweeps only
 probability threshold.
 
-Outputs are written to `results/detector_comparison/`:
+These exploratory settings live in `config.exploratory.yaml`, separate from the
+main notebook-first workflow. Outputs are written to `results/detector_comparison/`:
+
+```bash
+conda run -n smlm python BulkFluoRDF.py compare-detectors --config config.exploratory.yaml
+conda run -n smlm python BulkFluoRDF.py screen-spotiflow --config config.exploratory.yaml
+```
 
 - `detections.csv`
 - `summary.csv`
@@ -120,7 +143,7 @@ filter where `spotiflow_intensity >= median(SPEN pixels inside that nucleus) + 2
 Compare median + 1/2/3 STD hub filters without rerunning Cellpose or Spotiflow:
 
 ```bash
-conda run -n smlm python BulkFluoRDF.py compare-hub-filters --config config.yaml
+conda run -n smlm python BulkFluoRDF.py compare-hub-filters --config results/run_config.generated.yaml
 ```
 
 Outputs are written under `results/hub_filter_comparison/`. Each condition

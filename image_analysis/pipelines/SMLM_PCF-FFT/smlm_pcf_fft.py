@@ -140,51 +140,19 @@ def calculate_pcf_fft(points1, points2, mask, pixel_size, x_min, y_min, bin_star
         print("Computing FFT boundary correction...")
     edge_cor = compute_fft_boundary_correction(mask, pixel_size, r_centers)
     
-    # 3. Compute raw binned pair counts
-    N_pairs = np.zeros(len(bin_starts), dtype=np.int64)
-    chunk_size = 5000
+    # 3. Compute raw binned pair counts using high-performance KDTree.count_neighbors
+    unique_radii = np.unique(np.concatenate([bin_starts, bin_ends]))
     
     if mode == 'auto':
         tree = KDTree(pts1_filtered)
-        for start_idx in range(0, len(pts1_filtered), chunk_size):
-            end_idx = min(start_idx + chunk_size, len(pts1_filtered))
-            chunk = pts1_filtered[start_idx:end_idx]
-            indices = tree.query_ball_point(chunk, r_max)
-            
-            lengths = np.array([len(x) for x in indices])
-            flat_i = np.repeat(np.arange(len(chunk)), lengths)
-            non_empty = [np.array(x, dtype=np.int64) for x in indices if len(x) > 0]
-            if non_empty:
-                flat_neighbors = np.concatenate(non_empty)
-                actual_i_arr = start_idx + flat_i
-                valid = flat_neighbors > actual_i_arr
-                if np.any(valid):
-                    v_neighbors = flat_neighbors[valid]
-                    v_i = flat_i[valid]
-                    diff = pts1_filtered[v_neighbors] - chunk[v_i]
-                    dists = np.linalg.norm(diff, axis=1)
-                    for b_idx, (bs, be) in enumerate(zip(bin_starts, bin_ends)):
-                        N_pairs[b_idx] += np.sum((dists >= bs) & (dists < be))
-                        
-        # Multiply by 2 to account for both directions (i to j and j to i)
-        N_pairs = N_pairs * 2
-        
+        cum_counts = tree.count_neighbors(tree, unique_radii)
     else:
+        tree1 = KDTree(pts1_filtered)
         tree2 = KDTree(pts2_filtered)
-        for start_idx in range(0, len(pts1_filtered), chunk_size):
-            end_idx = min(start_idx + chunk_size, len(pts1_filtered))
-            chunk = pts1_filtered[start_idx:end_idx]
-            indices = tree2.query_ball_point(chunk, r_max)
-            
-            lengths = np.array([len(x) for x in indices])
-            flat_i = np.repeat(np.arange(len(chunk)), lengths)
-            non_empty = [np.array(x, dtype=np.int64) for x in indices if len(x) > 0]
-            if non_empty:
-                flat_neighbors = np.concatenate(non_empty)
-                diff = pts2_filtered[flat_neighbors] - chunk[flat_i]
-                dists = np.linalg.norm(diff, axis=1)
-                for b_idx, (bs, be) in enumerate(zip(bin_starts, bin_ends)):
-                    N_pairs[b_idx] += np.sum((dists >= bs) & (dists < be))
+        cum_counts = tree1.count_neighbors(tree2, unique_radii)
+        
+    counts_map = {r: count for r, count in zip(unique_radii, cum_counts)}
+    N_pairs = np.array([counts_map[be] - counts_map[bs] for bs, be in zip(bin_starts, bin_ends)], dtype=np.int64)
                     
     # 4. Calculate normalization factor
     area = np.sum(mask) * (pixel_size ** 2)

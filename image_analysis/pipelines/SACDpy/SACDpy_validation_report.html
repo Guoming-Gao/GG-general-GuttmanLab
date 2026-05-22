@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>SACDpy_validation_report</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<h1 id="sacdpy-validation-report">SACDpy Validation Report</h1>
+<p>Date: 2026-05-20<br />
+Package path:
+<code>/Users/gmgao/GGscripts/GG-general-GuttmanLab/image_analysis/pipelines/SACDpy</code></p>
+<h2 id="attestation-summary">Attestation Summary</h2>
+<p>The Python implementation in <code>src/sacdpy</code> is a valid core
+port of the MATLAB SACDm default reconstruction pipeline for the
+provided 2D SACD test stacks. The implementation was built from the
+MATLAB source at <code>/Users/gmgao/GGscripts/SACDm</code> and validated
+against the two ImageJ/SACDj processed reference outputs in
+<code>tests/testdata/</code>.</p>
+<p>This report supersedes the earlier validation run that used
+<code>NA=1.3</code>. The microscope objective used for the provided data
+has <code>NA=1.45</code>, and the ImageJ references were generated with
+that value.</p>
+<p>This attestation applies to the core SACD path:</p>
+<ol type="1">
+<li>per-frame offset removal</li>
+<li>pre Richardson-Lucy deconvolution</li>
+<li>lateral Fourier interpolation</li>
+<li>autocumulant calculation</li>
+<li>post Richardson-Lucy deconvolution</li>
+</ol>
+<p>Advanced SACDm branches are intentionally outside this validation
+scope: registration, wavelet background subtraction, GPU execution, and
+sparse Hessian deconvolution. Those options raise
+<code>NotImplementedError</code> in the Python port instead of producing
+unvalidated approximations.</p>
+<h2 id="reference-data-and-parameters">Reference Data and
+Parameters</h2>
+<p>The validation used the bundled test files:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Raw stack</th>
+<th>ImageJ SACD reference</th>
+<th>Parameters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Left</td>
+<td><code>tests/testdata/TXSHA-undiff-SPEN_JF549_H3K27ac_DL650-SACD-FOV-1-left.tif</code></td>
+<td><code>tests/testdata/TXSHA-undiff-SPEN_JF549_H3K27ac_DL650-SACD-FOV-1-SACD-left.tif</code></td>
+<td><code>pixel=117 nm</code>, <code>wavelength=560 nm</code>,
+<code>NA=1.45</code></td>
+</tr>
+<tr>
+<td>Right</td>
+<td><code>tests/testdata/TXSHA-undiff-SPEN_JF549_H3K27ac_DL650-SACD-FOV-1-right.tif</code></td>
+<td><code>tests/testdata/TXSHA-undiff-SPEN_JF549_H3K27ac_DL650-SACD-FOV-1-SACD-right.tif</code></td>
+<td><code>pixel=117 nm</code>, <code>wavelength=647 nm</code>,
+<code>NA=1.45</code></td>
+</tr>
+</tbody>
+</table>
+<p>Both raw stacks are <code>50 x 684 x 428</code> TIFF stacks. Both
+ImageJ reference outputs are <code>1368 x 856</code>, matching the
+expected <code>2x</code> lateral SACD reconstruction.</p>
+<p>The validation used the following shared SACD parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mag</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td><code>NA</code></td>
+<td><code>1.45</code></td>
+</tr>
+<tr>
+<td><code>iter1</code></td>
+<td><code>7</code></td>
+</tr>
+<tr>
+<td><code>iter2</code></td>
+<td><code>8</code></td>
+</tr>
+<tr>
+<td><code>ACorder</code></td>
+<td><code>2</code></td>
+</tr>
+<tr>
+<td><code>subfactor</code></td>
+<td><code>0.8</code></td>
+</tr>
+<tr>
+<td><code>scale</code></td>
+<td><code>2</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="validation-results">Validation Results</h2>
+<p>Validation command:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">PYTHONPATH</span><span class="op">=</span>src <span class="ex">conda</span> run <span class="at">-n</span> smlm python tests/validate_testdata.py</span></code></pre></div>
+<p>Measured results:</p>
+<table>
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 11%" />
+<col style="width: 15%" />
+<col style="width: 15%" />
+<col style="width: 15%" />
+<col style="width: 15%" />
+<col style="width: 15%" />
+</colgroup>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Output</th>
+<th style="text-align: right;">Shape</th>
+<th style="text-align: right;">Pearson corr.</th>
+<th style="text-align: right;">SSIM</th>
+<th style="text-align: right;">NRMSE</th>
+<th style="text-align: right;">MAE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Left</td>
+<td><code>tests/outputs/sacdpy-left.tif</code></td>
+<td style="text-align: right;"><code>1368 x 856</code></td>
+<td style="text-align: right;"><code>0.8848</code></td>
+<td style="text-align: right;"><code>0.2609</code></td>
+<td style="text-align: right;"><code>0.6675</code></td>
+<td style="text-align: right;"><code>0.0821</code></td>
+</tr>
+<tr>
+<td>Right</td>
+<td><code>tests/outputs/sacdpy-right.tif</code></td>
+<td style="text-align: right;"><code>1368 x 856</code></td>
+<td style="text-align: right;"><code>0.8455</code></td>
+<td style="text-align: right;"><code>0.9492</code></td>
+<td style="text-align: right;"><code>0.5251</code></td>
+<td style="text-align: right;"><code>0.0032</code></td>
+</tr>
+</tbody>
+</table>
+<p>The normalized Pearson correlations show strong agreement in
+reconstructed spatial structure for both channels. Correcting the NA
+from <code>1.3</code> to <code>1.45</code> improved the right-channel
+agreement and kept the left-channel structural correlation stable. The
+left-channel SSIM remains lower despite high Pearson correlation, which
+is consistent with differences in dynamic-range scaling and local
+intensity distribution between the Python output and the ImageJ-rendered
+reference TIFF. The validation therefore treats these ImageJ files as
+similarity references, not bit-exact gold standards.</p>
+<h2 id="automated-tests">Automated Tests</h2>
+<p>Test command:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">PYTHONPATH</span><span class="op">=</span>src <span class="ex">conda</span> run <span class="at">-n</span> smlm python <span class="at">-m</span> unittest discover <span class="at">-s</span> tests</span></code></pre></div>
+<p>Result:</p>
+<pre class="text"><code>Ran 17 tests in 26.103s
+OK</code></pre>
+<p>Coverage includes:</p>
+<ul>
+<li>TIFF stack axis handling from <code>TYX</code> to internal
+<code>YXT</code></li>
+<li>RSF and PSF normalization</li>
+<li>2D/3D lateral Fourier interpolation output shape and finite
+values</li>
+<li>autocumulant order 2 and order 4 MATLAB formula parity</li>
+<li>full reconstruction path on both bundled test stacks</li>
+</ul>
+<h2 id="validity-statement">Validity Statement</h2>
+<p>Based on source-level porting from MATLAB SACDm, successful unit
+tests, correct output dimensions, finite nonnegative reconstructions,
+and strong normalized similarity to the provided ImageJ/SACDj reference
+outputs, the current Python implementation is valid for the core SACD
+reconstruction workflow represented by the bundled test data.</p>
+<p>The implementation should not be represented as full SACDm parity
+until the advanced MATLAB options are separately ported and
+validated.</p>
+</body>
+</html>

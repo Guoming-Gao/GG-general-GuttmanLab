@@ -1,0 +1,205 @@
+condition,results_dir,pcf_type,r_center_nm,mean_G,sem_G,n_nuclei,color
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,50.0,0.893572082044435,0.0440813329264311,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,70.0,0.8948966567055229,0.043858502023177,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,90.0,0.895801599442248,0.0435447595761418,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,110.0,0.895557903739561,0.0429550848834944,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,130.0,0.8941325146409599,0.0421765665872978,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,150.0,0.8914434367133609,0.041270859896814,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,170.0,0.8881363821341549,0.0402134651052817,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,190.0,0.8845046060803556,0.038997704391425,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,210.0,0.8811379021739439,0.0377475409665698,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,230.0,0.8784292972909932,0.0365271908318785,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,250.0,0.8768356543562158,0.0354209289058819,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,270.0,0.8762405931022631,0.0345952867585875,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,290.0,0.8764460944926372,0.0340896217671671,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,310.0,0.8774569711345906,0.0338975561168572,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,330.0,0.8792139201830916,0.0339833786261686,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,350.0,0.8815398080690957,0.0341920750920518,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,370.0,0.884321225173581,0.0343993236913856,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,390.0,0.8873844597577306,0.0344695262545425,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,410.0,0.8905250136370536,0.0344023222404371,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,430.0,0.893678186634901,0.0341529239725119,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,450.0,0.8968083706433212,0.0337886353325977,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,470.0,0.9000324145695001,0.0333886912400647,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,490.0,0.9035479443011436,0.0330700523659642,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,510.0,0.9072748325182032,0.0327990242401438,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,530.0,0.9111578358416916,0.0326503046997459,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,550.0,0.9151241114224392,0.0326917640564802,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,570.0,0.9189616276697198,0.0328167231110511,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,590.0,0.9226067063814486,0.0330050049811394,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,610.0,0.9262308932005404,0.0332089191171224,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,630.0,0.9298133354831672,0.0333570831032189,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,650.0,0.9334059321605268,0.0333454650018844,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,670.0,0.9370174427664458,0.0332175757374165,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,690.0,0.940506093567367,0.0329411263182108,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,710.0,0.9437856678907364,0.0325561371509561,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,730.0,0.9466955520101528,0.0320157189232141,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,750.0,0.949241080984978,0.0314373091310415,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,770.0,0.951598475083102,0.0308323408943486,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,790.0,0.95380827955569,0.0302319035678834,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,810.0,0.9559486246122972,0.0296565202321853,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,830.0,0.958118284917376,0.0292004147562658,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,850.0,0.9603375975579034,0.0288801542320207,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,870.0,0.962470030421636,0.0286590723448008,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,890.0,0.9646632982935806,0.0285510770597013,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,910.0,0.9667768102065524,0.0285255682675665,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,930.0,0.9688048895386778,0.0285281031462601,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,950.0,0.9706484365018296,0.0284820077090936,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,970.0,0.9723656777636088,0.028412866431007,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,990.0,0.9738487071674636,0.0283531480073314,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,1010.0,0.975176992843352,0.0282972790747284,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,1030.0,0.9764434319659078,0.0282955367411314,8,#0072B2
+undifferentiated,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/undiff,cross,1050.0,0.9777065518860116,0.0283469936841322,8,#0072B2
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,50.0,0.9874002668806202,0.0227704544515478,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,70.0,0.99254315396402,0.0226339695332522,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,90.0,0.9969612842258886,0.0225473484060263,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,110.0,0.9990218099635731,0.0224128021244573,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,130.0,0.9985317044344022,0.0222643494222701,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,150.0,0.9955483894742508,0.0221058191486112,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,170.0,0.991079719988492,0.0219093818442019,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,190.0,0.9858390843372232,0.0216674436417133,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,210.0,0.9810090607718844,0.0213633402563317,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,230.0,0.9770099632064362,0.0209774785336903,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,250.0,0.9739657288047796,0.0205318543690803,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,270.0,0.9716296066424432,0.0200892364752819,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,290.0,0.969819397696671,0.0196906104579154,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,310.0,0.9684366250898412,0.0193241812449985,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,330.0,0.9675255523795344,0.0190401512161765,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,350.0,0.9669315368368284,0.0187839365961502,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,370.0,0.966708792970401,0.0185314546330335,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,390.0,0.9667445405614276,0.0182817917129072,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,410.0,0.9667956143140378,0.0181040731706964,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,430.0,0.9668873321620888,0.0179979153171823,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,450.0,0.9671429996379602,0.0179296321260276,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,470.0,0.967649598928232,0.0179048314332311,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,490.0,0.96839536444358,0.0178919311454965,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,510.0,0.9693473896691388,0.0178752294532235,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,530.0,0.9704727333935494,0.0178735738453735,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,550.0,0.971425514803,0.0179040505512337,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,570.0,0.9721946574892684,0.0179553217606157,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,590.0,0.97281731182677,0.0180055979105206,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,610.0,0.9734648638448424,0.0180054386602643,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,630.0,0.9740123751654066,0.0178876816925289,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,650.0,0.9746016584821529,0.0176764747240358,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,670.0,0.9751308660975452,0.0173465177212209,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,690.0,0.9756684987995584,0.0169545056655883,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,710.0,0.9761577097321574,0.0165693666160716,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,730.0,0.9765931858558988,0.0162335830690055,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,750.0,0.9769244397319834,0.0159632661740459,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,770.0,0.977249455453054,0.0157927454293079,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,790.0,0.9775216251178904,0.0156938877914476,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,810.0,0.9777666118669393,0.0155995681665547,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,830.0,0.9780028482305496,0.0155016446953321,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,850.0,0.9782510023762157,0.015393625825888,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,870.0,0.9785209505696764,0.0153030764700595,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,890.0,0.9785699629060608,0.0152196117795545,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,910.0,0.9784639641890291,0.0151921473125496,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,930.0,0.9784346445616235,0.0152162840122344,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,950.0,0.9785691894725264,0.0152874706560254,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,970.0,0.978850397290798,0.0153734256074349,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,990.0,0.9794307503061888,0.0155078413477439,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,1010.0,0.98030830022755,0.0156566114609271,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,1030.0,0.9812768629581128,0.0157828415503067,10,#D55E00
+Aux 1h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux1h,cross,1050.0,0.9823779149885464,0.0159006908604283,10,#D55E00
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,50.0,1.2491383302392798,0.0461144153849168,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,70.0,1.2497360308679042,0.0451624432820752,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,90.0,1.2480103013852006,0.0439825149632674,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,110.0,1.2432219011333032,0.0427764138975578,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,130.0,1.235109587444887,0.0416230941569483,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,150.0,1.2237299206109509,0.0405818825290172,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,170.0,1.2096774608417962,0.03956349687255,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,190.0,1.194188858518404,0.0384585251119245,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,210.0,1.1782680289335328,0.0371676912651699,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,230.0,1.162913545966052,0.0357154845771565,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,250.0,1.1484221392154592,0.0340979200425096,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,270.0,1.1352942404547162,0.0325479960147987,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,290.0,1.1234741761377431,0.0311891566023309,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,310.0,1.1131465529340556,0.0300564237919062,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,330.0,1.1045469870989866,0.0291518138572098,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,350.0,1.097924430442493,0.0284977488914852,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,370.0,1.0929502359483478,0.0280077267077054,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,390.0,1.089373584408414,0.0276711295723489,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,410.0,1.0869590229280186,0.0274488435238931,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,430.0,1.0851949155734018,0.0272955624348444,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,450.0,1.083782340592597,0.0271566062602555,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,470.0,1.0825043153956335,0.0270084170061519,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,490.0,1.0814272663382225,0.0267890742391253,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,510.0,1.0806152704454914,0.0265141886330602,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,530.0,1.0803105269085296,0.0262303070196226,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,550.0,1.0804329487728963,0.0259369476986216,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,570.0,1.080951116985332,0.0256605090948919,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,590.0,1.081538095798641,0.0254397687272827,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,610.0,1.0820492789443272,0.0253202871763833,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,630.0,1.0824308895053332,0.0252837246264552,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,650.0,1.0826988829546629,0.025307943655818,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,670.0,1.0830127338987106,0.0253645636618871,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,690.0,1.083590118733007,0.0254381794559339,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,710.0,1.0844104288152958,0.0254304688665426,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,730.0,1.0853910027761966,0.0253360845540469,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,750.0,1.086609345075878,0.0252015845657679,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,770.0,1.088034390984379,0.0250370826725984,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,790.0,1.0894975383627272,0.0248098796398271,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,810.0,1.0908367992257422,0.024528767735432,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,830.0,1.0919516376400964,0.0241690625173461,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,850.0,1.0927654797340238,0.0237073291144275,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,870.0,1.0934114953348864,0.0231941533551374,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,890.0,1.094115203777588,0.022690383990321,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,910.0,1.0951307426122752,0.022241282101393,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,930.0,1.0965138803196632,0.0218516778558908,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,950.0,1.0980477173203762,0.0215373059628597,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,970.0,1.0994744645847825,0.0212536671059718,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,990.0,1.1006793351963624,0.020990323929621,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,1010.0,1.101576240946825,0.0207292385572572,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,1030.0,1.102174170492034,0.0204938261374513,21,#009E73
+Aux 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Aux24h,cross,1050.0,1.1027251324136589,0.0202757499675994,21,#009E73
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,50.0,1.2550736157119766,0.0692337626367504,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,70.0,1.2606619617972143,0.0675472816435146,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,90.0,1.2656275860479873,0.0653406560250719,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,110.0,1.268389929786025,0.0628573971272308,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,130.0,1.267544801148195,0.0602184506568122,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,150.0,1.2619816968644118,0.0575565416767579,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,170.0,1.2515072595925785,0.0548239429003543,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,190.0,1.2371844779207382,0.0521470682697499,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,210.0,1.2206826783482236,0.0495160602345804,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,230.0,1.203597241827633,0.0468988451502269,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,250.0,1.187420623774082,0.044261406622805,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,270.0,1.172865258128218,0.0417055618133604,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,290.0,1.1598042459600466,0.0392363504914558,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,310.0,1.1479889507349523,0.0368024882362785,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,330.0,1.1373967361234545,0.0343854503787971,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,350.0,1.1280251446949956,0.0320333186700914,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,370.0,1.1198747896164938,0.0298245708361243,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,390.0,1.1129406442420444,0.0277812686437761,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,410.0,1.107092890633423,0.025976624125148,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,430.0,1.101948264439857,0.0244284479469068,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,450.0,1.0971065335368988,0.023097658020829,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,470.0,1.092478208364435,0.0219272339891039,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,490.0,1.0880393323817523,0.0209102967644516,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,510.0,1.084022121952099,0.0200434994018614,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,530.0,1.080514123947215,0.0192846549787698,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,550.0,1.077422353817283,0.0186011249122788,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,570.0,1.07465570097897,0.0179521032998443,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,590.0,1.0722447939402429,0.0173340305541159,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,610.0,1.0700708325419963,0.0167291224401897,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,630.0,1.0681559191282648,0.0161268749511219,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,650.0,1.0665763678920612,0.0155780050472447,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,670.0,1.065401989963396,0.015113034773216,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,690.0,1.0645261840174656,0.0147267693268676,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,710.0,1.0637832351390393,0.014394686250688,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,730.0,1.0631297743217205,0.0141048628790641,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,750.0,1.0626843453174653,0.0138387618045537,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,770.0,1.0625117919716278,0.0135939856042486,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,790.0,1.0628031829001094,0.0133805816206068,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,810.0,1.0636024537276534,0.0132090166886211,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,830.0,1.0649158995412729,0.013090907592699,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,850.0,1.0663876702226225,0.0130081135985517,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,870.0,1.067848468476167,0.0129403340773059,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,890.0,1.0689474131720968,0.0128397675928525,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,910.0,1.0696888658401844,0.0126994076355417,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,930.0,1.0700148401540823,0.012506908688057,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,950.0,1.0700946497923234,0.0123046329127497,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,970.0,1.0699867252444497,0.0121208129601895,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,990.0,1.0698039630039755,0.0119751645540711,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,1010.0,1.0696314359023018,0.0118852049805468,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,1030.0,1.0696625634436594,0.0118382731251597,33,#CC79A7
+Dox 24h,/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-dSTORM/Dox24h,cross,1050.0,1.0699437690612446,0.0117877074597005,33,#CC79A7

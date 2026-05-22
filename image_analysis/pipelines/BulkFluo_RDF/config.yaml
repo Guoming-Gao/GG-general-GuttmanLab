@@ -1,17 +1,20 @@
-input_dir: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-SACD/undiff
+# Minimal CLI/example config. The main user workflow is BulkFluoRDF_pipeline.ipynb,
+# where parameters are set in one notebook cell and a generated run config is
+# saved under the selected output directory for reproducibility.
+input_dir: data
 output_dir: results
 object_pattern: "*-SACD-left.tif"
 intensity_pattern: "*-SACD-right.tif"
 pixel_size_nm: 58.5
 radius_nm: 1000
-max_fovs: 30
+max_fovs: 1
 
 cellpose:
   use_existing_masks: true
   diameter: 120
   flow_threshold: 0.4
   cellprob_threshold: 0.0
-  device: cpu
+  device: auto
   downsample: 0.5
   preprocess:
     method: sacd_percentile
@@ -24,12 +27,11 @@ cellpose:
 spotiflow:
   use_existing_spots: true
   pretrained_model: general
-  cache_dir: results/spotiflow_cache
   probability_threshold: 0.4
   min_distance: 1
   exclude_border: 1
   normalizer: auto
-  device: cpu
+  device: auto
 
 nucleus_filter:
   enabled: true
@@ -55,11 +57,6 @@ hub_filter:
   std_multiplier: 2.0
   rule: greater_equal
 
-hub_filter_comparison:
-  enabled: true
-  std_multipliers: [1, 2, 3]
-  output_root: results/hub_filter_comparison
-
 qc:
   make_overlays: true
   max_points_draw: 5000
@@ -69,39 +66,5 @@ qc:
   hub_circle_size: 36
   scale_bar_um: 1.0
 
-detector_comparison:
-  input_dir: data
-  object_pattern: "*-SACD-left.tif"
-  intensity_pattern: "*-SACD-right.tif"
-  max_fovs: 1
-  domain: nuclear
-  output_dir: results/detector_comparison
-  ranking_metric: area_integrated
-  local_window_px: 15
-  component_threshold_mad: 3
-  top_n: 50
-  spotiflow:
-    probability_threshold: [0.5, 0.6, 0.7, 0.8, 0.9]
-    min_distance: [3]
-  dog:
-    min_sigma: [1, 2]
-    max_sigma: [4, 6, 8]
-    threshold_rel: [0.05, 0.1, 0.2, 0.3]
-    overlap: 0.5
-
-spotiflow_screen:
-  input_dir: data
-  object_pattern: "*-SACD-left.tif"
-  intensity_pattern: "*-SACD-right.tif"
-  max_fovs: 1
-  output_dir: results/detector_comparison/spotiflow_center_intensity_screen
-  thresholds: [0.2, 0.3, 0.4, 0.5]
-  min_distance: 1
-  intensity_metric: spotiflow_intensity
-  selection_rule: none
-  selection_std_multiplier: 0.0
-  min_nucleus_area_px: 15000
-  min_edge_distance_px: 20
-  top_n_per_nucleus: 50
-  local_max_radii: [1, 2, 3]
-  circle_size: 85
+progress:
+  enabled: true

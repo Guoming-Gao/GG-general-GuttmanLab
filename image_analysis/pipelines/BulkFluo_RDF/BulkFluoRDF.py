@@ -28,14 +28,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Iterable
 
-os.environ.setdefault("MPLCONFIGDIR", str(Path("results") / ".matplotlib"))
-
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from matplotlib import patheffects as pe
-from matplotlib.colors import ListedColormap
 import numpy as np
 import pandas as pd
 import tifffile
@@ -45,16 +37,20 @@ from scipy.optimize import curve_fit
 from scipy.spatial.distance import cdist
 from skimage import exposure, feature, measure, morphology, segmentation
 
+plt = None
+pe = None
+ListedColormap = None
+
 
 DEFAULT_CONFIG = {
-    "input_dir": "/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/20260413_ONI-gmgao-SPEN_H3K27ac_dSTORM_SACD/processed-SACD/undiff",
+    "input_dir": "data",
     "output_dir": "results",
     "object_pattern": "*-SACD-left.tif",
     "intensity_pattern": "*-SACD-right.tif",
     "pixel_size_nm": 58.5,
-    "radius_nm": None,
+    "radius_nm": 1000,
     "radius_px": 26,
-    "max_fovs": None,
+    "max_fovs": 1,
     "cellpose": {
         "use_existing_masks": True,
         "diameter": 50,
@@ -74,7 +70,7 @@ DEFAULT_CONFIG = {
     "spotiflow": {
         "use_existing_spots": True,
         "pretrained_model": "general",
-        "cache_dir": "results/spotiflow_cache",
+        "model_cache_dir": None,
         "probability_threshold": 0.4,
         "min_distance": 1,
         "exclude_border": 1,
@@ -120,6 +116,9 @@ DEFAULT_CONFIG = {
         "nucleus_crop_padding_px": 25,
         "hub_circle_size": 36,
         "scale_bar_um": 1.0,
+    },
+    "progress": {
+        "enabled": True,
     },
     "detector_comparison": {
         "input_dir": "data",
@@ -171,7 +170,7 @@ class ImagePair:
 
 
 def load_config(path: str | Path = "config.yaml") -> dict:
-    cfg = DEFAULT_CONFIG.copy()
+    cfg = copy.deepcopy(DEFAULT_CONFIG)
     path = Path(path)
     if path.exists():
         with path.open() as fh:
@@ -192,7 +191,7 @@ def _deep_update(base: dict, update: dict) -> dict:
 
 def fov_key(path: str | Path) -> str:
     name = Path(path).name
-    name = re.sub(r"-SACD-(left|right)\.tiff?$", "", name, flags=re.IGNORECASE)
+    name = re.sub(r"-(SACD|SACDpy)-(left|right)\.tiff?$", "", name, flags=re.IGNORECASE)
     return name
 
 
@@ -209,6 +208,108 @@ def pair_sacd_files(
     if max_fovs is not None:
         keys = keys[: int(max_fovs)]
     return [ImagePair(key, object_files[key], intensity_files[key]) for key in keys]
+
+
+def raise_if_no_pairs(
+    pairs: list[ImagePair],
+    input_dir: str | Path,
+    object_pattern: str,
+    intensity_pattern: str,
+) -> None:
+    """Raise a clear pairing error before downstream empty DataFrames obscure it."""
+    if pairs:
+        return
+    input_path = Path(input_dir)
+    object_matches = sorted(input_path.glob(object_pattern))
+    intensity_matches = sorted(input_path.glob(intensity_pattern))
+    object_keys = {fov_key(p) for p in object_matches}
+    intensity_keys = {fov_key(p) for p in intensity_matches}
+    shared_keys = sorted(object_keys & intensity_keys)
+    key_hint = ""
+    if object_matches and intensity_matches and not shared_keys:
+        object_examples = ", ".join(sorted(object_keys)[:3])
+        intensity_examples = ", ".join(sorted(intensity_keys)[:3])
+        key_hint = (
+            " Matched files were found, but their inferred FOV keys did not overlap. "
+            f"Example object keys: {object_examples or 'none'}. "
+            f"Example intensity keys: {intensity_examples or 'none'}."
+        )
+    raise FileNotFoundError(
+        "No paired SACD files found. "
+        f"input_dir={input_path!s}; "
+        f"object_pattern={object_pattern!r} matched {len(object_matches)} file(s); "
+        f"intensity_pattern={intensity_pattern!r} matched {len(intensity_matches)} file(s). "
+        f"{key_hint} "
+        "Check the notebook parameter cell or use paired patterns like "
+        "'*-SACD-left.tif'/'*-SACD-right.tif' or '*-SACDpy-left.tif'/'*-SACDpy-right.tif'."
+    )
+
+
+def resolve_cache_dir(out_dir: str | Path, explicit_cache_dir: str | Path | None = None, name: str = "cache") -> Path:
+    """Return an explicit cache path or an output-local hidden cache path."""
+    if explicit_cache_dir:
+        return Path(explicit_cache_dir)
+    return Path(out_dir) / ".cache" / name
+
+
+def ensure_matplotlib() -> None:
+    """Import Matplotlib after MPLCONFIGDIR has been set for the active run."""
+    global plt, pe, ListedColormap
+    if plt is not None:
+        return
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as _plt
+    from matplotlib import patheffects as _pe
+    from matplotlib.colors import ListedColormap as _ListedColormap
+
+    plt = _plt
+    pe = _pe
+    ListedColormap = _ListedColormap
+
+
+def resolve_spotiflow_cache_dir(cfg: dict, out_dir: str | Path) -> Path:
+    spotiflow_cfg = cfg.get("spotiflow", {})
+    explicit_cache_dir = spotiflow_cfg.get("model_cache_dir") or spotiflow_cfg.get("cache_dir")
+    if explicit_cache_dir:
+        return Path(explicit_cache_dir)
+    return Path(__file__).resolve().parent / "cache" / "spotiflow_models"
+
+
+def configure_runtime_caches(cfg: dict, out_dir: str | Path) -> None:
+    """Create output-local caches for libraries that need writable cache dirs."""
+    out_path = Path(out_dir)
+    mpl_cache = resolve_cache_dir(out_path, cfg.get("matplotlib_cache_dir"), "matplotlib")
+    mpl_cache.mkdir(parents=True, exist_ok=True)
+    os.environ["MPLCONFIGDIR"] = str(mpl_cache)
+    resolve_spotiflow_cache_dir(cfg, out_path).mkdir(parents=True, exist_ok=True)
+    ensure_matplotlib()
+
+
+def make_progress(enabled: bool = True):
+    """Return a Rich progress bar when available; callers can fall back to prints."""
+    if not enabled:
+        return None
+    try:
+        from rich.progress import (
+            BarColumn,
+            MofNCompleteColumn,
+            Progress,
+            TextColumn,
+            TimeElapsedColumn,
+            TimeRemainingColumn,
+        )
+    except ImportError:
+        return None
+    return Progress(
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+        transient=False,
+    )
 
 
 def read_image(path: str | Path) -> np.ndarray:
@@ -359,10 +460,8 @@ def load_or_run_nuclei(pair: ImagePair, cfg: dict, out_dir: Path) -> np.ndarray:
     mask_path = out_dir / mask_rel
     if cfg["cellpose"].get("use_existing_masks", True):
         candidate_roots = [out_dir]
-        for key in ("reuse_output_dir", "output_dir"):
-            if cfg.get(key):
-                candidate_roots.append(Path(cfg[key]))
-        candidate_roots.append(Path("results"))
+        if cfg.get("reuse_output_dir"):
+            candidate_roots.append(Path(cfg["reuse_output_dir"]))
         seen = set()
         for root in candidate_roots:
             root = Path(root)
@@ -398,24 +497,67 @@ def run_spotiflow_spots(
     normalizer: str = "auto",
     device: str = "auto",
 ) -> pd.DataFrame:
+    cfg = {
+        "spotiflow": {
+            "pretrained_model": pretrained_model,
+            "model_cache_dir": cache_dir,
+            "device": device,
+        }
+    }
+    context = load_spotiflow_context(cfg, Path("."))
+    return predict_spotiflow_spots(
+        object_image,
+        context,
+        probability_threshold=probability_threshold,
+        min_distance=min_distance,
+        exclude_border=exclude_border,
+        normalizer=normalizer,
+    )
+
+
+def load_spotiflow_context(cfg: dict, out_dir: str | Path) -> SimpleNamespace:
     try:
         from spotiflow.model import Spotiflow
     except ImportError as exc:
         raise RuntimeError("Spotiflow is not installed in the active environment.") from exc
 
-    torch_device = resolve_torch_device(device)
-    print(f"  Spotiflow hubs: model={pretrained_model}, device={torch_device}", flush=True)
-    cache_path = Path(cache_dir) if cache_dir else None
-    if cache_path is not None:
-        cache_path.mkdir(parents=True, exist_ok=True)
-    model = Spotiflow.from_pretrained(pretrained_model, cache_dir=cache_path)
-    points, details = model.predict(
+    spot_cfg = cfg.get("spotiflow", {})
+    pretrained_model = spot_cfg.get("pretrained_model", "general")
+    torch_device = resolve_torch_device(spot_cfg.get("device", "auto"))
+    cache_path = resolve_spotiflow_cache_dir(cfg, out_dir)
+    cache_path.mkdir(parents=True, exist_ok=True)
+    print(
+        f"  Spotiflow model: model={pretrained_model}, device={torch_device}, cache={cache_path}",
+        flush=True,
+    )
+    model = Spotiflow.from_pretrained(
+        pretrained_model,
+        cache_dir=cache_path,
+        map_location=str(torch_device),
+    )
+    return SimpleNamespace(
+        model=model,
+        device=torch_device,
+        cache_dir=cache_path,
+        pretrained_model=pretrained_model,
+    )
+
+
+def predict_spotiflow_spots(
+    object_image: np.ndarray,
+    context: SimpleNamespace,
+    probability_threshold: float | None = None,
+    min_distance: int = 1,
+    exclude_border: int = 1,
+    normalizer: str = "auto",
+) -> pd.DataFrame:
+    points, details = context.model.predict(
         object_image,
         prob_thresh=probability_threshold,
         min_distance=min_distance,
         exclude_border=exclude_border,
         normalizer=normalizer,
-        device=str(torch_device),
+        device=str(context.device),
     )
     spots = pd.DataFrame(np.round(points, 4), columns=["y", "x"])
     if hasattr(details, "prob") and details.prob is not None:
@@ -428,6 +570,9 @@ def run_spotiflow_spots(
 def resolve_torch_device(device: str):
     import torch
 
+    device = str(device).lower()
+    if device == "gpu":
+        device = "auto"
     if device == "auto":
         if torch.backends.mps.is_available():
             return torch.device("mps")
@@ -451,16 +596,20 @@ def resolve_torch_device(device: str):
     raise ValueError("device must be one of: auto, mps, cuda, cpu")
 
 
-def load_or_run_spots(pair: ImagePair, cfg: dict, out_dir: Path) -> pd.DataFrame:
+def load_or_run_spots(
+    pair: ImagePair,
+    cfg: dict,
+    out_dir: Path,
+    spotiflow_context: SimpleNamespace | None = None,
+    spotiflow_context_factory=None,
+) -> pd.DataFrame:
     spot_dir = out_dir / "spotiflow_spots"
     spot_rel = Path("spotiflow_spots") / f"{pair.fov}_spots.csv"
     spot_path = out_dir / spot_rel
     if cfg["spotiflow"].get("use_existing_spots", True):
         candidate_roots = [out_dir]
-        for key in ("reuse_output_dir", "output_dir"):
-            if cfg.get(key):
-                candidate_roots.append(Path(cfg[key]))
-        candidate_roots.append(Path("results"))
+        if cfg.get("reuse_output_dir"):
+            candidate_roots.append(Path(cfg["reuse_output_dir"]))
         seen = set()
         for root in candidate_roots:
             root = Path(root)
@@ -469,22 +618,27 @@ def load_or_run_spots(pair: ImagePair, cfg: dict, out_dir: Path) -> pd.DataFrame
             seen.add(root)
             candidate = root / spot_rel
             if candidate.exists():
-                return pd.read_csv(candidate)
+                spots = pd.read_csv(candidate)
+                spots.attrs["source_path"] = str(candidate)
+                spots.attrs["loaded_from_cache"] = True
+                return spots
 
     object_image = read_image(pair.object_path)
-    spots = run_spotiflow_spots(
+    if spotiflow_context is None:
+        spotiflow_context = spotiflow_context_factory() if spotiflow_context_factory else load_spotiflow_context(cfg, out_dir)
+    spots = predict_spotiflow_spots(
         object_image,
-        pretrained_model=cfg["spotiflow"]["pretrained_model"],
-        cache_dir=cfg["spotiflow"].get("cache_dir"),
+        spotiflow_context,
         probability_threshold=cfg["spotiflow"]["probability_threshold"],
         min_distance=cfg["spotiflow"]["min_distance"],
         exclude_border=cfg["spotiflow"]["exclude_border"],
         normalizer=cfg["spotiflow"]["normalizer"],
-        device=cfg["spotiflow"].get("device", "auto"),
     )
     spots.insert(0, "fov", pair.fov)
     spot_dir.mkdir(parents=True, exist_ok=True)
     spots.to_csv(spot_path, index=False)
+    spots.attrs["source_path"] = str(spot_path)
+    spots.attrs["loaded_from_cache"] = False
     return spots
 
 
@@ -742,6 +896,35 @@ def _safe_series_stats(values: np.ndarray, prefix: str) -> dict:
         f"{prefix}_q90": float(np.quantile(vals, 0.9)),
         f"{prefix}_max": float(np.max(vals)),
     }
+
+
+def validate_spotiflow_intensity_scale(
+    hub_properties: pd.DataFrame,
+    fov: str,
+    spot_source_path: str | Path | None = None,
+    min_median_ratio: float = 0.01,
+    max_median_ratio: float = 100.0,
+) -> None:
+    """Catch stale or normalized Spotiflow intensity values before hub filtering silently fails."""
+    required = {"spotiflow_intensity", "spen_center_intensity"}
+    if hub_properties.empty or not required.issubset(hub_properties.columns):
+        return
+    metric = hub_properties["spotiflow_intensity"].astype(float).to_numpy()
+    center = hub_properties["spen_center_intensity"].astype(float).to_numpy()
+    valid = np.isfinite(metric) & np.isfinite(center) & (metric > 0) & (center > 0)
+    if valid.sum() < 20:
+        return
+    ratio = float(np.median(metric[valid]) / np.median(center[valid]))
+    if min_median_ratio <= ratio <= max_median_ratio:
+        return
+    source = f" Source spot CSV: {spot_source_path}." if spot_source_path else ""
+    raise ValueError(
+        f"Spotiflow intensity scale looks inconsistent for {fov}: "
+        f"median(spotiflow_intensity)/median(raw SPEN center intensity) = {ratio:.4g}. "
+        "This usually means a stale spot CSV from a differently scaled run was reused. "
+        "Delete/regenerate that FOV's spot CSV or set spotiflow.use_existing_spots=false."
+        f"{source}"
+    )
 
 
 def resolve_hub_filter_threshold(row: dict, hub_filter_cfg: dict) -> float:
@@ -1037,6 +1220,7 @@ def make_hub_aggregate_rdf_plot(
     hub_rdf: pd.DataFrame | None = None,
     value_column: str = "h3k27ac_rdf_local_norm",
 ) -> Path | None:
+    ensure_matplotlib()
     if aggregate_summary.empty:
         return None
     out_path = out_dir / "rdf_aggregate.png"
@@ -1087,6 +1271,7 @@ def make_hub_aggregate_rdf_plot(
 
 
 def add_micrometer_scale_bar(ax, crop_shape: tuple[int, int], pixel_size_nm: float, scale_bar_um: float = 1.0) -> None:
+    ensure_matplotlib()
     bar_px = float(scale_bar_um) * 1000.0 / float(pixel_size_nm)
     margin = max(8, int(min(crop_shape) * 0.05))
     x1 = crop_shape[1] - margin
@@ -1121,6 +1306,7 @@ def make_single_hub_qc_overlay(
     pixel_size_nm: float,
     scale_bar_um: float,
 ) -> Path:
+    ensure_matplotlib()
     y0, y1, x0, x1 = crop_bounds
     nucleus_id = int(hubs_nuc["nucleus_id"].iloc[0]) if not hubs_nuc.empty else 0
     out_path = out_dir / f"{pair.fov}_nucleus_{nucleus_id:03d}_qc_overlay.png"
@@ -1178,6 +1364,7 @@ def make_hub_qc_overlay(
     scale_bar_um: float = 1.0,
     rdf_plot_column: str = "h3k27ac_rdf_local_norm",
 ) -> Path:
+    ensure_matplotlib()
     qc_dir = out_dir / "qc_overlays"
     qc_dir.mkdir(parents=True, exist_ok=True)
     single_overlay_dir = qc_dir / "overlays"
@@ -1321,7 +1508,7 @@ def run_pipeline(config_path: str | Path = "config.yaml", cfg: dict | None = Non
     cfg = load_config(config_path) if cfg is None else cfg
     out_dir = Path(cfg["output_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / ".matplotlib").mkdir(parents=True, exist_ok=True)
+    configure_runtime_caches(cfg, out_dir)
     radius_px, radius_nm, pixel_size_nm = resolve_radius(cfg)
     rdf_cfg = cfg.get("rdf", {})
     rdf_radius_nm = float(rdf_cfg.get("radius_nm", radius_nm))
@@ -1339,120 +1526,179 @@ def run_pipeline(config_path: str | Path = "config.yaml", cfg: dict | None = Non
         cfg["intensity_pattern"],
         cfg.get("max_fovs"),
     )
+    raise_if_no_pairs(pairs, cfg["input_dir"], cfg["object_pattern"], cfg["intensity_pattern"])
     pair_df = write_pairs_csv(pairs, out_dir)
-    print(f"Paired {len(pairs)} FOV(s)", flush=True)
-    print(
-        f"Per-hub RDF radius: {rdf_radius_nm:g} nm; "
-        f"{len(bins)} overlapping bins "
-        f"({float(rdf_cfg.get('bin_width_nm', 100)):g} nm width, "
-        f"{float(rdf_cfg.get('bin_step_nm', 50)):g} nm step)",
-        flush=True,
-    )
-    print(
-        f"Normalization: {rdf_cfg.get('normalization', 'local_intensity_mean')}; "
-        f"aggregate value={rdf_plot_column}",
-        flush=True,
-    )
+    make_qc = bool(cfg.get("qc", {}).get("make_overlays", True))
+    per_fov_steps = 6 if make_qc else 5
+    progress = make_progress(bool(cfg.get("progress", {}).get("enabled", True)))
+    progress_task = None
+    spotiflow_model_cache = resolve_spotiflow_cache_dir(cfg, out_dir)
+    spotiflow_context = None
 
-    all_hub_properties = []
-    all_hub_rdf = []
-    all_nucleus_qc = []
-    qc_paths = []
-    for pair in pairs:
-        print(f"Processing {pair.fov}", flush=True)
-        object_image = read_image(pair.object_path)
-        intensity_image = read_image(pair.intensity_path)
-        print("  Loaded object/intensity images", flush=True)
-        nuclei = load_or_run_nuclei(pair, cfg, out_dir)
-        print(f"  Nuclei: {max(0, len(np.unique(nuclei)) - 1)}", flush=True)
-        filter_cfg = cfg.get("nucleus_filter", {})
-        if filter_cfg.get("enabled", True):
-            nucleus_qc = compute_nucleus_qc(
-                nuclei,
-                pixel_size_nm,
-                int(filter_cfg.get("min_nucleus_area_px", 15000)),
-                int(filter_cfg.get("min_edge_distance_px", 20)),
-            )
-            nucleus_qc.insert(0, "fov", pair.fov)
-            keep_ids = nucleus_qc.loc[nucleus_qc["keep_nucleus"], "nucleus_id"].astype(int).tolist()
+    def log(message: str) -> None:
+        if progress is not None:
+            progress.console.print(message)
         else:
-            keep_ids = sorted(int(v) for v in np.unique(nuclei) if v > 0)
-            nucleus_qc = pd.DataFrame(
-                {
-                    "fov": pair.fov,
-                    "nucleus_id": keep_ids,
-                    "keep_nucleus": True,
-                    "exclude_reason": "filter_disabled",
-                }
-            )
-        all_nucleus_qc.append(nucleus_qc)
-        print(f"  Retained nuclei: {len(keep_ids)}", flush=True)
-        spots = load_or_run_spots(pair, cfg, out_dir)
-        print(f"  Raw SPEN hubs: {len(spots)}", flush=True)
-        nuclear_spots = assign_spots_to_nuclei(spots, nuclei)
-        nuclear_spots = nuclear_spots[nuclear_spots["nucleus_id"].isin(keep_ids)].reset_index(drop=True)
-        print(f"  Nuclear SPEN hubs: {len(nuclear_spots)}", flush=True)
-        (out_dir / "spotiflow_spots").mkdir(parents=True, exist_ok=True)
-        nuclear_spots.to_csv(out_dir / "spotiflow_spots" / f"{pair.fov}_nuclear_spots.csv", index=False)
-        hub_properties, hub_rdf = compute_hub_properties_and_annular_rdf(
-            pair.fov,
-            object_image,
-            intensity_image,
-            nuclei,
-            nuclear_spots,
-            keep_ids,
-            bins,
-            pixel_size_nm,
-            cfg.get("hub_filter", {}),
-            rdf_cfg,
-        )
-        hub_filter_cfg = cfg.get("hub_filter", {})
-        threshold_source = hub_filter_cfg.get("threshold_source", "nucleus_spen_median_plus_std")
-        std_multiplier = hub_filter_cfg.get("std_multiplier")
-        filter_label = threshold_source if std_multiplier is None else f"{threshold_source}; std_multiplier={float(std_multiplier):g}"
-        print(
-            f"  Retained SPEN hubs after filter ({filter_label}): "
-            f"{int(hub_properties['keep_hub'].sum()) if not hub_properties.empty else 0}",
-            flush=True,
-        )
-        print(f"  Hub RDF rows: {len(hub_rdf)}", flush=True)
-        all_hub_properties.append(hub_properties)
-        all_hub_rdf.append(hub_rdf)
+            print(message, flush=True)
 
-        if cfg.get("qc", {}).get("make_overlays", True):
-            qc_paths.append(
-                make_hub_qc_overlay(
-                    pair,
-                    object_image,
-                    intensity_image,
+    def set_progress(description: str) -> None:
+        if progress is not None and progress_task is not None:
+            progress.update(progress_task, description=description)
+
+    def advance_progress(description: str | None = None) -> None:
+        if progress is not None and progress_task is not None:
+            if description is not None:
+                progress.update(progress_task, description=description)
+            progress.advance(progress_task)
+
+    def get_spotiflow_context() -> SimpleNamespace:
+        nonlocal spotiflow_context
+        if spotiflow_context is None:
+            spotiflow_context = load_spotiflow_context(cfg, out_dir)
+        return spotiflow_context
+
+    if progress is not None:
+        progress.start()
+        progress_task = progress.add_task("Starting pipeline", total=len(pairs) * per_fov_steps + 1)
+
+    try:
+        log(f"Paired {len(pairs)} FOV(s)")
+        log(
+            f"Per-hub RDF radius: {rdf_radius_nm:g} nm; "
+            f"{len(bins)} overlapping bins "
+            f"({float(rdf_cfg.get('bin_width_nm', 100)):g} nm width, "
+            f"{float(rdf_cfg.get('bin_step_nm', 50)):g} nm step)"
+        )
+        log(
+            f"Normalization: {rdf_cfg.get('normalization', 'local_intensity_mean')}; "
+            f"aggregate value={rdf_plot_column}"
+        )
+        log(f"Spotiflow model cache: {spotiflow_model_cache}")
+
+        all_hub_properties = []
+        all_hub_rdf = []
+        all_nucleus_qc = []
+        qc_paths = []
+        for index, pair in enumerate(pairs, start=1):
+            log(f"Processing {pair.fov} ({index}/{len(pairs)})")
+            set_progress(f"{pair.fov}: loading images")
+            object_image = read_image(pair.object_path)
+            intensity_image = read_image(pair.intensity_path)
+            log("  Loaded object/intensity images")
+            advance_progress()
+
+            set_progress(f"{pair.fov}: nuclei")
+            nuclei = load_or_run_nuclei(pair, cfg, out_dir)
+            log(f"  Nuclei: {max(0, len(np.unique(nuclei)) - 1)}")
+            advance_progress()
+
+            set_progress(f"{pair.fov}: nucleus filter")
+            filter_cfg = cfg.get("nucleus_filter", {})
+            if filter_cfg.get("enabled", True):
+                nucleus_qc = compute_nucleus_qc(
                     nuclei,
-                    hub_properties,
-                    hub_rdf,
-                    out_dir,
-                    max_points_draw=int(cfg.get("qc", {}).get("max_points_draw", 5000)),
-                    contrast_lower_percentile=float(cfg.get("qc", {}).get("contrast_lower_percentile", 1)),
-                    contrast_upper_percentile=float(cfg.get("qc", {}).get("contrast_upper_percentile", 99.8)),
-                    nucleus_crop_padding_px=int(cfg.get("qc", {}).get("nucleus_crop_padding_px", 25)),
-                    hub_circle_size=float(cfg.get("qc", {}).get("hub_circle_size", 36)),
-                    pixel_size_nm=pixel_size_nm,
-                    scale_bar_um=float(cfg.get("qc", {}).get("scale_bar_um", 1.0)),
-                    rdf_plot_column=rdf_plot_column,
+                    pixel_size_nm,
+                    int(filter_cfg.get("min_nucleus_area_px", 15000)),
+                    int(filter_cfg.get("min_edge_distance_px", 20)),
                 )
-            )
+                nucleus_qc.insert(0, "fov", pair.fov)
+                keep_ids = nucleus_qc.loc[nucleus_qc["keep_nucleus"], "nucleus_id"].astype(int).tolist()
+            else:
+                keep_ids = sorted(int(v) for v in np.unique(nuclei) if v > 0)
+                nucleus_qc = pd.DataFrame(
+                    {
+                        "fov": pair.fov,
+                        "nucleus_id": keep_ids,
+                        "keep_nucleus": True,
+                        "exclude_reason": "filter_disabled",
+                    }
+                )
+            all_nucleus_qc.append(nucleus_qc)
+            log(f"  Retained nuclei: {len(keep_ids)}")
+            advance_progress()
 
-    hub_properties_df = pd.concat(all_hub_properties, ignore_index=True) if all_hub_properties else pd.DataFrame()
-    hub_rdf_df = pd.concat(all_hub_rdf, ignore_index=True) if all_hub_rdf else pd.DataFrame()
-    rdf_aggregate_df = aggregate_dual_channel_rdf(hub_rdf_df, h3k27ac_column=rdf_plot_column, spen_column="spen_rdf_local_norm")
-    nucleus_qc_df = pd.concat(all_nucleus_qc, ignore_index=True) if all_nucleus_qc else pd.DataFrame()
-    nucleus_qc_df.to_csv(out_dir / "nucleus_qc.csv", index=False)
-    hub_properties_df.to_csv(out_dir / "hub_properties.csv", index=False)
-    hub_rdf_df.to_csv(out_dir / "hub_rdf_results.csv", index=False)
-    rdf_aggregate_df.to_csv(out_dir / "aggregated_rdf_summary.csv", index=False)
-    for legacy_name in ["rdf_results.csv", "rdf_summary.csv", "rdf_aggregate_summary.csv"]:
-        legacy_path = out_dir / legacy_name
-        if legacy_path.exists():
-            legacy_path.unlink()
-    aggregate_plot_path = make_hub_aggregate_rdf_plot(rdf_aggregate_df, out_dir, hub_rdf_df, rdf_plot_column)
+            set_progress(f"{pair.fov}: Spotiflow hubs")
+            spots = load_or_run_spots(pair, cfg, out_dir, spotiflow_context_factory=get_spotiflow_context)
+            spot_source_path = spots.attrs.get("source_path")
+            log(f"  Raw SPEN hubs: {len(spots)}")
+            nuclear_spots = assign_spots_to_nuclei(spots, nuclei)
+            nuclear_spots = nuclear_spots[nuclear_spots["nucleus_id"].isin(keep_ids)].reset_index(drop=True)
+            log(f"  Nuclear SPEN hubs: {len(nuclear_spots)}")
+            (out_dir / "spotiflow_spots").mkdir(parents=True, exist_ok=True)
+            nuclear_spots.to_csv(out_dir / "spotiflow_spots" / f"{pair.fov}_nuclear_spots.csv", index=False)
+            advance_progress()
+
+            set_progress(f"{pair.fov}: RDF")
+            hub_properties, hub_rdf = compute_hub_properties_and_annular_rdf(
+                pair.fov,
+                object_image,
+                intensity_image,
+                nuclei,
+                nuclear_spots,
+                keep_ids,
+                bins,
+                pixel_size_nm,
+                cfg.get("hub_filter", {}),
+                rdf_cfg,
+            )
+            validate_spotiflow_intensity_scale(hub_properties, pair.fov, spot_source_path)
+            hub_filter_cfg = cfg.get("hub_filter", {})
+            threshold_source = hub_filter_cfg.get("threshold_source", "nucleus_spen_median_plus_std")
+            std_multiplier = hub_filter_cfg.get("std_multiplier")
+            filter_label = threshold_source if std_multiplier is None else f"{threshold_source}; std_multiplier={float(std_multiplier):g}"
+            log(
+                f"  Retained SPEN hubs after filter ({filter_label}): "
+                f"{int(hub_properties['keep_hub'].sum()) if not hub_properties.empty else 0}"
+            )
+            log(f"  Hub RDF rows: {len(hub_rdf)}")
+            all_hub_properties.append(hub_properties)
+            all_hub_rdf.append(hub_rdf)
+            advance_progress()
+
+            if make_qc:
+                set_progress(f"{pair.fov}: QC overlay")
+                qc_paths.append(
+                    make_hub_qc_overlay(
+                        pair,
+                        object_image,
+                        intensity_image,
+                        nuclei,
+                        hub_properties,
+                        hub_rdf,
+                        out_dir,
+                        max_points_draw=int(cfg.get("qc", {}).get("max_points_draw", 5000)),
+                        contrast_lower_percentile=float(cfg.get("qc", {}).get("contrast_lower_percentile", 1)),
+                        contrast_upper_percentile=float(cfg.get("qc", {}).get("contrast_upper_percentile", 99.8)),
+                        nucleus_crop_padding_px=int(cfg.get("qc", {}).get("nucleus_crop_padding_px", 25)),
+                        hub_circle_size=float(cfg.get("qc", {}).get("hub_circle_size", 36)),
+                        pixel_size_nm=pixel_size_nm,
+                        scale_bar_um=float(cfg.get("qc", {}).get("scale_bar_um", 1.0)),
+                        rdf_plot_column=rdf_plot_column,
+                    )
+                )
+                advance_progress()
+
+        set_progress("Writing outputs")
+        hub_properties_df = pd.concat(all_hub_properties, ignore_index=True) if all_hub_properties else pd.DataFrame()
+        if "keep_hub" not in hub_properties_df.columns:
+            hub_properties_df["keep_hub"] = pd.Series(dtype=bool)
+        hub_rdf_df = pd.concat(all_hub_rdf, ignore_index=True) if all_hub_rdf else pd.DataFrame()
+        rdf_aggregate_df = aggregate_dual_channel_rdf(hub_rdf_df, h3k27ac_column=rdf_plot_column, spen_column="spen_rdf_local_norm")
+        nucleus_qc_df = pd.concat(all_nucleus_qc, ignore_index=True) if all_nucleus_qc else pd.DataFrame()
+        nucleus_qc_df.to_csv(out_dir / "nucleus_qc.csv", index=False)
+        hub_properties_df.to_csv(out_dir / "hub_properties.csv", index=False)
+        hub_rdf_df.to_csv(out_dir / "hub_rdf_results.csv", index=False)
+        rdf_aggregate_df.to_csv(out_dir / "aggregated_rdf_summary.csv", index=False)
+        for legacy_name in ["rdf_results.csv", "rdf_summary.csv", "rdf_aggregate_summary.csv"]:
+            legacy_path = out_dir / legacy_name
+            if legacy_path.exists():
+                legacy_path.unlink()
+        aggregate_plot_path = make_hub_aggregate_rdf_plot(rdf_aggregate_df, out_dir, hub_rdf_df, rdf_plot_column)
+        advance_progress("Finished")
+    finally:
+        if progress is not None:
+            progress.stop()
+
     return SimpleNamespace(
         config=cfg,
         pairs=pair_df,
@@ -1487,6 +1733,7 @@ def hub_filter_config_for_std_multiplier(base_filter: dict, multiplier: float) -
 
 
 def make_filter_comparison_rdf_overlay(records: list[dict], out_dir: Path) -> Path | None:
+    ensure_matplotlib()
     if not records:
         return None
     out_path = out_dir / "filter_comparison_rdf_overlay.png"
@@ -1609,16 +1856,20 @@ def load_or_run_comparison_nuclei(pair: ImagePair, cfg: dict, compare_dir: Path)
     return masks
 
 
-def run_spotiflow_detector_sweep(object_image: np.ndarray, cfg: dict, sweep_cfg: dict) -> pd.DataFrame:
+def run_spotiflow_detector_sweep(object_image: np.ndarray, cfg: dict, sweep_cfg: dict, out_dir: str | Path) -> pd.DataFrame:
     try:
         from spotiflow.model import Spotiflow
     except ImportError as exc:
         raise RuntimeError("Spotiflow is not installed in the active environment.") from exc
 
     torch_device = resolve_torch_device(cfg["spotiflow"].get("device", "auto"))
-    cache_path = Path(cfg["spotiflow"].get("cache_dir", "results/spotiflow_cache"))
+    cache_path = resolve_spotiflow_cache_dir(cfg, out_dir)
     cache_path.mkdir(parents=True, exist_ok=True)
-    model = Spotiflow.from_pretrained(cfg["spotiflow"].get("pretrained_model", "general"), cache_dir=cache_path)
+    model = Spotiflow.from_pretrained(
+        cfg["spotiflow"].get("pretrained_model", "general"),
+        cache_dir=cache_path,
+        map_location=str(torch_device),
+    )
 
     frames = []
     probability_thresholds = sorted(float(v) for v in _as_list(sweep_cfg.get("probability_threshold", [0.5])))
@@ -1726,6 +1977,7 @@ def summarize_detector_comparison(detections: pd.DataFrame) -> pd.DataFrame:
 
 
 def make_detector_comparison_qc(detections: pd.DataFrame, pairs: list[ImagePair], out_dir: Path, cfg: dict) -> list[Path]:
+    ensure_matplotlib()
     paths = []
     if detections.empty:
         return paths
@@ -1812,14 +2064,19 @@ def run_detector_comparison(config_path: str | Path = "config.yaml") -> SimpleNa
     comp_cfg = cfg.get("detector_comparison", {})
     out_dir = Path(comp_cfg.get("output_dir", "results/detector_comparison"))
     out_dir.mkdir(parents=True, exist_ok=True)
+    configure_runtime_caches(cfg, out_dir)
     pixel_size_nm = float(cfg.get("pixel_size_nm", 58.5))
     max_fovs = comp_cfg.get("max_fovs", 1)
+    input_dir = comp_cfg.get("input_dir", cfg["input_dir"])
+    object_pattern = comp_cfg.get("object_pattern", cfg["object_pattern"])
+    intensity_pattern = comp_cfg.get("intensity_pattern", cfg["intensity_pattern"])
     pairs = pair_sacd_files(
-        comp_cfg.get("input_dir", cfg["input_dir"]),
-        comp_cfg.get("object_pattern", cfg["object_pattern"]),
-        comp_cfg.get("intensity_pattern", cfg["intensity_pattern"]),
+        input_dir,
+        object_pattern,
+        intensity_pattern,
         max_fovs,
     )
+    raise_if_no_pairs(pairs, input_dir, object_pattern, intensity_pattern)
     print(f"Detector comparison FOVs: {len(pairs)}", flush=True)
 
     all_detections = []
@@ -1827,7 +2084,7 @@ def run_detector_comparison(config_path: str | Path = "config.yaml") -> SimpleNa
         print(f"Comparing detectors for {pair.fov}", flush=True)
         object_image = read_image(pair.object_path)
         nuclei = load_or_run_comparison_nuclei(pair, cfg, out_dir)
-        spotiflow = run_spotiflow_detector_sweep(object_image, cfg, comp_cfg.get("spotiflow", {}))
+        spotiflow = run_spotiflow_detector_sweep(object_image, cfg, comp_cfg.get("spotiflow", {}), out_dir)
         dog = run_dog_detector_sweep(object_image, cfg, comp_cfg.get("dog", {}))
         raw = pd.concat([spotiflow, dog], ignore_index=True)
         raw.insert(0, "fov", pair.fov)
@@ -2006,6 +2263,7 @@ def make_spotiflow_screen_plots(
     out_dir: Path,
     cfg: dict,
 ) -> list[Path]:
+    ensure_matplotlib()
     paths = []
     if detections.empty:
         return paths
@@ -2178,14 +2436,19 @@ def run_spotiflow_screen(config_path: str | Path = "config.yaml") -> SimpleNames
     screen_cfg = cfg.get("spotiflow_screen", {})
     out_dir = Path(screen_cfg.get("output_dir", "results/detector_comparison/spotiflow_center_intensity_screen"))
     out_dir.mkdir(parents=True, exist_ok=True)
+    configure_runtime_caches(cfg, out_dir)
     thresholds = sorted(float(v) for v in _as_list(screen_cfg.get("thresholds", [0.1, 0.2])))
     min_distance = int(screen_cfg.get("min_distance", 1))
+    input_dir = screen_cfg.get("input_dir", cfg["input_dir"])
+    object_pattern = screen_cfg.get("object_pattern", cfg["object_pattern"])
+    intensity_pattern = screen_cfg.get("intensity_pattern", cfg["intensity_pattern"])
     pairs = pair_sacd_files(
-        screen_cfg.get("input_dir", cfg["input_dir"]),
-        screen_cfg.get("object_pattern", cfg["object_pattern"]),
-        screen_cfg.get("intensity_pattern", cfg["intensity_pattern"]),
+        input_dir,
+        object_pattern,
+        intensity_pattern,
         screen_cfg.get("max_fovs", 1),
     )
+    raise_if_no_pairs(pairs, input_dir, object_pattern, intensity_pattern)
     print(f"Spotiflow screen FOVs: {len(pairs)}", flush=True)
 
     all_detections = []
@@ -2205,7 +2468,7 @@ def run_spotiflow_screen(config_path: str | Path = "config.yaml") -> SimpleNames
         base_spots = run_spotiflow_spots(
             image,
             pretrained_model=cfg["spotiflow"]["pretrained_model"],
-            cache_dir=cfg["spotiflow"].get("cache_dir"),
+            cache_dir=resolve_spotiflow_cache_dir(cfg, out_dir),
             probability_threshold=min(thresholds),
             min_distance=min_distance,
             exclude_border=cfg["spotiflow"].get("exclude_border", 1),
@@ -2380,6 +2643,7 @@ def main() -> None:
         cfg = load_config(args.config)
         out_dir = Path(cfg["output_dir"])
         pairs = pair_sacd_files(cfg["input_dir"], cfg["object_pattern"], cfg["intensity_pattern"], cfg.get("max_fovs"))
+        raise_if_no_pairs(pairs, cfg["input_dir"], cfg["object_pattern"], cfg["intensity_pattern"])
         df = write_pairs_csv(pairs, out_dir)
         print(df.to_string(index=False))
     elif args.command == "run":
