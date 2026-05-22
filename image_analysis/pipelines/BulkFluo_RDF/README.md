@@ -51,7 +51,7 @@ Tune `cellpose.diameter` first if nuclei are missed or fragmented. The default
 local smoke-test config uses `diameter: 120` with `downsample: 0.5`; the effective
 diameter passed to Cellpose is scaled with the downsampled image.
 
-Distance defaults are `pixel_size_nm: 58.5`, `rdf.radius_nm: 1000`,
+Distance defaults are `pixel_size_nm: 58.5`, `rdf.radius_nm: 3000`,
 `rdf.bin_width_nm: 100`, and `rdf.bin_step_nm: 50`. Bins are overlapping, e.g.
 `0-100 nm`, `50-150 nm`, `100-200 nm`.
 
@@ -59,8 +59,11 @@ Hub filtering compares Spotiflow's `object_intensity` value, reported as
 `spotiflow_intensity`, against the median plus the configured STD multiplier of
 SPEN pixel intensities inside that hub's own nucleus. The default multiplier is
 2.0. This uses the raw SPEN nucleus pixel distribution, not the detected spot
-intensity distribution. Use `compare-hub-filters` to generate median + 1/2/3 STD
-comparison result folders.
+intensity distribution. The notebook workflow also applies a hard
+`spotiflow_intensity` floor from negative-control result folders; by default it
+uses the pooled Aux1h/Aux24h 95th percentile and keeps hubs only when they pass
+both the local nucleus filter and that hard floor. Use `compare-hub-filters` to
+generate median + 1/2/3 STD comparison result folders.
 
 QC overlays use robust percentile contrast controlled by
 `qc.contrast_lower_percentile` and `qc.contrast_upper_percentile`. One PNG is
@@ -105,7 +108,8 @@ when available (`mps` on Apple Silicon, CUDA on NVIDIA, CPU otherwise).
 Current RDF defaults use Spotiflow `probability_threshold: 0.4`,
 `min_distance: 1`, per-hub annular RDF, local-intensity H3K27ac normalization,
 plain per-bin mean/STD aggregation across retained hubs, nucleus area/edge
-filtering, and median + 2 STD SPEN hub filtering.
+filtering, median + 2 STD SPEN hub filtering, and an optional negative-control
+hard Spotiflow-intensity floor.
 
 ## Detector Comparison
 
@@ -137,6 +141,8 @@ conda run -n smlm python BulkFluoRDF.py screen-spotiflow --config config.explora
 The main RDF pipeline now uses the selected screen result directly:
 Spotiflow threshold `0.4`, nucleus area/edge filtering, and a per-nucleus hub
 filter where `spotiflow_intensity >= median(SPEN pixels inside that nucleus) + 2 * std(SPEN pixels inside that nucleus)`.
+When configured, the final threshold is the maximum of this per-nucleus value and
+the negative-control hard floor.
 
 ## Hub Filter Comparison
 

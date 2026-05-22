@@ -48,8 +48,8 @@ DEFAULT_CONFIG = {
     "object_pattern": "*-SACD-left.tif",
     "intensity_pattern": "*-SACD-right.tif",
     "pixel_size_nm": 58.5,
-    "radius_nm": 1000,
-    "radius_px": 26,
+    "radius_nm": 3000,
+    "radius_px": 51,
     "max_fovs": 1,
     "cellpose": {
         "use_existing_masks": True,
@@ -84,7 +84,7 @@ DEFAULT_CONFIG = {
     },
     "rdf": {
         "mode": "per_hub_annular",
-        "radius_nm": 1000,
+        "radius_nm": 3000,
         "bin_width_nm": 100,
         "bin_step_nm": 50,
         "normalization": "local_intensity_mean",
@@ -102,6 +102,15 @@ DEFAULT_CONFIG = {
         "threshold_source": "nucleus_spen_median_plus_std",
         "std_multiplier": 2.0,
         "rule": "greater_equal",
+        "hard_threshold": {
+            "enabled": False,
+            "source": "manual",
+            "value": None,
+            "control_dirs": [],
+            "metric": "spotiflow_intensity",
+            "statistic": "quantile",
+            "quantile": 0.95,
+        },
     },
     "hub_filter_comparison": {
         "enabled": True,
@@ -927,6 +936,104 @@ def validate_spotiflow_intensity_scale(
     )
 
 
+def _resolve_relative_path(path: str | Path, config_path: str | Path | None = None) -> Path:
+    out = Path(path).expanduser()
+    if out.is_absolute():
+        return out
+    if config_path is not None:
+        return Path(config_path).expanduser().resolve().parent / out
+    return out
+
+
+def _read_control_metric_values(control_dirs: Iterable[str | Path], metric: str, config_path: str | Path | None = None) -> np.ndarray:
+    values = []
+    missing = []
+    for control_dir in control_dirs:
+        control_path = _resolve_relative_path(control_dir, config_path)
+        csv_path = control_path if control_path.is_file() else control_path / "hub_properties.csv"
+        if not csv_path.exists():
+            missing.append(str(csv_path))
+            continue
+        df = pd.read_csv(csv_path)
+        if metric not in df.columns:
+            raise ValueError(f"Hard hub threshold metric `{metric}` is missing from {csv_path}")
+        metric_values = pd.to_numeric(df[metric], errors="coerce").replace([np.inf, -np.inf], np.nan).dropna()
+        if not metric_values.empty:
+            values.append(metric_values.to_numpy(float))
+    if missing:
+        raise FileNotFoundError("Missing hard-threshold control hub_properties.csv file(s): " + "; ".join(missing))
+    if not values:
+        return np.array([], dtype=float)
+    return np.concatenate(values)
+
+
+def resolve_hub_filter_hard_threshold(hub_filter_cfg: dict, config_path: str | Path | None = None) -> dict:
+    hard_cfg = hub_filter_cfg.get("hard_threshold", {}) or {}
+    enabled = bool(hard_cfg.get("enabled", False))
+    metric = hard_cfg.get("metric", hub_filter_cfg.get("metric", "spotiflow_intensity"))
+    source = hard_cfg.get("source", "manual")
+    statistic = hard_cfg.get("statistic", "quantile")
+    quantile = hard_cfg.get("quantile", np.nan)
+    resolved = {
+        "enabled": enabled,
+        "value": np.nan,
+        "source": source,
+        "metric": metric,
+        "statistic": statistic,
+        "quantile": float(quantile) if quantile is not None and np.isfinite(float(quantile)) else np.nan,
+        "n_control_values": 0,
+        "control_dirs": list(hard_cfg.get("control_dirs", []) or hard_cfg.get("negative_control_dirs", []) or []),
+    }
+    if not enabled:
+        return resolved
+
+    manual_value = hard_cfg.get("value", hard_cfg.get("threshold", None))
+    if manual_value is not None:
+        value = float(manual_value)
+        if not np.isfinite(value):
+            raise ValueError("hub_filter.hard_threshold.value must be finite when provided")
+        resolved.update({"value": value, "source": source or "manual", "statistic": "manual", "n_control_values": 0})
+        return resolved
+
+    if source != "negative_control_result_dirs":
+        raise ValueError(
+            "hub_filter.hard_threshold.source must be `negative_control_result_dirs` "
+            "or provide hub_filter.hard_threshold.value"
+        )
+
+    control_dirs = resolved["control_dirs"]
+    if not control_dirs:
+        raise ValueError("hub_filter.hard_threshold.control_dirs must list negative-control result directories")
+    values = _read_control_metric_values(control_dirs, metric, config_path)
+    if values.size == 0:
+        raise ValueError("No finite values found for hard hub threshold controls")
+
+    if statistic == "quantile":
+        q = float(hard_cfg.get("quantile", 0.95))
+        if q < 0 or q > 1:
+            raise ValueError("hub_filter.hard_threshold.quantile must be between 0 and 1")
+        value = float(np.quantile(values, q))
+        resolved["quantile"] = q
+    elif statistic == "max":
+        value = float(np.max(values))
+    else:
+        raise ValueError("hub_filter.hard_threshold.statistic must be `quantile` or `max`")
+
+    resolved.update({"value": value, "n_control_values": int(values.size)})
+    return resolved
+
+
+def combine_hub_filter_threshold(local_threshold: float, hard_threshold_info: dict) -> float:
+    thresholds = []
+    if np.isfinite(local_threshold):
+        thresholds.append(float(local_threshold))
+    if hard_threshold_info.get("enabled", False):
+        hard_value = hard_threshold_info.get("value", np.nan)
+        if np.isfinite(hard_value):
+            thresholds.append(float(hard_value))
+    return float(max(thresholds)) if thresholds else np.nan
+
+
 def resolve_hub_filter_threshold(row: dict, hub_filter_cfg: dict) -> float:
     source = hub_filter_cfg.get("threshold_source", "nucleus_spen_median_plus_std")
     if source == "nucleus_spen_median_plus_std":
@@ -967,7 +1074,10 @@ def compute_hub_properties_and_annular_rdf(
 
     filter_enabled = bool(hub_filter_cfg.get("enabled", True))
     filter_metric = hub_filter_cfg.get("metric", "spotiflow_intensity")
-    threshold_source = hub_filter_cfg.get("threshold_source", "nucleus_spen_median")
+    threshold_source = hub_filter_cfg.get("threshold_source", "nucleus_spen_median_plus_std")
+    hard_threshold_info = hub_filter_cfg.get("_resolved_hard_threshold") or resolve_hub_filter_hard_threshold(hub_filter_cfg)
+    hard_threshold_enabled = bool(hard_threshold_info.get("enabled", False))
+    hard_threshold_value = float(hard_threshold_info.get("value", np.nan))
     rdf_cfg = rdf_cfg or {}
     tail_cfg = rdf_cfg.get("tail_normalization", {})
     tail_enabled = bool(tail_cfg.get("enabled", False))
@@ -1029,19 +1139,38 @@ def compute_hub_properties_and_annular_rdf(
                 "local_spen_mean": local_spen_mean,
                 "local_reference_pixel_count": local_reference_pixel_count,
             }
-            threshold_value = resolve_hub_filter_threshold(row, hub_filter_cfg)
+            local_threshold_value = resolve_hub_filter_threshold(row, hub_filter_cfg)
+            threshold_value = combine_hub_filter_threshold(local_threshold_value, hard_threshold_info)
             metric_value = row.get(filter_metric, np.nan)
             if filter_enabled:
                 row["hub_filter_metric"] = filter_metric
                 row["hub_filter_threshold_source"] = threshold_source
                 row["hub_filter_std_multiplier"] = float(hub_filter_cfg.get("std_multiplier", np.nan))
+                row["hub_filter_local_threshold"] = local_threshold_value
+                row["hub_filter_hard_threshold_enabled"] = hard_threshold_enabled
+                row["hub_filter_hard_threshold"] = hard_threshold_value
+                row["hub_filter_hard_threshold_source"] = hard_threshold_info.get("source", "")
+                row["hub_filter_hard_threshold_metric"] = hard_threshold_info.get("metric", "")
+                row["hub_filter_hard_threshold_statistic"] = hard_threshold_info.get("statistic", "")
+                row["hub_filter_hard_threshold_quantile"] = hard_threshold_info.get("quantile", np.nan)
+                row["hub_filter_hard_threshold_n_control_values"] = int(hard_threshold_info.get("n_control_values", 0))
                 row["hub_filter_threshold"] = threshold_value
+                row["hub_filter_final_threshold"] = threshold_value
                 row["keep_hub"] = bool(np.isfinite(metric_value) and np.isfinite(threshold_value) and metric_value >= threshold_value)
             else:
                 row["hub_filter_metric"] = filter_metric
                 row["hub_filter_threshold_source"] = "filter_disabled"
                 row["hub_filter_std_multiplier"] = np.nan
+                row["hub_filter_local_threshold"] = np.nan
+                row["hub_filter_hard_threshold_enabled"] = False
+                row["hub_filter_hard_threshold"] = np.nan
+                row["hub_filter_hard_threshold_source"] = "filter_disabled"
+                row["hub_filter_hard_threshold_metric"] = ""
+                row["hub_filter_hard_threshold_statistic"] = ""
+                row["hub_filter_hard_threshold_quantile"] = np.nan
+                row["hub_filter_hard_threshold_n_control_values"] = 0
                 row["hub_filter_threshold"] = np.nan
+                row["hub_filter_final_threshold"] = np.nan
                 row["keep_hub"] = True
             hub_rows.append(row)
 
@@ -1514,6 +1643,9 @@ def run_pipeline(config_path: str | Path = "config.yaml", cfg: dict | None = Non
     rdf_radius_nm = float(rdf_cfg.get("radius_nm", radius_nm))
     aggregation_cfg = rdf_cfg.get("aggregation", {})
     rdf_plot_column = aggregation_cfg.get("plot_column", "h3k27ac_rdf_local_norm")
+    hub_filter_cfg = copy.deepcopy(cfg.get("hub_filter", {}))
+    hard_threshold_info = resolve_hub_filter_hard_threshold(hub_filter_cfg, config_path)
+    hub_filter_cfg["_resolved_hard_threshold"] = hard_threshold_info
     bins = make_physical_rdf_bins(
         rdf_radius_nm,
         float(rdf_cfg.get("bin_width_nm", 100)),
@@ -1573,6 +1705,12 @@ def run_pipeline(config_path: str | Path = "config.yaml", cfg: dict | None = Non
             f"Normalization: {rdf_cfg.get('normalization', 'local_intensity_mean')}; "
             f"aggregate value={rdf_plot_column}"
         )
+        if hard_threshold_info.get("enabled", False):
+            log(
+                "Hub hard threshold: "
+                f"{hard_threshold_info.get('metric')} >= {float(hard_threshold_info.get('value')):g} "
+                f"({hard_threshold_info.get('statistic')}, n={int(hard_threshold_info.get('n_control_values', 0))})"
+            )
         log(f"Spotiflow model cache: {spotiflow_model_cache}")
 
         all_hub_properties = []
@@ -1638,14 +1776,15 @@ def run_pipeline(config_path: str | Path = "config.yaml", cfg: dict | None = Non
                 keep_ids,
                 bins,
                 pixel_size_nm,
-                cfg.get("hub_filter", {}),
+                hub_filter_cfg,
                 rdf_cfg,
             )
             validate_spotiflow_intensity_scale(hub_properties, pair.fov, spot_source_path)
-            hub_filter_cfg = cfg.get("hub_filter", {})
             threshold_source = hub_filter_cfg.get("threshold_source", "nucleus_spen_median_plus_std")
             std_multiplier = hub_filter_cfg.get("std_multiplier")
             filter_label = threshold_source if std_multiplier is None else f"{threshold_source}; std_multiplier={float(std_multiplier):g}"
+            if hard_threshold_info.get("enabled", False):
+                filter_label = f"{filter_label}; hard>={float(hard_threshold_info.get('value')):g}"
             log(
                 f"  Retained SPEN hubs after filter ({filter_label}): "
                 f"{int(hub_properties['keep_hub'].sum()) if not hub_properties.empty else 0}"
@@ -2578,7 +2717,7 @@ def synthetic_rdf_check(seed: int = 7) -> dict:
             "y": centers[:, 0],
             "x": centers[:, 1],
             "probability": [0.9, 0.9],
-            "object_intensity": [0.7, 0.7],
+            "object_intensity": [0.7, 1.0],
             "nucleus_id": [1, 1],
         }
     )
@@ -2598,6 +2737,12 @@ def synthetic_rdf_check(seed: int = 7) -> dict:
             "threshold_source": "nucleus_spen_median_plus_std",
             "std_multiplier": 2.0,
             "rule": "greater_equal",
+            "hard_threshold": {
+                "enabled": True,
+                "source": "manual",
+                "value": 0.8,
+                "metric": "spotiflow_intensity",
+            },
         },
         rdf_cfg={
             "normalization": "local_intensity_mean",
@@ -2611,6 +2756,7 @@ def synthetic_rdf_check(seed: int = 7) -> dict:
     return {
         "mode": "per_hub_annular",
         "retained_hubs": int(hub_props["keep_hub"].sum()),
+        "hard_threshold": float(hub_props["hub_filter_hard_threshold"].dropna().iloc[0]),
         "rdf_rows": int(len(hub_rdf)),
         "bins": int(len(agg)),
         "first_bin_rdf": first,

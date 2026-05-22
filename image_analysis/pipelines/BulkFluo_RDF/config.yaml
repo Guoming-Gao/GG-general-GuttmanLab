@@ -6,7 +6,7 @@ output_dir: results
 object_pattern: "*-SACD-left.tif"
 intensity_pattern: "*-SACD-right.tif"
 pixel_size_nm: 58.5
-radius_nm: 1000
+radius_nm: 3000
 max_fovs: 1
 
 cellpose:
@@ -40,7 +40,7 @@ nucleus_filter:
 
 rdf:
   mode: per_hub_annular
-  radius_nm: 1000
+  radius_nm: 3000
   bin_width_nm: 100
   bin_step_nm: 50
   normalization: local_intensity_mean
@@ -56,6 +56,13 @@ hub_filter:
   threshold_source: nucleus_spen_median_plus_std
   std_multiplier: 2.0
   rule: greater_equal
+  hard_threshold:
+    enabled: false
+    source: negative_control_result_dirs
+    control_dirs: []
+    metric: spotiflow_intensity
+    statistic: quantile
+    quantile: 0.95
 
 qc:
   make_overlays: true
