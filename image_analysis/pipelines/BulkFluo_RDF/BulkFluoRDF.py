@@ -1274,9 +1274,13 @@ def aggregate_hub_rdf(
     rows = []
     group_cols = ["bin_index", "radius_start_nm", "radius_end_nm", "radius_center_nm"]
     for name, group in hub_rdf.groupby(group_cols, sort=True):
-        values = group[value_column].replace([np.inf, -np.inf], np.nan).dropna().astype(float)
+        valid_group = group[np.isfinite(group[value_column])].copy()
+        values = valid_group[value_column].astype(float)
         mean = float(values.mean()) if not values.empty else np.nan
         std = float(values.std(ddof=1)) if len(values) > 1 else np.nan
+        n_hubs = int(values.size)
+        n_nuclei = int(valid_group["nucleus_id"].nunique()) if "nucleus_id" in valid_group.columns else n_hubs
+        sem = float(std / np.sqrt(n_hubs)) if np.isfinite(std) and n_hubs > 0 else np.nan
         rows.append(
             {
                 "bin_index": int(name[0]),
@@ -1286,9 +1290,13 @@ def aggregate_hub_rdf(
                 "aggregation_value_column": value_column,
                 f"{value_column}_mean": mean,
                 f"{value_column}_std": std,
+                f"{value_column}_sem": sem,
                 f"{prefix}_mean": mean,
                 f"{prefix}_std": std,
-                "n_hubs": int(values.size),
+                f"{prefix}_sem": sem,
+                "n_hubs": n_hubs,
+                "n_nuclei": n_nuclei,
+                "sem_n": n_hubs,
                 "total_pixel_count": int(group["pixel_count"].sum()),
                 f"{prefix}_bin_intensity_mean": float(group["h3k27ac_mean_intensity"].mean()) if value_column.startswith("h3k27ac_") else float(group["spen_mean_intensity"].mean()),
             }
@@ -1318,11 +1326,11 @@ def clamp_rdf_ylim(ax, lower: float = 0.5, upper: float = 2.0) -> None:
         ax.set_ylim(lower, upper)
 
 
-def plot_rdf_mean_with_std(
+def plot_rdf_mean_with_error(
     ax,
     x: np.ndarray,
     mean: np.ndarray,
-    std: np.ndarray,
+    error: np.ndarray,
     color,
     label: str,
     zorder: int = 4,
@@ -1330,7 +1338,7 @@ def plot_rdf_mean_with_std(
     ax.errorbar(
         x,
         mean,
-        yerr=std,
+        yerr=error,
         fmt=".",
         color=color,
         ecolor=color,
@@ -1341,6 +1349,18 @@ def plot_rdf_mean_with_std(
         zorder=zorder,
     )
     ax.plot(x, mean, color=color, lw=2, zorder=zorder)
+
+
+def plot_rdf_mean_with_std(
+    ax,
+    x: np.ndarray,
+    mean: np.ndarray,
+    std: np.ndarray,
+    color,
+    label: str,
+    zorder: int = 4,
+) -> None:
+    plot_rdf_mean_with_error(ax, x, mean, std, color, label, zorder=zorder)
 
 
 def make_hub_aggregate_rdf_plot(
@@ -1383,8 +1403,9 @@ def make_hub_aggregate_rdf_plot(
                 )
         x = aggregate_summary["radius_start_nm"].to_numpy(float)
         y = aggregate_summary[f"{prefix}_mean"].to_numpy(float)
-        std = aggregate_summary[f"{prefix}_std"].to_numpy(float)
-        plot_rdf_mean_with_std(ax, x, y, std, "black", "Mean +/- STD", zorder=4)
+        sem_column = f"{prefix}_sem"
+        error = aggregate_summary[sem_column].to_numpy(float) if sem_column in aggregate_summary.columns else aggregate_summary[f"{prefix}_std"].to_numpy(float)
+        plot_rdf_mean_with_error(ax, x, y, error, "black", "Mean +/- SEM", zorder=4)
         ax.axhline(1.0, color="0.45", lw=1, ls="--")
         ax.set_xlim(float(aggregate_summary["radius_start_nm"].min()), float(aggregate_summary["radius_start_nm"].max()))
         ax.set_xlabel("Distance from SPEN hub center (nm)")
@@ -1392,7 +1413,9 @@ def make_hub_aggregate_rdf_plot(
         ax.set_title(title)
         clamp_rdf_ylim(ax)
         n_hubs = int(aggregate_summary["n_hubs"].max()) if "n_hubs" in aggregate_summary else 0
-        ax.plot([], [], linestyle="None", label=f"N = {n_hubs} SPEN hubs")
+        n_nuclei = int(aggregate_summary["n_nuclei"].max()) if "n_nuclei" in aggregate_summary else 0
+        ax.plot([], [], linestyle="None", label=f"SEM N = {n_hubs} SPEN hubs")
+        ax.plot([], [], linestyle="None", label=f"{n_nuclei} nuclei")
         ax.legend(frameon=False, fontsize=8, loc="best")
     fig.savefig(out_path, dpi=180)
     plt.close(fig)
@@ -1605,10 +1628,10 @@ def make_hub_qc_overlay(
             )
         summary = aggregate_hub_rdf(draw, value_column=plot_column)
         if not summary.empty:
-            std = summary["h3k27ac_rdf_std"].to_numpy(float)
+            error = summary["h3k27ac_rdf_sem"].to_numpy(float) if "h3k27ac_rdf_sem" in summary.columns else summary["h3k27ac_rdf_std"].to_numpy(float)
             mean = summary["h3k27ac_rdf_mean"].to_numpy(float)
             x = summary["radius_start_nm"].to_numpy(float)
-            plot_rdf_mean_with_std(rdf_ax, x, mean, std, "black", "FOV mean +/- STD", zorder=4)
+            plot_rdf_mean_with_error(rdf_ax, x, mean, error, "black", "FOV mean +/- SEM", zorder=4)
     rdf_ax.axhline(1.0, color="0.45", lw=1, ls="--")
     if not hub_rdf.empty:
         rdf_ax.set_xlim(float(hub_rdf["radius_start_nm"].min()), float(hub_rdf["radius_start_nm"].max()))
@@ -1885,10 +1908,10 @@ def make_filter_comparison_rdf_overlay(records: list[dict], out_dir: Path) -> Pa
             continue
         x = aggregate["radius_start_nm"].to_numpy(float)
         y = aggregate["h3k27ac_rdf_mean"].to_numpy(float)
-        std = aggregate["h3k27ac_rdf_std"].to_numpy(float)
+        error = aggregate["h3k27ac_rdf_sem"].to_numpy(float) if "h3k27ac_rdf_sem" in aggregate.columns else aggregate["h3k27ac_rdf_std"].to_numpy(float)
         label = f"{record['filter_label']} ({record['retained_hubs']} hubs)"
         color = f"C{color_idx}"
-        plot_rdf_mean_with_std(ax, x, y, std, color, label, zorder=4)
+        plot_rdf_mean_with_error(ax, x, y, error, color, label, zorder=4)
         color_idx += 1
         plotted = True
     if not plotted:

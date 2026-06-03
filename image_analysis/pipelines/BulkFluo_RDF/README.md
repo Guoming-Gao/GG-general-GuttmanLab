@@ -107,7 +107,8 @@ when available (`mps` on Apple Silicon, CUDA on NVIDIA, CPU otherwise).
 
 Current RDF defaults use Spotiflow `probability_threshold: 0.4`,
 `min_distance: 1`, per-hub annular RDF, local-intensity H3K27ac normalization,
-plain per-bin mean/STD aggregation across retained hubs, nucleus area/edge
+plain per-bin mean aggregation across retained hubs with SEM error bars using
+the number of contributing SPEN hubs as N, nucleus area/edge
 filtering, median + 2 STD SPEN hub filtering, and an optional negative-control
 hard Spotiflow-intensity floor.
 
@@ -174,6 +175,7 @@ rdf_local_norm(h, r0, r1) = observed_sum / expected_sum
 `pixel_count` is the actual number of valid nucleus pixels in that clipped
 annular bin. This provides ring-area/boundary normalization while the denominator
 uses the hub-local max-radius intensity reference instead of the whole nucleus. Aggregated
-plots show the per-bin mean and STD across retained hubs, with individual hub
-curves in the background. The same RDF calculation is also run on the SPEN object
-channel as a positive control.
+plots show the per-bin mean across retained hubs with SEM error bars computed as
+hub-level STD divided by the square root of the number of contributing SPEN hubs,
+with individual hub curves in the background. The same RDF calculation is also
+run on the SPEN object channel as a positive control.

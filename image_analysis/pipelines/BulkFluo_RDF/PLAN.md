@@ -75,14 +75,16 @@ comparison folders under `results/hub_filter_comparison/`.
 ## Aggregation
 `aggregated_rdf_summary.csv` is aggregated directly across retained hubs, not
 first across nuclei. It includes:
-- H3K27ac RDF mean and STD
-- SPEN positive-control RDF mean and STD
+- H3K27ac RDF mean, STD, and SEM
+- SPEN positive-control RDF mean, STD, and SEM
+- SEM N as the number of contributing SPEN hubs per bin
 
 `rdf_aggregate.png` plots:
 - H3K27ac RDF and SPEN positive-control RDF
 - all individual hub RDF curves in the background using a shared intensity color
   palette
-- aggregate mean curves with STD error bars
+- aggregate mean curves with SEM error bars, where SEM is hub-level STD divided
+  by the square root of the number of contributing SPEN hubs
 - y-axis clamped to `[0.5, 2]` if the plotted range would otherwise exceed it
 - x coordinates set to each bin's left bound, with the x-axis ending at the last
   left bound
@@ -109,5 +111,6 @@ Validate that:
   hard threshold
 - `hub_rdf_results.csv` contains H3K27ac and SPEN local-intensity normalized RDF
   columns
-- `aggregated_rdf_summary.csv` contains H3K27ac/SPEN mean and STD aggregate columns
+- `aggregated_rdf_summary.csv` contains H3K27ac/SPEN mean, STD, SEM, `n_hubs`,
+  `n_nuclei`, and `sem_n` aggregate columns, with `sem_n == n_hubs`
 - aggregate and QC plots use RDF terminology and the final axis ranges
