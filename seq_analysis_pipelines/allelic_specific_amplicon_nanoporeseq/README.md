@@ -1,10 +1,11 @@
-# Nanopore Amplicon Sequencing Pipeline
+# Allele-Specific Amplicon Nanopore Sequencing Pipeline
 
 Whole-genome alignment pipeline for Nanopore amplicon sequencing with SNP-based allelic quantification.
 
 ## Requirements
 
 - **Conda environment**: `bioinfo`
+- Run all commands and notebooks from this environment: `conda activate bioinfo`
 - **Key tools**: `minimap2`, `samtools`, `pysam`, `pandas`, `matplotlib`, `numpy`
 - **Reference genome**: mm10 FASTA
 - **VCF file**: MGP v5 merged SNPs (for B6/Cast strain discrimination)
@@ -23,14 +24,46 @@ python -c "import pysam, pandas, matplotlib; print('All packages installed')"
 
 ## Workflow: Mode 1 (No UMI)
 
+### Optional Step 0: Demultiplex Inline Dual Indexes
+
+Use this step when a run contains multiple samples in one FASTQ with Illumina-style inline dual indexes. The sample map may use `SampleName,i5,i7` or `SampleName,P7_Barcode,P5_Barcode`. For `i5/i7` maps, `i5` is treated as the P5-side barcode and `i7` is reverse-complemented into the internal P7 orientation.
+
+```bash
+python 00_demultiplex_inline_barcodes.py \
+  --fastq /path/to/multiplexed.fastq \
+  --sample-map /path/to/barcode_sample_map.csv \
+  --output-dir /path/to/data/fastq_by_sample \
+  --summary /path/to/data/demux_summary.csv \
+  --unassigned-fastq /path/to/data/demux_audit/unassigned.fastq \
+  --max-mismatches 1
+```
+
+Use `fastq_by_sample/` as `--data_dir` for the downstream steps.
+
+### Optional Full Wrapper
+
+For multiplexed FASTQ runs:
+
+```bash
+python run_nanopore_pipeline.py \
+  --data-dir /path/to/data \
+  --fastq /path/to/data/multiplexed.fastq \
+  --sample-map /path/to/data/barcode_sample_map.csv \
+  --genome /Volumes/guttman/genomes/mm10/fasta/mm10.fa \
+  --vcf /Volumes/guttman/genomes/mm10/variants/mgp.v5.merged.snps_all.dbSNP142.vcf.gz \
+  --python /opt/miniconda3/envs/bioinfo/bin/python
+```
+
+For already-demultiplexed per-sample FASTQs, omit `--fastq` and `--sample-map`, and pass `--fastq-dir` if the FASTQs are not directly under `--data-dir`.
+
 ### Step 1: Quality Control
 
 Calculate read length distributions, N50, and quality scores.
 
 ```bash
-python scripts/01_fastq_quality_metrics.py \
+python 01_fastq_quality_metrics.py \
   --data_dir /path/to/fastq \
-  --output_dir results/qc
+  --results_dir results/mode_1
 ```
 
 **Outputs**: `qc_summary.csv`, length distribution plots
@@ -42,7 +75,7 @@ python scripts/01_fastq_quality_metrics.py \
 Align reads to mm10 genome using minimap2 with ONT preset.
 
 ```bash
-python scripts/02_align_to_genome.py \
+python 02_align_to_genome.py \
   --data_dir /path/to/fastq \
   --results_dir results/mode_1 \
   --genome /Volumes/guttman/genomes/mm10/fasta/mm10.fa \
@@ -60,7 +93,7 @@ python scripts/02_align_to_genome.py \
 Extract B6/Cast discriminating SNPs from VCF for the Xist region.
 
 ```bash
-python scripts/03_extract_snps_from_vcf.py \
+python 03_extract_snps_from_vcf.py \
   --vcf /Volumes/guttman/genomes/mm10/variants/mgp.v5.merged.snps_all.dbSNP142.vcf.gz \
   --region chrX:103460373-103483233 \
   --b6 C57BL_6NJ \
@@ -77,10 +110,11 @@ python scripts/03_extract_snps_from_vcf.py \
 Assign each read to B6 or Cast allele based on SNP match scoring.
 
 ```bash
-python scripts/04_quantify_alleles.py \
+python 04_quantify_alleles.py \
   --bam_dir results/mode_1/aligned \
   --snp_file results/mode_1/xist_snps.txt \
-  --output_dir results/mode_1/quantification
+  --output_dir results/mode_1/quantification \
+  --region chrX:103460373-103483233
 ```
 
 **Outputs**:
@@ -89,26 +123,36 @@ python scripts/04_quantify_alleles.py \
 
 ---
 
-### Step 5: Visualize Stoichiometry
+### Step 5: Consolidated Allele Plot
 
-Generate 2D heatmaps showing B6 vs Cast SNP match distributions.
+Generate a horizontal B6/Cast stacked bar plot matching the short-read visualization style. Raw Cast and B6 read counts are shown inside the bars by default.
 
 ```bash
-python scripts/05_plot_stoichiometry_heatmap.py \
-  --quant_dir results/mode_1/quantification \
-  --output_dir results/mode_1/quantification/plots
+python 05_plot_allele_summary.py \
+  --results-dir results/mode_1 \
+  --sample-map /path/to/barcode_sample_map.csv
 ```
 
-**Outputs**: `*.png` - Heatmaps for each sample
+Use `--hide-raw-counts` only if you want a percent-only figure.
+
+**Outputs**: `allele_barplot_consolidated.png`
 
 ---
 
-### Step 6: Compare Multiple Datasets (Optional)
+### Optional: Visualize Stoichiometry
+
+Use `visualization.ipynb` for exploratory 2D heatmaps showing B6 vs Cast SNP match distributions.
+
+**Outputs**: notebook-rendered plots for each sample.
+
+---
+
+### Step 7: Compare Multiple Datasets (Optional)
 
 Compare allelic ratios across multiple experimental datasets.
 
 ```bash
-python scripts/06_compare_multiple_datasets.py \
+python 05_compare_multiple_datasets.py \
   --results_dirs "results/exon_rep1,results/exon_rep2,results/intron" \
   --labels "ExonRep1,ExonRep2,Intron" \
   --output_dir results/comparative_analysis
@@ -120,12 +164,12 @@ python scripts/06_compare_multiple_datasets.py \
 
 ---
 
-### Step 7: Generate Summary Report (Optional)
+### Step 8: Generate Summary Report (Optional)
 
 Auto-generate a consolidated markdown report.
 
 ```bash
-python scripts/07_generate_summary_report.py \
+python 06_generate_summary_report.py \
   --results_dir results/mode_1 \
   --omit_snps "2,5"  # Optional: comma-separated SNP indices to exclude
 ```
@@ -194,6 +238,11 @@ See detailed analysis: `/Volumes/guttman/users/gmgao/Data_seq/20260129-DoxSeqRep
 
 ```
 results/
+├── demux_summary.csv
+├── demux_audit/
+│   └── unassigned.fastq
+├── fastq_by_sample/
+│   └── *.fastq
 ├── qc/
 │   ├── qc_summary.csv
 │   └── *_length_dist.png
@@ -204,8 +253,8 @@ results/
 │   │   └── *.xist.primary.bam
 │   ├── quantification/
 │   │   ├── *_quant.csv
-│   │   ├── allele_quantification_summary.csv
-│   │   └── plots/*.png
+│   │   └── allele_quantification_summary.csv
+│   ├── allele_barplot_consolidated.png
 │   └── xist_snps.txt
 └── mode_2/ (experimental)
     ├── categorized/
