@@ -27,7 +27,12 @@ from .transcripts import (
 )
 
 
-def design_snpaware_rna_primers(gene_name: str, output_dir: str | Path, config: dict) -> dict:
+def design_snpaware_rna_primers(
+    gene_name: str,
+    output_dir: str | Path,
+    config: dict,
+    progress_callback=None,
+) -> dict:
     """Run the full SNP-aware mature-RNA primer design pipeline."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -71,6 +76,7 @@ def design_snpaware_rna_primers(gene_name: str, output_dir: str | Path, config: 
         primer3_core=primer3_core,
         config=config,
         ntthal=ntthal,
+        progress_callback=progress_callback,
     )
     candidate_rows = _dedupe_candidates(crossing_rows)
     candidate_rows.sort(key=_pre_specificity_rank_key)
@@ -92,6 +98,7 @@ def design_snpaware_rna_primers(gene_name: str, output_dir: str | Path, config: 
             primer3_core=primer3_core,
             config=config,
             ntthal=ntthal,
+            progress_callback=progress_callback,
         )
         candidate_rows = _dedupe_candidates(candidate_rows + fallback_rows)
         candidate_rows.sort(key=_pre_specificity_rank_key)
@@ -208,11 +215,21 @@ def _design_mode_candidates(
     primer3_core: str,
     config: dict,
     ntthal: str,
+    progress_callback=None,
 ) -> list[dict]:
     rows: list[dict] = []
     min_snps = int(config["min_informative_snps"])
     goals = [min_snps] if mode == "junction_crossing" else list(range(min_snps, 0, -1))
     thermo_cache = {}
+    attempt_total = _count_primer3_attempts(mode, goals, common_junctions, snps, snp_cdna, config)
+    attempt_done = 0
+    if progress_callback:
+        progress_callback(
+            "mode_start",
+            mode=mode,
+            total_attempts=attempt_total,
+            message=f"{mode}: {attempt_total} Primer3 windows",
+        )
 
     for snp_goal in goals:
         for junction in common_junctions:
@@ -224,7 +241,23 @@ def _design_mode_candidates(
                 continue
             for flank in config["flank_steps"]:
                 for span_index, (span_start, span_end, target_snps) in enumerate(spans):
+                    attempt_done += 1
+                    if progress_callback:
+                        progress_callback(
+                            "attempt_start",
+                            mode=mode,
+                            attempt_index=attempt_done,
+                            total_attempts=attempt_total,
+                            message=f"{mode} {attempt_done}/{attempt_total}: cDNA{junction.cdna_left}|{junction.cdna_right}, flank {flank}",
+                        )
                     if span_end - span_start + 1 > int(config["max_amplicon_size"]):
+                        if progress_callback:
+                            progress_callback(
+                                "attempt_done",
+                                mode=mode,
+                                attempt_index=attempt_done,
+                                total_attempts=attempt_total,
+                            )
                         continue
                     template_start = max(1, span_start - int(flank))
                     template_end = min(template.length, span_end + int(flank))
@@ -258,6 +291,13 @@ def _design_mode_candidates(
                                 str(exc),
                             )
                         )
+                        if progress_callback:
+                            progress_callback(
+                                "attempt_done",
+                                mode=mode,
+                                attempt_index=attempt_done,
+                                total_attempts=attempt_total,
+                            )
                         continue
 
                     for pair in pairs:
@@ -284,6 +324,13 @@ def _design_mode_candidates(
                         row["Failure_Reason"] = "primer_overlaps_snp" if row["Primer_Overlaps_SNP"] else ""
                         _annotate_row(row, config, ntthal, thermo_cache)
                         rows.append(row)
+                    if progress_callback:
+                        progress_callback(
+                            "attempt_done",
+                            mode=mode,
+                            attempt_index=attempt_done,
+                            total_attempts=attempt_total,
+                        )
 
                 if any(
                     row.get("Hard_Filter_Pass") is True
@@ -291,8 +338,41 @@ def _design_mode_candidates(
                     and row.get("Design_Mode") == mode
                     for row in rows
                 ):
+                    if progress_callback:
+                        progress_callback(
+                            "mode_done",
+                            mode=mode,
+                            attempt_index=attempt_done,
+                            total_attempts=attempt_total,
+                        )
                     return rows
+    if progress_callback:
+        progress_callback(
+            "mode_done",
+            mode=mode,
+            attempt_index=attempt_done,
+            total_attempts=attempt_total,
+        )
     return rows
+
+
+def _count_primer3_attempts(
+    mode: str,
+    goals: list[int],
+    common_junctions: list[CommonJunction],
+    snps: list[SnpRecord],
+    snp_cdna: dict[tuple[str, int], int],
+    config: dict,
+) -> int:
+    total = 0
+    for snp_goal in goals:
+        for junction in common_junctions:
+            if mode == "junction_crossing":
+                spans = [(junction.cdna_left, junction.cdna_right, [])]
+            else:
+                spans = _target_spans(junction, snps, snp_cdna, snp_goal, config["max_target_spans_per_flank"])
+            total += len(spans) * len(config["flank_steps"])
+    return total
 
 
 def _query_template_snps(template: TranscriptTemplate, snp_db: SnpDatabase) -> tuple[list[SnpRecord], dict[tuple[str, int], int]]:

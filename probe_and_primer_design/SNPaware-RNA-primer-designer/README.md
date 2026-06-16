@@ -11,12 +11,14 @@ and strict-to-relaxed output tiers.
 
 ## Quick Start
 
-For interactive use, open `SNPaware_RNA_primer_pipeline.ipynb`. The notebook
-keeps all user-facing setup parameters in the first code cell, including gene
-list, output folders, local resource paths, Primer3 settings, SNP thresholds,
-junction thresholds, and BLAST settings. It also runs multi-gene designs with a
-`rich.progress` progress bar. There is no separate `config.py` file; notebook
-runs are configured directly in the notebook.
+For interactive use, open `SNPaware_RNA_primer_pipeline.ipynb`. The notebook is
+the primary interface and keeps all user-facing setup parameters in the first
+code cell, including gene list, output folders, local resource paths, Primer3
+settings, SNP thresholds, junction thresholds, and BLAST settings. It also runs
+multi-gene designs with a `rich.progress` progress bar. The notebook shows both
+gene-level progress and a current-gene Primer3-window progress task with ETA, so
+the ETA updates while a long gene is still running. There is no separate
+`config.py` file; notebook runs are configured directly in the notebook.
 
 For command-line use, run from this directory with the `bioinfo` conda
 environment. CLI defaults are embedded in `design_snpaware_rna_primers.py` and
@@ -28,12 +30,20 @@ conda run -n bioinfo python design_snpaware_rna_primers.py \
   --output-dir "/Users/gmgao/Dropbox/Caltech_PostDoc_GuttmanLab/constructs_primers_FISHprobes/qPCR LibAmp PCR primers/AmpliconSeq-Xist-crossjunction"
 ```
 
+The current notebook defaults are set up for an X-linked gene batch:
+
+- genes: `Xist`, `Tsix`, `Kdm5c`, `Ddx3x`, `Smc1a`, and `Rbmx`
+- output root:
+  `/Users/gmgao/Dropbox/Caltech_PostDoc_GuttmanLab/constructs_primers_FISHprobes/qPCR LibAmp PCR primers/AmpliconSeq-X genes set`
+- each gene writes to `<OUTPUT_ROOT>/<gene>_SNPaware_RNA_primers` unless an
+  exact path is added to `OUTPUT_DIR_BY_GENE`
+
 Batch command-line runs are also supported:
 
 ```bash
 conda run -n bioinfo python design_snpaware_rna_primers.py \
   --genes Xist,Tsix \
-  --output-dir "/Users/gmgao/Dropbox/Caltech_PostDoc_GuttmanLab/constructs_primers_FISHprobes/qPCR LibAmp PCR primers"
+  --output-dir "/Users/gmgao/Dropbox/Caltech_PostDoc_GuttmanLab/constructs_primers_FISHprobes/qPCR LibAmp PCR primers/AmpliconSeq-X genes set"
 ```
 
 Batch runs write one subfolder per gene and a `SNPaware_RNA_batch_summary.csv`
@@ -60,7 +70,8 @@ External tools default to `/opt/miniconda3/envs/bioinfo/bin`.
 The first notebook code cell is the main user setup surface. Edit these values
 there before running:
 
-- `GENE_NAMES`: one or more genes to design.
+- `GENE_NAMES`: one or more genes to design. The current notebook lists
+  `Xist`, `Tsix`, `Kdm5c`, `Ddx3x`, `Smc1a`, and `Rbmx`.
 - `OUTPUT_ROOT`: root folder for batch outputs.
 - `OUTPUT_DIR_BY_GENE`: optional exact output folders for specific genes.
 - local GTF, FASTA, BLAST database, and VCF paths.
@@ -69,6 +80,16 @@ there before running:
 For multiple genes, the notebook writes each gene to its own folder unless an
 exact folder is listed in `OUTPUT_DIR_BY_GENE`. It also writes
 `SNPaware_RNA_batch_summary.csv` in `OUTPUT_ROOT`.
+
+Current notebook search defaults:
+
+- minimum informative SNPs: `2`
+- cDNA amplicon range: `150-3000 bp`
+- ideal amplicon maximum for ranking: `1000 bp`
+- Primer3 candidates per target window: `100`
+- top reported pairs per gene: `20`
+- crossing-primer junction requirement: at least `6` bases on each side and at
+  least `4` bases on the primer 3-prime side
 
 ## Design Logic
 
