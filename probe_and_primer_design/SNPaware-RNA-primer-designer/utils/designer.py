@@ -10,7 +10,7 @@ from rich.progress import track
 
 from .io_utils import write_dataframe, write_fasta
 from .models import CommonJunction, SnpRecord, TranscriptModel, TranscriptTemplate
-from .post_filters import _annotate_row, annotate_post_filters
+from .post_filters import annotate_post_filter_row, annotate_post_filters
 from .primer3_utils import run_primer3_cdna_pair_design
 from .report import write_html_report
 from .snp_utils import SnpDatabase
@@ -322,7 +322,7 @@ def _design_mode_candidates(
                         if not row["Junction_Target_Pass"]:
                             continue
                         row["Failure_Reason"] = "primer_overlaps_snp" if row["Primer_Overlaps_SNP"] else ""
-                        _annotate_row(row, config, ntthal, thermo_cache)
+                        annotate_post_filter_row(row, config, ntthal, thermo_cache)
                         rows.append(row)
                     if progress_callback:
                         progress_callback(
@@ -494,7 +494,11 @@ def _score_pair(
     left_arm_lengths = _junction_arm_lengths(left_start, left_end, "left", primary_crossing) if crossing_side == "left" else {}
     right_arm_lengths = _junction_arm_lengths(right_start, right_end, "right", primary_crossing) if crossing_side == "right" else {}
     tm_delta = abs(pair["left_tm"] - pair["right_tm"])
+    snp_count = len(snps_in_amplicon)
+    meets_snp_goal = snp_count >= snp_goal
+    snp_excess = max(0, snp_count - snp_goal)
     ideal_penalty = max(0, pair["amplicon_size"] - ideal_amplicon_max)
+    size_rank_penalty = ideal_penalty
     left_segments = cdna_interval_to_genomic_segments(template, left_start, left_end)
     right_segments = cdna_interval_to_genomic_segments(template, right_start, right_end)
     amp_segments = cdna_interval_to_genomic_segments(template, amp_start, amp_end)
@@ -531,7 +535,9 @@ def _score_pair(
         "Amplicon_Genomic_Span": genomic_span,
         "Junction_Target_Pass": target_pass,
         "Covers_All_Guides": target_pass,
-        "SNP_Count_In_Amplicon": len(snps_in_amplicon),
+        "SNP_Count_In_Amplicon": snp_count,
+        "Meets_Min_SNP_Goal": meets_snp_goal,
+        "SNP_Excess_Over_Goal": snp_excess,
         "SNP_Positions_In_Amplicon": _format_snps(snps_in_amplicon, snp_cdna),
         "Left_Primer_Seq": pair["left_sequence"],
         "Left_Primer_cDNA_Start": left_start,
@@ -567,6 +573,7 @@ def _score_pair(
         "Left_Primer_SNP_Overlaps": _format_snps(left_overlaps, snp_cdna),
         "Right_Primer_SNP_Overlaps": _format_snps(right_overlaps, snp_cdna),
         "Ideal_Size_Overage": ideal_penalty,
+        "Amplicon_Size_Rank_Penalty": size_rank_penalty,
         "Left_Primer_PerfectOrNear_Hits": "",
         "Left_Primer_Noise_Hits": "",
         "Left_Primer_Specificity_Pass": "",
@@ -655,12 +662,16 @@ def _failure_row(
         "Target_Junction_Genomic": _format_junction(junction),
         "Flank_Used": flank,
         "SNP_Goal_For_Attempt": snp_goal,
+        "Amplicon_cDNA_Size": "",
         "Amplicon_Size": "",
         "Junction_Target_Pass": False,
         "SNP_Count_In_Amplicon": 0,
+        "Meets_Min_SNP_Goal": False,
+        "SNP_Excess_Over_Goal": 0,
         "Left_Primer_Seq": "",
         "Right_Primer_Seq": "",
         "Primer_Overlaps_SNP": "",
+        "Amplicon_Size_Rank_Penalty": "",
         "Failure_Reason": f"primer3_failed_for_target_span_{span_start}_{span_end}: {reason}",
     }
 
@@ -718,12 +729,14 @@ def _rank_key(row: dict) -> tuple:
         mode_rank,
         not row.get("Junction_Target_Pass", False),
         row.get("Primer_Overlaps_SNP", True),
-        -int(row.get("SNP_Count_In_Amplicon") or 0),
+        not row.get("Meets_Min_SNP_Goal", False),
         not specificity_pass,
-        int(row.get("Ideal_Size_Overage") or 0),
+        int(row.get("Amplicon_Size_Rank_Penalty") or row.get("Ideal_Size_Overage") or 0),
         int(row.get("Amplicon_Size") or 999999),
         float(row.get("Primer_Tm_Delta") or 999),
         float(row.get("Primer3_Pair_Penalty") or 999),
+        -int(row.get("SNP_Excess_Over_Goal") or 0),
+        -int(row.get("SNP_Count_In_Amplicon") or 0),
     )
 
 
@@ -735,11 +748,13 @@ def _pre_specificity_rank_key(row: dict) -> tuple:
         mode_rank,
         not row.get("Junction_Target_Pass", False),
         row.get("Primer_Overlaps_SNP", True),
-        -int(row.get("SNP_Count_In_Amplicon") or 0),
-        int(row.get("Ideal_Size_Overage") or 0),
+        not row.get("Meets_Min_SNP_Goal", False),
+        int(row.get("Amplicon_Size_Rank_Penalty") or row.get("Ideal_Size_Overage") or 0),
         int(row.get("Amplicon_Size") or 999999),
         float(row.get("Primer_Tm_Delta") or 999),
         float(row.get("Primer3_Pair_Penalty") or 999),
+        -int(row.get("SNP_Excess_Over_Goal") or 0),
+        -int(row.get("SNP_Count_In_Amplicon") or 0),
     )
 
 

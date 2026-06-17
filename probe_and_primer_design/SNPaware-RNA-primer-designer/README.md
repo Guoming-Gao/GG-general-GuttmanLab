@@ -30,9 +30,9 @@ conda run -n bioinfo python design_snpaware_rna_primers.py \
   --output-dir "/Users/gmgao/Dropbox/Caltech_PostDoc_GuttmanLab/constructs_primers_FISHprobes/qPCR LibAmp PCR primers/AmpliconSeq-Xist-crossjunction"
 ```
 
-The current notebook defaults are set up for an X-linked gene batch:
+The current notebook defaults are set up for a two-gene test run:
 
-- genes: `Xist`, `Tsix`, `Kdm5c`, `Ddx3x`, `Smc1a`, and `Rbmx`
+- genes: `Ddx3x` and `Mid1`
 - output root:
   `/Users/gmgao/Dropbox/Caltech_PostDoc_GuttmanLab/constructs_primers_FISHprobes/qPCR LibAmp PCR primers/AmpliconSeq-X genes set`
 - each gene writes to `<OUTPUT_ROOT>/<gene>_SNPaware_RNA_primers` unless an
@@ -71,7 +71,8 @@ The first notebook code cell is the main user setup surface. Edit these values
 there before running:
 
 - `GENE_NAMES`: one or more genes to design. The current notebook lists
-  `Xist`, `Tsix`, `Kdm5c`, `Ddx3x`, `Smc1a`, and `Rbmx`.
+  `Ddx3x` and `Mid1`; the previous X-linked batch is kept as a commented
+  example.
 - `OUTPUT_ROOT`: root folder for batch outputs.
 - `OUTPUT_DIR_BY_GENE`: optional exact output folders for specific genes.
 - local GTF, FASTA, BLAST database, and VCF paths.
@@ -84,6 +85,7 @@ exact folder is listed in `OUTPUT_DIR_BY_GENE`. It also writes
 Current notebook search defaults:
 
 - minimum informative SNPs: `2`
+- flank steps: `250`, `500`, `750`, `1000`, and `1500` cDNA bases
 - cDNA amplicon range: `150-3000 bp`
 - ideal amplicon maximum for ranking: `1000 bp`
 - Primer3 candidates per target window: `100`

@@ -11,21 +11,14 @@ from .sequence_utils import reverse_complement
 
 TIER_ORDER = ["strict_all", "relaxed_amplicon", "relaxed_specificity", "relaxed_gc_tm"]
 
-TIER_EXPLANATIONS = {
-    "strict_all": "All hard filters and all soft preference filters passed.",
-    "relaxed_amplicon": "Hard filters passed with strict specificity; only the 400-700 bp amplicon preference was relaxed.",
-    "relaxed_specificity": "Hard filters passed with configured amplicon size; strict BLAST specificity was relaxed.",
-    "relaxed_gc_tm": "Last-resort rescue: GC/Tm was modestly relaxed, while 3-prime G/C clamp and other hard safety filters still passed.",
-    "failed": "Not orderable: one or more hard selectable filters failed.",
-}
-
 
 def annotate_post_filters(rows: list[dict], config: dict, ntthal: str) -> dict:
     """Annotate candidate rows with post-design filter metrics and select the best tier."""
     thermo_cache: dict[tuple[str, str, str | None], float | None] = {}
+    tier_explanations = _tier_explanations(config)
 
     for row in rows:
-        _annotate_row(row, config, ntthal, thermo_cache)
+        _annotate_row(row, config, ntthal, thermo_cache, tier_explanations)
 
     counts = {tier: sum(row["Filter_Tier"] == tier for row in rows) for tier in TIER_ORDER}
     counts["failed"] = sum(row["Filter_Tier"] == "failed" for row in rows)
@@ -40,7 +33,49 @@ def annotate_post_filters(rows: list[dict], config: dict, ntthal: str) -> dict:
         "tier_counts": counts,
         "hard_pass_count": hard_pass_count,
         "hard_fail_count": len(rows) - hard_pass_count,
-        "tier_explanations": TIER_EXPLANATIONS,
+        "tier_explanations": tier_explanations,
+    }
+
+
+def annotate_post_filter_row(
+    row: dict,
+    config: dict,
+    ntthal: str,
+    thermo_cache: dict[tuple[str, str, str | None], float | None] | None = None,
+) -> None:
+    """Annotate one candidate row with the same config-aware post filters as batch annotation."""
+    _annotate_row(row, config, ntthal, thermo_cache if thermo_cache is not None else {}, _tier_explanations(config))
+
+
+def _tier_explanations(config: dict) -> dict[str, str]:
+    strict_amplicon = f"{config['strict_amplicon_min']}-{config['strict_amplicon_max']} bp"
+    configured_amplicon = f"{config['min_amplicon_size']}-{config['max_amplicon_size']} bp"
+    strict_gc = f"{config['post_filter_gc_min']}-{config['post_filter_gc_max']}%"
+    relaxed_gc = f"{config['relaxed_post_filter_gc_min']}-{config['relaxed_post_filter_gc_max']}%"
+    strict_tm = f"{config['post_filter_tm_min']}-{config['post_filter_tm_max']} C"
+    relaxed_tm = f"{config['relaxed_post_filter_tm_min']}-{config['relaxed_post_filter_tm_max']} C"
+    min_snps = config["min_informative_snps"]
+    return {
+        "strict_all": (
+            "All hard filters and soft preferences passed: strict BLAST specificity, "
+            f"{strict_amplicon} cDNA amplicon, at least {min_snps} informative SNPs, "
+            f"primer GC {strict_gc}, and primer Tm {strict_tm}."
+        ),
+        "relaxed_amplicon": (
+            "Hard filters passed with strict BLAST specificity; only the strict cDNA "
+            f"amplicon preference ({strict_amplicon}) was relaxed within the configured "
+            f"allowed range ({configured_amplicon})."
+        ),
+        "relaxed_specificity": (
+            "Hard filters passed within the configured cDNA amplicon range "
+            f"({configured_amplicon}); strict BLAST specificity was relaxed."
+        ),
+        "relaxed_gc_tm": (
+            "Last-resort rescue: primer GC/Tm was relaxed from "
+            f"{strict_gc}/{strict_tm} to {relaxed_gc}/{relaxed_tm}, while the 3-prime "
+            "G/C clamp and other hard safety filters still passed."
+        ),
+        "failed": "Not orderable: one or more hard selectable filters failed.",
     }
 
 
@@ -49,6 +84,7 @@ def _annotate_row(
     config: dict,
     ntthal: str,
     thermo_cache: dict[tuple[str, str, str | None], float | None],
+    tier_explanations: dict[str, str],
 ) -> None:
     left = str(row.get("Left_Primer_Seq", "") or "").upper()
     right = str(row.get("Right_Primer_Seq", "") or "").upper()
@@ -170,7 +206,7 @@ def _annotate_row(
     if not relaxed_specificity:
         soft_reasons.append("relaxed_specificity_failed")
     if not strict_amplicon:
-        soft_reasons.append("outside_strict_amplicon_400_700")
+        soft_reasons.append(f"outside_strict_amplicon_{config['strict_amplicon_min']}_{config['strict_amplicon_max']}")
     if not relaxed_amplicon:
         hard_reasons.append("outside_configured_amplicon_range")
 
@@ -227,7 +263,7 @@ def _annotate_row(
             "Filter_Tier": tier,
             "Soft_Filter_Tier": tier,
             "Selectable_For_Top_Output": tier != "failed",
-            "Tier_Explanation": TIER_EXPLANATIONS[tier],
+            "Tier_Explanation": tier_explanations[tier],
             "Relaxed_Criteria_Used": relaxed_criteria,
             "Hard_Filter_Failure_Reasons": ";".join(dict.fromkeys(hard_reasons)),
             "Soft_Filter_Relaxed_Reasons": ";".join(dict.fromkeys(soft_reasons)),
