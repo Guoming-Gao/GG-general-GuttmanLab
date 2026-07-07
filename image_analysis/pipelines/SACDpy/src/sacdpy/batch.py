@@ -77,6 +77,14 @@ def params_for_file(
     ac_order: int = 2,
     subfactor: float = 0.8,
     frames_per_sacd: int | None = None,
+    ifregistration: bool = False,
+    ifbackground: bool = False,
+    backgroundfactor: float = 2.0,
+    ifsparsedecon: bool = False,
+    fidelity: float = 100.0,
+    tcontinuity: float = 0.1,
+    sparsity: float = 1.0,
+    sparse_iterations: int = 100,
 ) -> SACDParams:
     return SACDParams(
         pixel_nm=pixel_nm,
@@ -88,6 +96,14 @@ def params_for_file(
         ac_order=ac_order,
         subfactor=subfactor,
         frames_per_sacd=frames_per_sacd,
+        ifregistration=ifregistration,
+        ifbackground=ifbackground,
+        backgroundfactor=backgroundfactor,
+        ifsparsedecon=ifsparsedecon,
+        fidelity=fidelity,
+        tcontinuity=tcontinuity,
+        sparsity=sparsity,
+        sparse_iterations=sparse_iterations,
     )
 
 
@@ -106,6 +122,14 @@ def run_batch_reconstruction(
     ac_order: int = 2,
     subfactor: float = 0.8,
     frames_per_sacd: int | None = None,
+    ifregistration: bool = False,
+    ifbackground: bool = False,
+    backgroundfactor: float = 2.0,
+    ifsparsedecon: bool = False,
+    fidelity: float = 100.0,
+    tcontinuity: float = 0.1,
+    sparsity: float = 1.0,
+    sparse_iterations: int = 100,
     show_progress: bool = False,
 ) -> list[BatchResult]:
     results: list[BatchResult] = []
@@ -161,6 +185,14 @@ def run_batch_reconstruction(
                 ac_order=ac_order,
                 subfactor=subfactor,
                 frames_per_sacd=frames_per_sacd,
+                ifregistration=ifregistration,
+                ifbackground=ifbackground,
+                backgroundfactor=backgroundfactor,
+                ifsparsedecon=ifsparsedecon,
+                fidelity=fidelity,
+                tcontinuity=tcontinuity,
+                sparsity=sparsity,
+                sparse_iterations=sparse_iterations,
             )
             stack = read_tiff_stack(input_file)
             sacd = reconstruct(stack, params)

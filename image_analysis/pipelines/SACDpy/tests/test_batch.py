@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sacdpy.batch import find_input_files, sacdpy_output_path, wavelength_for_file
+from sacdpy.batch import find_input_files, params_for_file, sacdpy_output_path, wavelength_for_file
 
 
 class BatchTests(unittest.TestCase):
@@ -43,6 +43,33 @@ class BatchTests(unittest.TestCase):
             640,
         )
         self.assertEqual(wavelength_for_file("sample-other.tif", 561, {"right": 640}), 561)
+
+    def test_params_for_file_passes_optional_sacdm_branches(self) -> None:
+        params = params_for_file(
+            "sample-right_frames_1-50.tif",
+            pixel_nm=117.0,
+            na=1.45,
+            default_wavelength_nm=561,
+            wavelength_by_name={"right": 640},
+            ifbackground=True,
+            backgroundfactor=3.0,
+            ifregistration=True,
+            ifsparsedecon=True,
+            fidelity=50.0,
+            tcontinuity=0.25,
+            sparsity=2.0,
+            sparse_iterations=5,
+        )
+
+        self.assertEqual(params.wavelength_nm, 640)
+        self.assertTrue(params.ifbackground)
+        self.assertEqual(params.backgroundfactor, 3.0)
+        self.assertTrue(params.ifregistration)
+        self.assertTrue(params.ifsparsedecon)
+        self.assertEqual(params.fidelity, 50.0)
+        self.assertEqual(params.tcontinuity, 0.25)
+        self.assertEqual(params.sparsity, 2.0)
+        self.assertEqual(params.sparse_iterations, 5)
 
 
 if __name__ == "__main__":
