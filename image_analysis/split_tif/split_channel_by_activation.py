@@ -10,13 +10,13 @@ import time
 """
 Activation-Scheme TIFF Splitter
 ================================
-Splits large TIFF stacks vertically into left and/or right camera halves,
-guided by a user-defined activation scheme.
+Splits large TIFF stacks by time into activation labels. For two-camera data,
+frames can also be split vertically into left and/or right camera halves.
 
 Each activation entry in the scheme specifies:
   - frame_start : int   -- 1-based, inclusive start frame of this activation
   - frame_end   : int   -- 1-based, inclusive end frame of this activation
-  - cameras     : list  -- e.g. ["left"], ["right"], or ["left", "right"]
+  - cameras     : list  -- e.g. ["left"], ["right"], ["left", "right"], or ["single"]
   - labels      : list  -- one label per camera entry, used as the output filename suffix
                            e.g. ["targetA_dyeA"] or ["targetA_dyeA", "targetB_dyeB"]
 
@@ -32,7 +32,7 @@ ACTIVATION_SCHEME = [
     {
         "frame_start": 11,
         "frame_end":   20,
-        "cameras":     ["left"],
+        "cameras":     ["single"],
         "labels":      ["targetC_dyeC"],
     },
 ]
@@ -48,22 +48,34 @@ Output filenames are:   <input_stem>-<label>.tif
 ACTIVATION_SCHEME = [
     {
         "frame_start": 1,
-        "frame_end":   10,
-        "cameras":     ["right"],
-        "labels":      ["Nb_JFX650"],
-    },
-    {
-        "frame_start": 11,
-        "frame_end":   20,
-        "cameras":     ["left"],
-        "labels":      ["Edar-GFP"],
-    },
-    {
-        "frame_start": 21,
-        "frame_end":   30,
-        "cameras":     ["left"],
+        "frame_end":   25,
+        "cameras":     ["single"],
         "labels":      ["DAPI"],
     },
+    {
+        "frame_start": 26,
+        "frame_end":   50,
+        "cameras":     ["single"],
+        "labels":      ["RL560"],
+    },
+    # {
+    #     "frame_start": 1,
+    #     "frame_end":   10,
+    #     "cameras":     ["right"],
+    #     "labels":      ["Nb_JFX650"],
+    # },
+    # {
+    #     "frame_start": 11,
+    #     "frame_end":   20,
+    #     "cameras":     ["left"],
+    #     "labels":      ["Edar-GFP"],
+    # },
+    # {
+    #     "frame_start": 21,
+    #     "frame_end":   30,
+    #     "cameras":     ["left"],
+    #     "labels":      ["DAPI"],
+    # },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -84,10 +96,10 @@ def _validate_scheme(scheme):
             )
 
         for cam in act["cameras"]:
-            if cam not in ("left", "right"):
+            if cam not in ("left", "right", "single"):
                 raise ValueError(
                     f"Activation {i+1}: unknown camera '{cam}'. "
-                    "Must be 'left' or 'right'."
+                    "Must be 'left', 'right', or 'single'."
                 )
 
         if len(act["cameras"]) != len(act["labels"]):
@@ -100,14 +112,23 @@ def _validate_scheme(scheme):
 def _calculate_chunk_size(frame_bytes):
     """Calculate chunk size based on available RAM and actual frame size.
 
-    Peak memory per activation = 2 × chunk (full frames + two halves).
+    Peak memory per activation is estimated from two-camera splitting.
     We target at most 50% of available RAM.
     """
     available_ram = psutil.virtual_memory().available
     usable_ram = available_ram * 0.5
-    memory_per_frame = frame_bytes * 2   # full + left_half + right_half ≈ 2× full
+    memory_per_frame = frame_bytes * 2   # full + split output frame ≈ 2× full
     frames_per_chunk = int(usable_ram / memory_per_frame)
     return max(100, min(frames_per_chunk, 3000))
+
+
+def _select_camera_frame(frame, camera, halfwidth):
+    """Return the frame data to write for the requested camera mode."""
+    if camera == "single":
+        return frame
+    if camera == "left":
+        return frame[:, :halfwidth]
+    return frame[:, halfwidth:]
 
 
 class ActivationProcessor:
@@ -116,9 +137,8 @@ class ActivationProcessor:
 
     For each activation entry the processor:
       1. Reads the specified frame range.
-      2. Splits each frame vertically into left / right halves.
-      3. Keeps only the camera(s) specified for that activation.
-      4. Writes one output TIFF per kept camera, named with the corresponding label.
+      2. Writes full frames for "single", or left / right halves for two-camera data.
+      3. Writes one output TIFF per kept camera, named with the corresponding label.
     """
 
     def __init__(self, fpath, scheme):
@@ -128,11 +148,11 @@ class ActivationProcessor:
 
     def _process_activation(self, activation, halfwidth, frame_bytes, act_index, total_acts, progress, task):
         """
-        Load, split, and save frames for a single activation entry using
+        Load and save frames for a single activation entry using
         sequential chunked I/O and streaming TiffWriter appends.
 
         Each chunk opens a fresh TiffFile handle to avoid file-handle sharing.
-        Frames are written immediately after splitting — no full accumulation.
+        Frames are written immediately after camera selection — no full accumulation.
         Advances `task` in the shared `progress` bar once per output file written.
         """
         frame_start = activation["frame_start"] - 1   # convert to 0-based
@@ -180,24 +200,24 @@ class ActivationProcessor:
                         frame = tif.pages[j].asarray()
 
                         for cam in cameras:
-                            half = frame[:, :halfwidth] if cam == "left" else frame[:, halfwidth:]
+                            out_frame = _select_camera_frame(frame, cam, halfwidth)
 
                             if first_written[cam]:
                                 # First frame: embed ImageJ-compatible TYX axes metadata
                                 writers[cam].write(
-                                    half,
+                                    out_frame,
                                     contiguous=True,
                                     metadata={'axes': 'TYX'},
                                 )
                                 first_written[cam] = False
                             else:
                                 writers[cam].write(
-                                    half,
+                                    out_frame,
                                     contiguous=True,
                                     metadata=None,
                                 )
 
-                            del half
+                            del out_frame
 
                         del frame
 
