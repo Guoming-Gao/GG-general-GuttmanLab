@@ -1,0 +1,7 @@
+{
+  "python": "3.13.9 | packaged by Anaconda, Inc. | (main, Oct 21 2025, 19:11:29) [Clang 20.1.8 ]",
+  "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+  "numpy": "2.4.6",
+  "repo_root": "/Users/gmgao/GGscripts/GG-general-GuttmanLab/image_analysis/pipelines/SACDpy",
+  "matlab_root": "/Users/gmgao/GGscripts/SACDm"
+}

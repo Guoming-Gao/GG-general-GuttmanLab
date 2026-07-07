@@ -26,6 +26,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--scale", type=float, default=None, help="Post-RL PSF exponent; defaults to AC order.")
     parser.add_argument("--subfactor", type=float, default=0.8, help="Mean subtraction factor before cumulant.")
+    parser.add_argument("--background", action="store_true", help="Enable SACDm wavelet background subtraction.")
+    parser.add_argument("--backgroundfactor", type=float, default=2.0, help="SACDm background weight.")
+    parser.add_argument("--registration", action="store_true", help="Enable subpixel registration to the first frame.")
+    parser.add_argument("--sparse-decon", action="store_true", help="Enable sparse Hessian post-deconvolution.")
+    parser.add_argument("--fidelity", type=float, default=100.0, help="Sparse Hessian fidelity weight.")
+    parser.add_argument("--tcontinuity", type=float, default=0.1, help="Sparse Hessian t/z continuity weight.")
+    parser.add_argument("--sparsity", type=float, default=1.0, help="Sparse Hessian sparsity weight.")
+    parser.add_argument("--sparse-iterations", type=int, default=100, help="Sparse Hessian iterations.")
     return parser
 
 
@@ -42,6 +50,14 @@ def main(argv: list[str] | None = None) -> int:
         frames_per_sacd=args.frames_per_sacd,
         scale=args.scale,
         subfactor=args.subfactor,
+        ifbackground=args.background,
+        backgroundfactor=args.backgroundfactor,
+        ifregistration=args.registration,
+        ifsparsedecon=args.sparse_decon,
+        fidelity=args.fidelity,
+        tcontinuity=args.tcontinuity,
+        sparsity=args.sparsity,
+        sparse_iterations=args.sparse_iterations,
     )
     stack = read_tiff_stack(args.input)
     result = reconstruct(stack, params)

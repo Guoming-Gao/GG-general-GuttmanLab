@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
+from .background import background_estimation
 from .cumulant import cumulant
 from .deconvolution import richardson_lucy_image, richardson_lucy_stack
 from .fourier import fourier_interpolate
 from .params import SACDParams
 from .psf import make_psfs
+from .registration import register_stack
+from .sparse_hessian import sparse_hessian_core
 
 
 def reconstruct(stack: np.ndarray, params: SACDParams | None = None) -> np.ndarray:
@@ -62,6 +65,13 @@ def _reconstruct_single_window(
     work = yxt.astype(np.float64, copy=False)
     work = work - np.min(work, axis=(0, 1), keepdims=True)
     work[work < 0] = 0.0
+    if params.ifbackground:
+        background = background_estimation(work / params.backgroundfactor)
+        background[background < 0] = 0
+        work = work - background
+        work[work < 0] = 0.0
+    if params.ifregistration:
+        work = register_stack(work)
 
     decon = richardson_lucy_stack(work, psf, params.iter1)
     interp = fourier_interpolate(decon, (params.mag, params.mag, 1), mirror_mode="lateral")
@@ -70,6 +80,14 @@ def _reconstruct_single_window(
     subtraction = params.subfactor * np.mean(interp, axis=2)
     interp = np.abs(interp - subtraction[:, :, None])
     ac = np.abs(cumulant(interp, params.ac_order))
+    if params.ifsparsedecon:
+        ac = sparse_hessian_core(
+            ac,
+            fidelity=params.fidelity,
+            continuity=params.tcontinuity,
+            sparsity=params.sparsity,
+            iterations=params.sparse_iterations,
+        )
 
     post_kernel = psf_high ** params.resolved_scale()
     post_kernel = post_kernel / post_kernel.sum()

@@ -1,0 +1,4 @@
+branch,matlab_fixture,parity_note,shape_python,shape_matlab,pearson,nrmse,mae,max_abs_diff
+background_estimation,background_fixture.mat,tolerance; PyWavelets/MATLAB boundary internals differ,128x96x3,128x96x3,0.9948164581864267,0.03549651633978849,0.008430592900035857,0.08966071334079051
+registration,registration_fixture.mat,tight,64x64,64x64,0.9999999996816298,1.4758590510789953e-05,1.3394800735848708e-06,1.7526092355057976e-05
+sparse_hessian,sparse_fixture.mat,tight,18x16,18x16,0.9999999999999776,2.0775562057424686e-07,5.08984709599258e-08,2.457708789815882e-07

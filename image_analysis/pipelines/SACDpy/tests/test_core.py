@@ -6,11 +6,14 @@ import sys
 import tempfile
 import unittest
 
+from sacdpy.background import background_estimation
 from sacdpy.cumulant import cumulant
 from sacdpy.fourier import fourier_interpolate
 from sacdpy.params import SACDParams
 from sacdpy.psf import airy_kernel, generate_rsf
+from sacdpy.registration import register_stack
 from sacdpy.reconstruction import as_yxt, reconstruct
+from sacdpy.sparse_hessian import sparse_hessian_core
 from sacdpy.tiffio import read_tiff_stack, write_tiff_image
 
 
@@ -78,6 +81,40 @@ class CoreTests(unittest.TestCase):
             reconstruct(stack, self._fast_params(frames_per_sacd=0))
         with self.assertRaises(ValueError):
             reconstruct(stack, self._fast_params(frames_per_sacd=1))
+
+    def test_background_estimation_preserves_shape_and_finite_values(self) -> None:
+        stack = np.random.default_rng(6).random((32, 24, 3)).astype(np.float32)
+        background = background_estimation(stack, decomposition_level=2, iterations=1)
+        self.assertEqual(background.shape, stack.shape)
+        self.assertTrue(np.isfinite(background).all())
+
+    def test_registration_preserves_shape_and_normalizes_registered_frames(self) -> None:
+        stack = np.zeros((16, 16, 3), dtype=np.float64)
+        stack[6:10, 6:10, 0] = 1
+        stack[7:11, 5:9, 1] = 1
+        stack[5:9, 7:11, 2] = 1
+        registered = register_stack(stack, upsample_factor=10)
+        self.assertEqual(registered.shape, stack.shape)
+        self.assertTrue(np.isfinite(registered).all())
+        self.assertTrue(np.allclose(registered[:, :, 1:].max(axis=(0, 1)), 1.0))
+
+    def test_sparse_hessian_core_accepts_2d_images(self) -> None:
+        image = np.random.default_rng(7).random((12, 10)).astype(np.float32)
+        out = sparse_hessian_core(image, iterations=2)
+        self.assertEqual(out.shape, image.shape)
+        self.assertTrue(np.isfinite(out).all())
+        self.assertGreaterEqual(float(out.min()), 0.0)
+
+    def test_reconstruct_advanced_branches_execute_on_small_stack(self) -> None:
+        stack = np.random.default_rng(8).random((32, 24, 4))
+        params = self._fast_params()
+        params.ifbackground = True
+        params.ifregistration = True
+        params.ifsparsedecon = True
+        params.sparse_iterations = 2
+        result = reconstruct(stack, params)
+        self.assertEqual(result.shape, (64, 48))
+        self.assertTrue(np.isfinite(result).all())
 
     def test_cli_help_includes_frames_per_sacd(self) -> None:
         result = subprocess.run(

@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>REPORT</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<h1 id="sacdpy-vs-sacdm-validation-report">SACDpy vs SACDm Validation
+Report</h1>
+<p>Generated: 2026-07-03</p>
+<h2 id="executive-conclusion">Executive conclusion</h2>
+<p>SACDpy now aligns closely with the MATLAB SACDm default 2D
+reconstruction path for the bundled validation dataset. The current
+Python implementation ports the MATLAB
+<code>deconvlucy(I, PSF, NUMIT)</code> loop, keeps the SACDm Fourier
+interpolation/cumulant/PSF sequence, and implements the previously
+missing optional wavelet-background, registration, and sparse-Hessian
+branches.</p>
+<p>The strongest evidence is direct comparison against MATLAB SACDm
+outputs generated locally from
+<code>/Users/gmgao/GGscripts/SACDm/</code>: SACDpy-vs-MATLAB
+Pearson/SSIM are greater than <code>0.999</code> for both channels, with
+max-normalized NRMSE <code>0.01696</code> for the left channel and
+<code>0.00127</code> for the right channel.</p>
+<p>The bundled SACDj/ImageJ TIFFs remain different from MATLAB SACDm
+itself. For the right channel, MATLAB-vs-SACDj NRMSE is about
+<code>0.594</code>, while SACDpy-vs-SACDj is about <code>0.594</code>;
+this means SACDpy is now reproducing SACDm, and the remaining visible
+SACDj fixture difference should be treated as an implementation/version
+difference between SACDm and SACDj rather than a SACDpy port
+failure.</p>
+<h2 id="scope">Scope</h2>
+<p>Reference MATLAB source:
+<code>/Users/gmgao/GGscripts/SACDm</code></p>
+<p>Validation data:</p>
+<ul>
+<li><code>tests/testdata/TXSHA-undiff-SPEN_JF549_H3K27ac_DL650-SACD-FOV-1-left.tif</code></li>
+<li><code>tests/testdata/TXSHA-undiff-SPEN_JF549_H3K27ac_DL650-SACD-FOV-1-right.tif</code></li>
+<li>bundled SACD reference TIFFs in
+<code>tests/testdata/*-SACD-left.tif</code> and
+<code>tests/testdata/*-SACD-right.tif</code></li>
+</ul>
+<p>Parameters used for final validation: <code>pixel=117 nm</code>,
+<code>NA=1.45</code>, <code>mag=2</code>, <code>iter1=7</code>,
+<code>iter2=8</code>, <code>ACorder=2</code>,
+<code>subfactor=0.8</code>, left wavelength <code>560 nm</code>, right
+wavelength <code>647 nm</code>.</p>
+<p>Direct MATLAB execution available in this environment:
+<code>True</code>. MATLAB R2026a with Image Processing Toolbox and
+Wavelet Toolbox was used to generate
+<code>matlab_reference/sacdm-left.tif</code> and
+<code>matlab_reference/sacdm-right.tif</code>. A local compatibility
+shim for <code>Generate_PSF.m</code> is recorded in
+<code>matlab_patch/</code> because the original loop syntax fails in
+current MATLAB when <code>size(s1)</code> returns a vector.</p>
+<h2 id="final-image-metrics">Final Image Metrics</h2>
+<p>All metrics below compare SACDpy outputs regenerated by this report
+script against each reference after max normalization.</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+<col style="width: 10%" />
+</colgroup>
+<thead>
+<tr>
+<th>case</th>
+<th>reference</th>
+<th>shape_result</th>
+<th>shape_reference</th>
+<th>pearson_max_norm</th>
+<th>ssim_max_norm</th>
+<th>nrmse_max_norm</th>
+<th>mae_max_norm</th>
+<th>p95_abs_diff</th>
+<th>p99_abs_diff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>left</td>
+<td>SACDj/ImageJ fixture</td>
+<td>1368x856</td>
+<td>1368x856</td>
+<td>0.7576</td>
+<td>0.0891</td>
+<td>0.9072</td>
+<td>0.1062</td>
+<td>0.1985</td>
+<td>0.2499</td>
+</tr>
+<tr>
+<td>left</td>
+<td>MATLAB SACDm</td>
+<td>1368x856</td>
+<td>1368x856</td>
+<td>1.0000</td>
+<td>0.9999</td>
+<td>0.0170</td>
+<td>1.496e-04</td>
+<td>6.219e-04</td>
+<td>0.0011</td>
+</tr>
+<tr>
+<td>right</td>
+<td>SACDj/ImageJ fixture</td>
+<td>1368x856</td>
+<td>1368x856</td>
+<td>0.8108</td>
+<td>0.9269</td>
+<td>0.5943</td>
+<td>0.0039</td>
+<td>0.0171</td>
+<td>0.0292</td>
+</tr>
+<tr>
+<td>right</td>
+<td>MATLAB SACDm</td>
+<td>1368x856</td>
+<td>1368x856</td>
+<td>1.0000</td>
+<td>1.0000</td>
+<td>0.0013</td>
+<td>2.756e-06</td>
+<td>1.364e-05</td>
+<td>3.547e-05</td>
+</tr>
+</tbody>
+</table>
+<p>Interpretation: the MATLAB SACDm rows are the publication parity gate
+for this Python port. The SACDj/ImageJ rows are retained to document the
+known cross-implementation difference in the original fixture.</p>
+<h2 id="sharpness-metrics">Sharpness Metrics</h2>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr>
+<th>case</th>
+<th>source</th>
+<th>laplacian_variance</th>
+<th>tenengrad_mean</th>
+<th>high_frequency_energy_fraction</th>
+<th>top_0_5_percent_component_count</th>
+<th>top_0_5_percent_median_component_area_px</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>left</td>
+<td>SACDj/ImageJ fixture</td>
+<td>3.340e-04</td>
+<td>0.0089</td>
+<td>0.0125</td>
+<td>363</td>
+<td>9.0000</td>
+</tr>
+<tr>
+<td>left</td>
+<td>MATLAB SACDm</td>
+<td>1.106e-04</td>
+<td>0.0026</td>
+<td>0.0683</td>
+<td>869</td>
+<td>4.0000</td>
+</tr>
+<tr>
+<td>left</td>
+<td>SACDpy</td>
+<td>1.122e-04</td>
+<td>0.0026</td>
+<td>0.0718</td>
+<td>878</td>
+<td>4.0000</td>
+</tr>
+<tr>
+<td>right</td>
+<td>SACDj/ImageJ fixture</td>
+<td>1.462e-05</td>
+<td>4.913e-04</td>
+<td>0.0078</td>
+<td>152</td>
+<td>13.0000</td>
+</tr>
+<tr>
+<td>right</td>
+<td>MATLAB SACDm</td>
+<td>2.040e-06</td>
+<td>2.874e-04</td>
+<td>0.0011</td>
+<td>151</td>
+<td>13.0000</td>
+</tr>
+<tr>
+<td>right</td>
+<td>SACDpy</td>
+<td>2.070e-06</td>
+<td>2.879e-04</td>
+<td>0.0012</td>
+<td>152</td>
+<td>13.0000</td>
+</tr>
+</tbody>
+</table>
+<p>The right-channel reference has substantially higher
+high-frequency/gradient energy than SACDpy. This supports the reported
+visual difference: the reference keeps sharper puncta boundaries and
+resolves nearby bright objects better.</p>
+<h2 id="optional-branch-metrics">Optional Branch Metrics</h2>
+<p>The optional branches were compared against deterministic MATLAB
+fixtures generated by <code>run_matlab_optional_fixtures.m</code>.</p>
+<table style="width:100%;">
+<colgroup>
+<col style="width: 11%" />
+<col style="width: 11%" />
+<col style="width: 11%" />
+<col style="width: 11%" />
+<col style="width: 11%" />
+<col style="width: 11%" />
+<col style="width: 11%" />
+<col style="width: 11%" />
+<col style="width: 11%" />
+</colgroup>
+<thead>
+<tr>
+<th>branch</th>
+<th>matlab_fixture</th>
+<th>shape_python</th>
+<th>shape_matlab</th>
+<th>pearson</th>
+<th>nrmse</th>
+<th>mae</th>
+<th>max_abs_diff</th>
+<th>parity_note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>background_estimation</td>
+<td>background_fixture.mat</td>
+<td>128x96x3</td>
+<td>128x96x3</td>
+<td>0.9948</td>
+<td>0.0355</td>
+<td>0.0084</td>
+<td>0.0897</td>
+<td>tolerance; PyWavelets/MATLAB boundary internals differ</td>
+</tr>
+<tr>
+<td>registration</td>
+<td>registration_fixture.mat</td>
+<td>64x64</td>
+<td>64x64</td>
+<td>1.0000</td>
+<td>1.476e-05</td>
+<td>1.339e-06</td>
+<td>1.753e-05</td>
+<td>tight</td>
+</tr>
+<tr>
+<td>sparse_hessian</td>
+<td>sparse_fixture.mat</td>
+<td>18x16</td>
+<td>18x16</td>
+<td>1.0000</td>
+<td>2.078e-07</td>
+<td>5.090e-08</td>
+<td>2.458e-07</td>
+<td>tight</td>
+</tr>
+</tbody>
+</table>
+<h2 id="step-by-step-source-review">Step-by-Step Source Review</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Pipeline step</th>
+<th>MATLAB SACDm source</th>
+<th>SACDpy source</th>
+<th>Parity finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Defaults</td>
+<td><code>SACDm.m:64-82</code></td>
+<td><code>src/sacdpy/params.py:12-25</code></td>
+<td>Not exact: MATLAB default <code>NA=1.3</code>; SACDpy default
+<code>na=1.45</code>. Tests pass <code>1.45</code>, but defaults are not
+source-compatible.</td>
+</tr>
+<tr>
+<td>PSF generation</td>
+<td><code>SACDm.m:104-117</code>, <code>Utils/kernel.m</code>,
+<code>Utils/Generate_PSF.m</code>,
+<code>Utils/generate_rsf.m</code></td>
+<td><code>src/sacdpy/psf.py:7-95</code></td>
+<td>Mostly faithful for the default Airy/RSF paths. Python uses fixed
+96-point Gauss-Legendre quadrature instead of MATLAB
+<code>integral</code>; independent quad check max abs error is
+<code>9.021e-16</code> for sampled radii.</td>
+</tr>
+<tr>
+<td>Per-frame offset subtraction</td>
+<td><code>SACDm.m:119-123</code></td>
+<td><code>src/sacdpy/reconstruction.py:62-64</code></td>
+<td>Faithful: subtracts each frame minimum and clips negatives.</td>
+</tr>
+<tr>
+<td>Optional wavelet background subtraction</td>
+<td><code>SACDm.m:124-131</code>,
+<code>Utils/background_estimation.m</code></td>
+<td><code>src/sacdpy/background.py</code></td>
+<td>Implemented with PyWavelets and validated against a deterministic
+MATLAB fixture within tolerance. Small residual differences remain from
+MATLAB Wavelet Toolbox vs PyWavelets boundary/coefficient
+internals.</td>
+</tr>
+<tr>
+<td>Optional registration</td>
+<td><code>SACDm.m:132-137</code>, <code>Register/*</code></td>
+<td><code>src/sacdpy/registration.py</code></td>
+<td>Implemented as a source-level port of SACDm
+<code>DriftDetect</code>/<code>G2DFit</code>/Fourier shift and validated
+tightly against a MATLAB fixture.</td>
+</tr>
+<tr>
+<td>Pre RL deconvolution</td>
+<td><code>SACDm.m:139-143</code> calls MATLAB
+<code>deconvlucy</code></td>
+<td><code>src/sacdpy/deconvolution.py</code> ports MATLAB
+<code>deconvlucy</code>/<code>corelucy</code>/<code>psf2otf</code>
+defaults</td>
+<td>Aligned for default use. Direct fixture comparison against MATLAB
+SACDm passes strict Pearson/SSIM/NRMSE gates.</td>
+</tr>
+<tr>
+<td>Fourier interpolation</td>
+<td><code>SACD_core/fourierInterpolation.m</code></td>
+<td><code>src/sacdpy/fourier.py</code></td>
+<td>Source-level port is close, including symmetric lateral padding,
+Fourier zero-padding, Nyquist splitting, and valid-part cropping.</td>
+</tr>
+<tr>
+<td>Mean subtraction before cumulant</td>
+<td><code>SACDm.m:150-153</code></td>
+<td><code>src/sacdpy/reconstruction.py:70-72</code></td>
+<td>Faithful: subtracts <code>subfactor * mean(stack,3)</code> and takes
+absolute value per frame.</td>
+</tr>
+<tr>
+<td>Autocumulant</td>
+<td><code>SACD_core/cumulant.m</code></td>
+<td><code>src/sacdpy/cumulant.py</code></td>
+<td>Faithful in mathematical structure for orders 2-6. Python rejects
+order 1, whereas MATLAB returns <code>0</code> for order 1.</td>
+</tr>
+<tr>
+<td>Sparse Hessian post-deconvolution</td>
+<td><code>SACDm.m:155-158</code>, <code>Sparse/*</code></td>
+<td><code>src/sacdpy/sparse_hessian.py</code></td>
+<td>Implemented as a CPU NumPy port and covered by small-array execution
+tests.</td>
+</tr>
+<tr>
+<td>Post RL deconvolution</td>
+<td><code>SACDm.m:159-160</code> calls MATLAB
+<code>deconvlucy(cum, psfv2.^scale, iter2)</code></td>
+<td><code>src/sacdpy/reconstruction.py</code> plus
+<code>deconvolution.py</code></td>
+<td>Aligned for default use through the MATLAB <code>deconvlucy</code>
+port.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="stage-diagnostics">Stage Diagnostics</h2>
+<p>The script reproduced the Python stages using
+<code>src/sacdpy/reconstruction.py</code> and wrote full stage summaries
+to <code>metrics/stage_summary.csv</code>. Key invariant checks passed:
+no nonfinite values were produced and final shapes are
+<code>1368x856</code>.</p>
+<table>
+<colgroup>
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+<col style="width: 12%" />
+</colgroup>
+<thead>
+<tr>
+<th>case</th>
+<th>stage</th>
+<th>shape</th>
+<th>min</th>
+<th>max</th>
+<th>mean</th>
+<th>nonfinite</th>
+<th>negative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>left</td>
+<td>input_yxt</td>
+<td>684x428x50</td>
+<td>326.0000</td>
+<td>1.226e+03</td>
+<td>522.3611</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>psf_pre</td>
+<td>129x129</td>
+<td>2.950e-06</td>
+<td>0.0932</td>
+<td>6.009e-05</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>psf_post</td>
+<td>129x129</td>
+<td>3.238e-06</td>
+<td>0.0262</td>
+<td>6.009e-05</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>per_frame_min_subtracted</td>
+<td>684x428x50</td>
+<td>0.0000</td>
+<td>862.0000</td>
+<td>158.3811</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>pre_richardson_lucy</td>
+<td>684x428x50</td>
+<td>0.0000</td>
+<td>1.646e+03</td>
+<td>158.3811</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>lateral_fourier_interpolation</td>
+<td>1368x856x50</td>
+<td>0.0000</td>
+<td>1.639e+03</td>
+<td>158.2993</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>mean_subtracted_abs_stack</td>
+<td>1368x856x50</td>
+<td>1.263e-06</td>
+<td>954.1977</td>
+<td>37.5604</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>autocumulant_abs</td>
+<td>1368x856</td>
+<td>0.0016</td>
+<td>9.833e+04</td>
+<td>2.266e+03</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>post_kernel_scaled</td>
+<td>129x129</td>
+<td>1.472e-09</td>
+<td>0.0966</td>
+<td>6.009e-05</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>left</td>
+<td>post_richardson_lucy_result</td>
+<td>1368x856</td>
+<td>0.0000</td>
+<td>2.698e+05</td>
+<td>2.266e+03</td>
+<td>0</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cumulant-term-structure">Cumulant Term Structure</h2>
+<p>The Python cumulant implementation uses the joint-cumulant partition
+formula and skips singleton partitions. That matches the MATLAB explicit
+expressions:</p>
+<table>
+<thead>
+<tr>
+<th>order</th>
+<th>finite</th>
+<th>shape</th>
+<th>matlab_term_structure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>True</td>
+<td>5x4</td>
+<td>{“2”: 1}</td>
+</tr>
+<tr>
+<td>3</td>
+<td>True</td>
+<td>5x4</td>
+<td>{“3”: 1}</td>
+</tr>
+<tr>
+<td>4</td>
+<td>True</td>
+<td>5x4</td>
+<td>{“2+2”: 3, “4”: 1}</td>
+</tr>
+<tr>
+<td>5</td>
+<td>True</td>
+<td>5x4</td>
+<td>{“3+2”: 10, “5”: 1}</td>
+</tr>
+<tr>
+<td>6</td>
+<td>True</td>
+<td>5x4</td>
+<td>{“2+2+2”: 15, “3+3”: 10, “4+2”: 15, “6”: 1}</td>
+</tr>
+</tbody>
+</table>
+<h2 id="automated-tests">Automated Tests</h2>
+<p>Command recorded by this script:
+<code>PYTHONPATH=src python -m unittest discover -s tests</code></p>
+<p>Return code: <code>0</code></p>
+<pre><code>
+................................
+----------------------------------------------------------------------
+Ran 32 tests in 40.886s
+
+OK</code></pre>
+<p>Note: <code>pytest</code> is installed in the <code>smlm</code>
+environment for interactive validation. This embedded report command
+uses <code>unittest</code> so it does not depend on pytest-specific
+collection behavior.</p>
+<h2 id="artifacts">Artifacts</h2>
+<ul>
+<li>Regenerated SACDpy TIFFs: <code>outputs/sacdpy-left.tif</code>,
+<code>outputs/sacdpy-right.tif</code></li>
+<li>Metrics CSVs: <code>metrics/final_metrics.csv</code>,
+<code>metrics/sharpness_metrics.csv</code>,
+<code>metrics/optional_branch_metrics.csv</code>,
+<code>metrics/stage_summary.csv</code>,
+<code>metrics/cumulant_checks.csv</code>,
+<code>metrics/psf_check.json</code></li>
+<li>Figures: <code>figures/left_overview.png</code>,
+<code>figures/right_overview.png</code>,
+<code>figures/left_profile.png</code>,
+<code>figures/right_profile.png</code></li>
+</ul>
+<h2 id="remaining-caveats">Remaining Caveats</h2>
+<ol type="1">
+<li>SACDj/ImageJ output is not numerically identical to MATLAB SACDm for
+the bundled fixtures. If the publication method claims SACDj parity
+specifically, generate SACDj-native reference outputs and set separate
+acceptance thresholds.</li>
+<li>Wavelet background subtraction is validated within tolerance rather
+than bit-exactly because MATLAB Wavelet Toolbox and PyWavelets do not
+expose identical internal coefficient/boundary behavior.</li>
+<li><code>Generate_PSF.m</code> in the downloaded SACDm source required
+a local R2026a compatibility patch for direct MATLAB execution. The
+Python PSF implementation was independently checked against
+high-accuracy SciPy quadrature.</li>
+</ol>
+</body>
+</html>

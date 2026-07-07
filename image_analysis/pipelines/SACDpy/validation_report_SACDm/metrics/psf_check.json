@@ -1,0 +1,4 @@
+{
+  "max_abs_error_vs_scipy_quad": 9.020562075079397e-16,
+  "mean_abs_error_vs_scipy_quad": 5.134781488891349e-16
+}
