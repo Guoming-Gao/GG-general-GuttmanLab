@@ -37,6 +37,19 @@ class BatchTests(unittest.TestCase):
 
             self.assertEqual(find_input_files(folder), [wanted])
 
+    def test_find_input_files_can_exclude_generated_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            wanted = folder / "sample-DAPI.tif"
+            generated = folder / "sample-DAPI-SACDpy.tif"
+            wanted.touch()
+            generated.touch()
+
+            self.assertEqual(
+                find_input_files(folder, "*.tif", exclude_name_contains=("SACDpy",)),
+                [wanted],
+            )
+
     def test_wavelength_for_file_uses_filename_tokens(self) -> None:
         self.assertEqual(
             wavelength_for_file("sample-right_frames_1-50.tif", 561, {"right": 640}),

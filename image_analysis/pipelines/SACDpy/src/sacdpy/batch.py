@@ -21,13 +21,23 @@ class BatchResult:
     frames_per_sacd: int | None = None
 
 
-def find_input_files(input_path: str | Path, glob_pattern: str = "*frames_1-50.tif") -> list[Path]:
+def find_input_files(
+    input_path: str | Path,
+    glob_pattern: str = "*frames_1-50.tif",
+    exclude_name_contains: tuple[str, ...] = (),
+) -> list[Path]:
     path = Path(input_path)
     if path.is_file():
-        return [path]
-    if not path.exists():
-        raise FileNotFoundError(f"Input path does not exist: {path}")
-    return sorted(f for f in path.glob(glob_pattern) if f.is_file())
+        files = [path]
+    else:
+        if not path.exists():
+            raise FileNotFoundError(f"Input path does not exist: {path}")
+        files = sorted(f for f in path.glob(glob_pattern) if f.is_file())
+
+    exclude_tokens = tuple(token.lower() for token in exclude_name_contains)
+    if exclude_tokens:
+        files = [f for f in files if not any(token in f.name.lower() for token in exclude_tokens)]
+    return files
 
 
 def sacdpy_output_path(
