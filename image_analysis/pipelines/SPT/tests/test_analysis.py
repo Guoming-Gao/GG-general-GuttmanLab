@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
-from oni_spt.analysis import calculate_aio_table, concat_aio_files, reformat_aio_for_saspt
+from spt_shared import DEFAULT_CONFIG, condition_from_fov, output_dirs
+from step06_calculate_diffusion import calculate_aio_table, concat_aio_files, reformat_aio_for_saspt
+from step07_generate_reports import generate_report
 
 
 def test_aio_accepts_legacy_and_propagates_new_cell_metadata():
@@ -56,3 +60,39 @@ def test_old_trackmate_table_and_aio_concat_remain_supported(tmp_path):
     combined = pd.read_csv(output)
     assert len(combined) == 2
     assert set(combined["filename"]) == {"first.csv", "second.csv"}
+
+
+def test_condition_is_prefix_before_fov_token():
+    condition, warning = condition_from_fov("TXSHA-undiff-SPEN_JFX650-30ms-FOV-12")
+    assert condition == "TXSHA-undiff-SPEN_JFX650-30ms"
+    assert warning == ""
+    condition, warning = condition_from_fov("sample_without_token")
+    assert condition == "sample_without_token"
+    assert warning
+
+
+def test_condition_report_writes_pdf_png_and_count_tables(tmp_path):
+    rows = []
+    for track_id in range(4):
+        for frame in range(7):
+            rows.append({
+                "trackID": track_id, "x": track_id * 20 + frame + (frame % 2) * 0.2,
+                "y": frame * 0.7 + (frame % 3) * 0.3, "t": frame,
+                "meanIntensity": 10 + frame, "dataset": "test", "condition": "condition-A",
+                "fov": "condition-A-FOV-1", "channel": "spt", "cell_id": track_id + 1,
+                "assignment_confidence": 1.0, "assignment_ambiguous": False,
+                "trajectory_uid": f"test/fov/spt/{track_id}",
+            })
+    aio = calculate_aio_table(pd.DataFrame(rows), frame_interval_s=0.03)
+    aio.insert(0, "filename", "condition-A-FOV-1.tif")
+    cfg = {**DEFAULT_CONFIG, "output_dir": str(tmp_path)}
+    condition_dir = output_dirs(tmp_path)["analysis"] / "by_condition"
+    condition_dir.mkdir(parents=True)
+    aio.to_csv(condition_dir / "SPT_results_AIO_concat-condition-A__spt.csv", index=False)
+    result = generate_report(cfg)
+    assert Path(result["pdf"]).exists()
+    plots = list((output_dirs(tmp_path)["reports"] / "plots").glob("*.png"))
+    assert len(plots) == 9
+    for name in ("condition_summary.csv", "replicate_fractions.csv", "replicate_cell_counts.csv",
+                 "diffusion_metric_summary.csv"):
+        assert (output_dirs(tmp_path)["reports"] / name).exists()

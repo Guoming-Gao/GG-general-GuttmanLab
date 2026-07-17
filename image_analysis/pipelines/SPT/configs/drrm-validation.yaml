@@ -1,6 +1,6 @@
 dataset: 20260701_ONI-gmgao-SPEN_SPT-dRRM
 input_dir: /Volumes/guttman/primarydata/imaging_rawdata/20260701_ONI-gmgao-SPEN_SPT-dRRM
-output_dir: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SPT/20260701_ONI-gmgao-SPEN_SPT-dRRM/validation
+output_dir: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SPT/20260701_ONI-gmgao-SPEN_SPT-dRRM/validation_revised
 file_glob: "*.tif"
 
 layout:
@@ -21,3 +21,15 @@ spotiflow:
   probability_threshold: null
   model_cache_dir: ../../BulkFluo_RDF/cache/spotiflow_models
   device: auto
+
+laptrack:
+  max_link_distance_px: 5
+  gap_closing: true
+  gap_closing_max_frame_count: 2
+  min_track_length: 5
+
+qc:
+  max_video_frames: 100
+  render_scale: 2
+  video_fps: 10
+  scale_bar_um: 1

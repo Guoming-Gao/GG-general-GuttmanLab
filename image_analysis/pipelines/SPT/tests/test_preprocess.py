@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 from skimage.filters import difference_of_gaussians
-from skimage.util import img_as_uint
 from tifffile import imread
 
-from oni_spt.config import load_config
-from oni_spt.manifest import build_manifest
-from oni_spt.preprocess import artifact_paths, bandpass_frame, channel_specs, preprocess_file, split_frame
+from spt_shared import load_config
+from step01_inspect_inputs import build_manifest
+from step02_preprocess_videos import artifact_paths, bandpass_frame, channel_specs, preprocess_file, split_frame
 
 from conftest import write_config, write_oni_tiff
 
@@ -20,9 +20,10 @@ def test_split_and_bandpass_exact(tmp_path):
     np.testing.assert_array_equal(halves["right"], frame[:, 8:])
     with pytest.raises(ValueError):
         split_frame(frame[:, :-1], "dual")
-    expected = img_as_uint(difference_of_gaussians(frame, 1, 3))
+    expected = difference_of_gaussians(frame.astype(np.float32), 1, 3).astype(np.float32)
     np.testing.assert_array_equal(bandpass_frame(frame, 1, 3), expected)
-    assert expected.dtype == np.uint16
+    assert expected.dtype == np.float32
+    assert expected.min() < 0
 
 
 def test_preprocess_streams_raw_filtered_and_mip_and_resume(tmp_path):
@@ -42,6 +43,12 @@ def test_preprocess_streams_raw_filtered_and_mip_and_resume(tmp_path):
     assert raw_out.shape == (3, 10, 12)
     np.testing.assert_array_equal(raw_out, data[:3])
     np.testing.assert_array_equal(filtered[0], bandpass_frame(data[0], 1, 3))
+    assert filtered.dtype == np.float32
+    assert filtered.min() < 0
+    assert np.any(filtered != np.rint(filtered))
+    statistics = pd.read_csv(paths["stats"])
+    assert {"percentile_0_1", "percentile_50", "percentile_99_9"} <= set(statistics)
+    assert statistics.loc[0, "negative_fraction"] > 0
     np.testing.assert_array_equal(imread(paths["mip"]), data[:3].max(axis=0))
     mtime = paths["filtered"].stat().st_mtime_ns
     preprocess_file(row, cfg, max_frames=3, resume=True)

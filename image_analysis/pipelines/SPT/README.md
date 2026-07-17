@@ -1,107 +1,116 @@
-# ONI SPT
+# ONI Single-Particle Tracking
 
-`oni-spt` is a stand-alone, resumable pipeline for ONI single-particle tracking.
-It replaces TrackMate detection/tracking with Spotiflow and LapTrack while
-retaining compatibility with the existing AIO and saSPT analyses.
+This folder is the complete ONI SPT pipeline. The primary interface is
+`ONI_SPT_pipeline.ipynb`; the ordered `stepXX_*.py` files are the readable,
+independently runnable implementation.
 
-## Pipeline
+The workflow replaces TrackMate detection/tracking with Spotiflow and LapTrack,
+assigns trajectories to CellposeSAM masks, calculates the historical AIO
+diffusion metrics, runs pooled saSPT by condition, and creates comparison reports.
 
-1. Inspect ONI metadata and validate the configured acquisition layout.
-2. Stream the input into standardized channel BigTIFFs.
-3. Save DoG-filtered (`sigma=1,3`) TIFFs for SPT channels.
-4. Segment a marker MIP, or an SPT MIP when no marker is present, with
-   CellposeSAM.
-5. Detect subpixel spots independently in every filtered SPT frame with
-   Spotiflow.
-6. Link detections with LapTrack and assign each trajectory to its modal cell
-   mask.
-7. Export rich CSVs, exact numeric TrackMate-compatible CSVs, summaries, and QC.
+## Quick start
 
-The source TIFFs are never modified. Existing outputs are not silently deleted:
-use `--resume` to reuse a complete stage or `--force` to replace its individual
-artifacts.
+Use the existing `smlm` environment. Its required dependencies are documented in
+`environment.yml`; Spotiflow and LapTrack currently resolve to the local checkouts
+under `/Users/gmgao/GGscripts/`.
 
-## Installation
+Open `ONI_SPT_pipeline.ipynb`, edit only its parameter cell, and run the 50-frame
+pilot. Review the MP4s and 1200-dpi trajectory overlay before enabling the full
+batch.
 
-Create the combined environment:
+Terminal equivalent:
 
 ```bash
-conda env create -f environment.yml
-conda activate oni-spt
+conda run -n smlm python run_ONI_SPT.py inspect --config configs/fvp-validation.yaml
+conda run -n smlm python run_ONI_SPT.py run --config configs/fvp-validation.yaml --max-files 1 --max-frames 50
 ```
 
-For development in the existing `smlm` environment:
+Resume complete stage outputs or explicitly replace them:
 
 ```bash
-conda run -n smlm pip install -e /Users/gmgao/GGscripts/spotiflow
-conda run -n smlm pip install -e /Users/gmgao/GGscripts/laptrack
-conda run -n smlm pip install -e ".[analysis,test]"
+conda run -n smlm python run_ONI_SPT.py run --config CONFIG.yaml --resume
+conda run -n smlm python step04_detect_spots.py --config CONFIG.yaml --force
 ```
 
-## Commands
+## Ordered stages
 
-Inspect inputs without running models:
+1. `step01_inspect_inputs.py` — validate ONI layout and metadata.
+2. `step02_preprocess_videos.py` — split/copy channels and save signed float32 DoG.
+3. `step03_segment_cells.py` — CellposeSAM segmentation from marker or SPT MIP.
+4. `step04_detect_spots.py` — frame-resolved Spotiflow detections and MP4 QC.
+5. `step05_link_trajectories.py` — LapTrack, cell assignment, edge tables, track QC.
+6. `step06_calculate_diffusion.py` — historical AIO metrics and pooled saSPT.
+7. `step07_generate_reports.py` — condition comparison PDF, PNGs, and summaries.
+8. `step08_make_crop_qc_video.py` — regenerate a detailed cell/track crop video from existing results.
 
-```bash
-oni-spt inspect --config configs/fvp-validation.yaml
-oni-spt inspect --config configs/drrm-validation.yaml
-```
+The default LapTrack settings are `<5 px` between adjacent frames, `<5 px` gap
+closing over at most two frames, no splitting/merging, and at least five detected
+locations per retained trajectory.
 
-Run a 50-frame validation:
-
-```bash
-oni-spt run --config configs/fvp-validation.yaml --max-files 1 --max-frames 50
-oni-spt run --config configs/drrm-validation.yaml --max-files 1 --max-frames 50
-```
-
-Each stage can be run independently:
-
-```bash
-oni-spt preprocess --config CONFIG.yaml --max-frames 50
-oni-spt segment --config CONFIG.yaml
-oni-spt detect --config CONFIG.yaml
-oni-spt track --config CONFIG.yaml
-```
-
-Run the classical analysis on a new trajectory file:
-
-```bash
-oni-spt analyze-aio tracks.csv --frame-interval 0.03
-oni-spt concat-aio SPT_results_AIO-*.csv --output condition.csv
-oni-spt analyze-saspt condition.csv --frame-interval 0.03
-```
-
-The historical `cli_reformat-TrackMate-tracks.py` remains available for old
-TrackMate exports.
+Conditions default to the filename prefix before the first case-insensitive
+`FOV` token. Exceptional names can be mapped explicitly under
+`analysis.condition_overrides` using either the TIFF filename or stem as the key.
 
 ## Acquisition profiles
 
-- `fvp-*.yaml`: the 428-pixel frame is one full-width SPT channel.
-- `drrm-*.yaml`: only 856-pixel frames are accepted and split into a 428-pixel
-  left Hoechst channel and 428-pixel right SPT channel. The five mistaken
-  428-pixel files are left in primary data and listed in `unused_files.csv`.
-- `dual-spt-example.yaml`: both halves are independently filtered, detected,
-  and tracked; normalized channel MIPs are combined for a shared mask.
+- `configs/fvp-*.yaml`: one 428-pixel SPT channel.
+- `configs/drrm-*.yaml`: only 856-pixel inputs are accepted; left is Hoechst and
+  right is SPT. The five 428-pixel mistakes are listed in `unused_files.csv` and
+  never moved.
+- `configs/dual-spt-example.yaml`: both halves are independent SPT channels and
+  share a percentile-normalized segmentation source.
 
-## Output layout
+The revised validation profiles write to `validation_revised/`, leaving the old
+validation results unchanged.
+
+## Output folders
 
 ```text
-output/
-  input_manifest.csv
-  unused_files.csv
-  run_config.resolved.yaml
-  provenance.json
-  stage_status.json
-  channels/       # raw standardized/split stacks and metadata sidecars
-  bandpass/       # filtered SPT stacks
-  mips/           # raw per-channel MIPs
-  segmentation/   # Cellpose source, masks, region table, overlay
-  detections/     # canonical per-spot tables
-  tracks/         # canonical trajectories, legacy CSVs, track summaries
-  qc/             # detection and tracking overlays/histograms
+00_run_metadata/                 manifests, resolved config, provenance, status
+01_preprocessed/raw_channels/    standardized raw channel BigTIFFs
+01_preprocessed/bandpass_float32/ signed float32 DoG BigTIFFs and statistics
+01_preprocessed/mips/            raw channel MIPs
+02_segmentation/                 masks, regions, source image, overlay
+03_spot_detection/               rich per-frame detections
+04_trajectories/                 canonical/legacy tracks, summaries, edge tables
+05_diffusion_analysis/           per-FOV AIO, condition AIO, pooled saSPT
+06_reports/                      comparison PDF, 300-dpi plots, summary CSVs
+07_quality_control/              detection/track/crop MP4s and trajectory overlays
 ```
 
-Coordinates remain in channel-local pixels. Pixel size and frame interval are
-recorded from ONI metadata; the supplied profiles validate 0.117 um/pixel and
-30/100 ms acquisitions. Channel registration is assumed and no transform is
-applied.
+The tracking-metrics dashboards in `07_quality_control/secondary_metrics/` are
+secondary summaries. Use the frame-resolved MP4 and the 1200-dpi/vector overlay
+to judge whether detections were linked correctly.
+
+DoG is saved as signed `float32` in camera-intensity units. Negative values are
+not clipped and frames are not integer-quantized. Legacy TrackMate intensity
+columns use the positive DoG component without rounding; rich detection tables
+also retain signed-DoG and raw-intensity measurements.
+
+## Crop QC video
+
+Render existing results for one segmented cell:
+
+```bash
+conda run -n smlm python step08_make_crop_qc_video.py \
+  --config CONFIG.yaml --fov FOV_NAME --channel spt --cell-id 3
+```
+
+Selectors may instead be `--track-id ID` or `--bbox X0 Y0 X1 Y1`. The video uses
+at most 100 source frames and includes a 1 µm scale bar, source frame, physical
+timestamp, `Δt`, a physical-time progress bar, detections, track IDs, and resolved
+Spotiflow/LapTrack settings.
+
+A manually cropped TIFF can be used only with its full-FOV coordinate origin:
+
+```bash
+conda run -n smlm python step08_make_crop_qc_video.py \
+  --config CONFIG.yaml --fov FOV_NAME --channel spt --cell-id 3 \
+  --cropped-tif CELL_CROP.tif --origin-x 120 --origin-y 80
+```
+
+## Historical tools
+
+Original GUI scripts and plotting notebooks are preserved under `legacy/`.
+The original root CLI filenames remain as non-GUI compatibility wrappers around
+the new shared AIO, concatenation, and saSPT implementations.

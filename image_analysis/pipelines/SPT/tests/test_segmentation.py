@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 from tifffile import imwrite
 
-from oni_spt.preprocess import artifact_paths, channel_specs
-from oni_spt.segmentation import choose_segmentation_image, normalize01, region_table
+from step02_preprocess_videos import artifact_paths, channel_specs
+from step03_segment_cells import choose_segmentation_image, normalize01, region_table
 
 
 def test_marker_is_preferred_and_regions_are_exportable(tmp_path):
