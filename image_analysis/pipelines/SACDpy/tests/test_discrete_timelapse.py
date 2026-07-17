@@ -9,6 +9,8 @@ import numpy as np
 import tifffile
 
 from sacdpy.discrete_timelapse import (
+    apply_incomplete_grid_policy,
+    discover_fov_folders,
     discover_folder_plans,
     find_timelapse_files,
     group_timelapse_files,
@@ -20,6 +22,7 @@ from sacdpy.discrete_timelapse import (
     parse_timelapse_filename,
     read_oni_metadata,
     write_timelapse_tiff,
+    validate_unique_output_paths,
 )
 
 
@@ -50,6 +53,54 @@ class DiscreteTimelapseTests(unittest.TestCase):
         missing = group_timelapse_files(files[:-1])[0]
         self.assertFalse(missing.is_complete)
         self.assertEqual(missing.missing_entries, ((1, 2),))
+
+    def test_group_timelapse_files_rejects_duplicate_grid_entries(self) -> None:
+        first = parse_timelapse_filename("sample_posXY0_channels_t0_posZ0.tif")
+        duplicate = parse_timelapse_filename("sample_posXY0_channels_t0_posZ0.tiff")
+        with self.assertRaisesRegex(ValueError, "Duplicate time/z entry"):
+            group_timelapse_files([first, duplicate])
+
+    def test_discover_fov_folders_recurses_and_applies_filters(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            keep = root / "keep_fov"
+            omit = root / "50ms_photobleached" / "omit_fov"
+            (keep / "pos_0").mkdir(parents=True)
+            (omit / "pos_0").mkdir(parents=True)
+
+            result = discover_fov_folders(
+                root,
+                include_folder_patterns=("*fov",),
+                exclude_folder_patterns=("50ms_photobleached",),
+            )
+
+        self.assertEqual(result.discovered, (omit, keep))
+        self.assertEqual(result.included, (keep,))
+        self.assertEqual(result.excluded, (omit,))
+
+    def test_incomplete_grid_policies(self) -> None:
+        files = [
+            parse_timelapse_filename(f"sample_posXY0_channels_t{time}_posZ{z}.tif")
+            for time, z in [(0, 0), (0, 1), (1, 0)]
+        ]
+        group = group_timelapse_files(files)[0]
+
+        dropped = apply_incomplete_grid_policy(group)
+        self.assertEqual(dropped.group.time_indices, (0,))
+        self.assertEqual(dropped.dropped_time_indices, (1,))
+        self.assertEqual(dropped.status, "dropped_incomplete_timepoints")
+        self.assertIsNone(apply_incomplete_grid_policy(group, "skip_fov").group)
+        with self.assertRaisesRegex(ValueError, "incomplete time points"):
+            apply_incomplete_grid_policy(group, "error")
+
+    def test_validate_unique_output_paths_detects_collisions(self) -> None:
+        group = group_timelapse_files([
+            parse_timelapse_filename("sample_posXY0_channels_t0_posZ0.tif")
+        ])[0]
+        paths = validate_unique_output_paths([group], "/out")
+        self.assertEqual(len(paths), 2)
+        with self.assertRaisesRegex(ValueError, "Output path collision"):
+            validate_unique_output_paths([group, group], "/out")
 
     def test_find_timelapse_files_recurses_and_ignores_unmatched_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

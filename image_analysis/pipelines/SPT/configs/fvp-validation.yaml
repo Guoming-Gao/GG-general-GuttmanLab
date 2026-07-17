@@ -1,0 +1,20 @@
+dataset: 20260611_ONI-gmgao-SPEN_SPT-FVP
+input_dir: /Volumes/guttman/primarydata/imaging_rawdata/20260611_ONI-gmgao-SPEN_SPT-FVP
+output_dir: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SPT/20260611_ONI-gmgao-SPEN_SPT-FVP/validation
+file_glob: "TXSHAXX-FVP100min-SPEN_JFX650-30ms-plus405-FOV-1.tif"
+
+layout:
+  mode: single
+  expected_width: 428
+  unexpected_width_reason: unexpected_width
+
+channels:
+  full:
+    name: spt
+    role: spt
+
+spotiflow:
+  pretrained_model: general
+  probability_threshold: null
+  model_cache_dir: ../../BulkFluo_RDF/cache/spotiflow_models
+  device: auto

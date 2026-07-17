@@ -4,6 +4,7 @@ import json
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from fnmatch import fnmatch
 from pathlib import Path
 from statistics import median
 from typing import Iterable
@@ -66,6 +67,21 @@ class FolderTimelapsePlan:
     groups: tuple[TimelapseGroup, ...]
 
 
+@dataclass(frozen=True)
+class FOVFolderDiscovery:
+    dataset_root: Path
+    discovered: tuple[Path, ...]
+    included: tuple[Path, ...]
+    excluded: tuple[Path, ...]
+
+
+@dataclass(frozen=True)
+class GridPolicyResult:
+    group: TimelapseGroup | None
+    dropped_time_indices: tuple[int, ...]
+    status: str
+
+
 def parse_timelapse_filename(path: str | Path, channel_name: str = "647") -> TimelapseFile:
     """Parse ONI timelapse-z filenames ending in `_posXY#_channels_t#_posZ#.tif`."""
 
@@ -119,12 +135,81 @@ def group_timelapse_files(files: Iterable[TimelapseFile]) -> list[TimelapseGroup
     grouped: dict[tuple[str, str, int], dict[tuple[int, int], Path]] = defaultdict(dict)
     for item in files:
         key = (item.prefix, item.channel, item.pos_xy)
-        grouped[key][(item.time_index, item.z_index)] = item.path
+        grid_key = (item.time_index, item.z_index)
+        previous = grouped[key].get(grid_key)
+        if previous is not None:
+            raise ValueError(
+                f"Duplicate time/z entry for {item.prefix} posXY{item.pos_xy} "
+                f"at t{item.time_index} z{item.z_index}: {previous} and {item.path}"
+            )
+        grouped[key][grid_key] = item.path
 
     return [
         TimelapseGroup(prefix=prefix, channel=channel, pos_xy=pos_xy, files=files_by_tz)
         for (prefix, channel, pos_xy), files_by_tz in sorted(grouped.items())
     ]
+
+
+def discover_fov_folders(
+    dataset_root: str | Path,
+    *,
+    position_folder: str = "pos_0",
+    include_folder_patterns: Iterable[str] = (),
+    exclude_folder_patterns: Iterable[str] = (),
+) -> FOVFolderDiscovery:
+    """Find FOV folders containing a position folder and apply relative-path filters."""
+
+    root = Path(dataset_root)
+    if not root.is_dir():
+        raise FileNotFoundError(f"Dataset root does not exist: {root}")
+
+    discovered = tuple(sorted({path.parent for path in root.rglob(position_folder) if path.is_dir()}))
+    include_patterns = tuple(include_folder_patterns)
+    exclude_patterns = tuple(exclude_folder_patterns)
+
+    included: list[Path] = []
+    excluded: list[Path] = []
+    for folder in discovered:
+        relative = folder.relative_to(root).as_posix()
+        include_match = not include_patterns or _matches_folder_patterns(relative, include_patterns)
+        exclude_match = _matches_folder_patterns(relative, exclude_patterns)
+        (included if include_match and not exclude_match else excluded).append(folder)
+
+    return FOVFolderDiscovery(root, discovered, tuple(included), tuple(excluded))
+
+
+def apply_incomplete_grid_policy(
+    group: TimelapseGroup,
+    policy: str = "drop_incomplete_timepoints",
+) -> GridPolicyResult:
+    """Validate a time/z grid and optionally remove time points missing any observed z plane."""
+
+    policy = policy.lower()
+    if policy not in {"drop_incomplete_timepoints", "skip_fov", "error"}:
+        raise ValueError("incomplete-grid policy must be drop_incomplete_timepoints, skip_fov, or error")
+    if group.is_complete:
+        return GridPolicyResult(group, (), "complete")
+
+    incomplete_times = tuple(
+        time_index
+        for time_index in group.time_indices
+        if any((time_index, z_index) not in group.files for z_index in group.z_indices)
+    )
+    if policy == "error":
+        raise ValueError(
+            f"Group {group.prefix} posXY{group.pos_xy} has incomplete time points "
+            f"{incomplete_times}; missing entries: {group.missing_entries}"
+        )
+    if policy == "skip_fov":
+        return GridPolicyResult(None, incomplete_times, "skipped_incomplete")
+
+    kept_files = {
+        key: path for key, path in group.files.items() if key[0] not in incomplete_times
+    }
+    if not kept_files:
+        return GridPolicyResult(None, incomplete_times, "skipped_no_complete_timepoints")
+    filtered = TimelapseGroup(group.prefix, group.channel, group.pos_xy, kept_files)
+    return GridPolicyResult(filtered, incomplete_times, "dropped_incomplete_timepoints")
 
 
 def discover_folder_plans(
@@ -253,6 +338,19 @@ def output_paths_for_group(
     return output_dir / f"{stem}-TZYX.tif", output_dir / f"{stem}-MIP-TYX.tif"
 
 
+def validate_unique_output_paths(
+    groups: Iterable[TimelapseGroup],
+    output_dir: str | Path,
+) -> tuple[Path, ...]:
+    """Return planned output paths, raising before processing if any path collides."""
+
+    paths = tuple(path for group in groups for path in output_paths_for_group(group, output_dir))
+    duplicates = sorted({path for path in paths if paths.count(path) > 1})
+    if duplicates:
+        raise ValueError(f"Output path collision(s): {duplicates}")
+    return paths
+
+
 def write_timelapse_tiff(
     path: str | Path,
     image: np.ndarray,
@@ -298,3 +396,12 @@ def _metadata_time_interval_s(group: TimelapseGroup) -> float | None:
         timestamps.sort()
         intervals.extend((b - a) / 1_000_000.0 for (_, a), (_, b) in zip(timestamps, timestamps[1:]))
     return float(median(intervals)) if intervals else None
+
+
+def _matches_folder_patterns(relative_path: str, patterns: Iterable[str]) -> bool:
+    parts = Path(relative_path).parts
+    return any(
+        fnmatch(relative_path, pattern)
+        or any(fnmatch(part, pattern) for part in parts)
+        for pattern in patterns
+    )

@@ -1,0 +1,23 @@
+dataset: replace-me
+input_dir: /path/to/raw
+output_dir: /path/to/processed
+file_glob: "*.tif"
+
+layout:
+  mode: dual
+  expected_width: 856
+
+channels:
+  left:
+    name: spt_left
+    role: spt
+  right:
+    name: spt_right
+    role: spt
+
+segmentation:
+  source: combined_spt_mip
+
+spotiflow:
+  pretrained_model: general
+  probability_threshold: null

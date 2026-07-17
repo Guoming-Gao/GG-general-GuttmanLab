@@ -1,0 +1,23 @@
+dataset: 20260701_ONI-gmgao-SPEN_SPT-dRRM
+input_dir: /Volumes/guttman/primarydata/imaging_rawdata/20260701_ONI-gmgao-SPEN_SPT-dRRM
+output_dir: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SPT/20260701_ONI-gmgao-SPEN_SPT-dRRM/validation
+file_glob: "*.tif"
+
+layout:
+  mode: dual
+  expected_width: 856
+  unexpected_width_reason: unexpected_single_channel_width
+
+channels:
+  left:
+    name: hoechst
+    role: marker
+  right:
+    name: spt
+    role: spt
+
+spotiflow:
+  pretrained_model: general
+  probability_threshold: null
+  model_cache_dir: ../../BulkFluo_RDF/cache/spotiflow_models
+  device: auto

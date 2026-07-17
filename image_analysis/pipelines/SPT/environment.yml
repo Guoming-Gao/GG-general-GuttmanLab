@@ -1,0 +1,9 @@
+name: oni-spt
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pytorch
+  - pip:
+      - -e .[analysis,test]

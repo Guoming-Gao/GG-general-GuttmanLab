@@ -1,0 +1,5 @@
+{
+    "python.condaPath": "/opt/miniconda3/bin/conda",
+    "python.defaultInterpreterPath": "/opt/miniconda3/envs/spt/bin/python",
+    "terminal.integrated.inheritEnv": true
+}
