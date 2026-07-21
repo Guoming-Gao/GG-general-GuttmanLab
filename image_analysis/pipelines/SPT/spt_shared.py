@@ -8,6 +8,7 @@ import json
 import os
 import platform
 import re
+import shutil
 import sys
 import time
 from contextlib import contextmanager
@@ -109,10 +110,27 @@ def validate_config(cfg: dict[str, Any]) -> None:
         raise ValueError("gap_closing_max_frame_count must be at least one")
 
 
+def _load_config_chain(path: Path, seen: set[Path] | None = None) -> tuple[dict[str, Any], list[Path]]:
+    seen = set() if seen is None else seen
+    path = path.expanduser().resolve()
+    if path in seen:
+        raise ValueError(f"Circular config inheritance involving {path}")
+    seen.add(path)
+    with path.open() as handle:
+        raw = yaml.safe_load(handle) or {}
+    parent = raw.pop("extends", None)
+    if parent is None:
+        return raw, [path]
+    parent_path = Path(parent).expanduser()
+    if not parent_path.is_absolute():
+        parent_path = path.parent / parent_path
+    inherited, chain = _load_config_chain(parent_path, seen)
+    return _deep_merge(inherited, raw), chain + [path]
+
+
 def load_config(path: str | Path) -> dict[str, Any]:
     config_path = Path(path).expanduser().resolve()
-    with config_path.open() as handle:
-        raw = yaml.safe_load(handle) or {}
+    raw, chain = _load_config_chain(config_path)
     cfg = _deep_merge(DEFAULT_CONFIG, raw)
     cfg["input_dir"] = _resolve_path(cfg["input_dir"], config_path.parent)
     cfg["output_dir"] = _resolve_path(cfg["output_dir"], config_path.parent)
@@ -121,12 +139,21 @@ def load_config(path: str | Path) -> dict[str, Any]:
         cache, config_path.parent
     ) if cache else str(Path(cfg["output_dir"]) / ".cache" / "spotiflow_models")
     cfg["_config_path"] = str(config_path)
+    cfg["_config_chain"] = [str(value) for value in chain]
     validate_config(cfg)
     return cfg
 
 
 def public_config(cfg: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in cfg.items() if not key.startswith("_")}
+
+
+def atomic_text(value: str, path: str | Path) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(value)
+    os.replace(temporary, path)
 
 
 def output_dirs(output_dir: str | Path) -> dict[str, Path]:
@@ -216,16 +243,43 @@ def config_fingerprint(cfg: dict[str, Any]) -> str:
     return hashlib.sha256(payload).hexdigest()[:16]
 
 
-def write_run_metadata(cfg: dict[str, Any]) -> None:
+def write_run_metadata(
+    cfg: dict[str, Any], *, resume: bool = False, force: bool = False,
+    batch_config_path: str | Path | None = None, command: str | None = None,
+) -> None:
     dirs = ensure_output_dirs(cfg["output_dir"])
+    fingerprint = config_fingerprint(cfg)
+    provenance_path = dirs["metadata"] / "provenance.json"
+    if resume and provenance_path.exists() and not force:
+        try:
+            previous = json.loads(provenance_path.read_text())
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"Cannot safely resume: invalid {provenance_path}") from exc
+        previous_fingerprint = previous.get("config_fingerprint")
+        if previous_fingerprint and previous_fingerprint != fingerprint:
+            raise RuntimeError(
+                "Cannot resume with changed processing parameters: "
+                f"stored fingerprint {previous_fingerprint}, current {fingerprint}. "
+                "Use --force only after intentionally reviewing the change."
+            )
     with (dirs["metadata"] / "resolved_config.yaml").open("w") as handle:
         yaml.safe_dump(public_config(cfg), handle, sort_keys=False)
+    source_dir = dirs["metadata"] / "config_sources"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    for index, value in enumerate(cfg.get("_config_chain", [cfg["_config_path"]])):
+        source = Path(value)
+        shutil.copyfile(source, source_dir / f"{index:02d}_{source.name}")
+    shutil.copyfile(cfg["_config_path"], dirs["metadata"] / "pipeline_config.yaml")
+    if batch_config_path is not None:
+        shutil.copyfile(Path(batch_config_path).expanduser().resolve(), dirs["metadata"] / "batch_config.yaml")
+    if command:
+        atomic_text(command.rstrip() + "\n", dirs["metadata"] / "run_command.txt")
     atomic_json(
         {
             "created_unix": time.time(),
             "python": sys.version,
             "platform": platform.platform(),
-            "config_fingerprint": config_fingerprint(cfg),
+            "config_fingerprint": fingerprint,
             "dependencies": dependency_versions(),
         },
         dirs["metadata"] / "provenance.json",

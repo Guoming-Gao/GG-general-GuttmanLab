@@ -17,6 +17,13 @@ dependencies = [
     "PyWavelets",
 ]
 
+[project.optional-dependencies]
+phase-diagram = [
+    "cellpose>=4.1,<5",
+    "matplotlib",
+    "pandas",
+]
+
 [project.scripts]
 sacdpy = "sacdpy.cli:main"
 

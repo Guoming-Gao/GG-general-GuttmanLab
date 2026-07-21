@@ -156,14 +156,17 @@ def preprocess_file(row: dict[str, Any], cfg: dict[str, Any], *, max_frames: int
 
 
 def preprocess_stage(cfg: dict[str, Any], manifest: pd.DataFrame, *, max_files: int | None = None,
-                     max_frames: int | None = None, resume: bool = False, force: bool = False) -> None:
+                     max_frames: int | None = None, resume: bool = False, force: bool = False,
+                     progress: Any | None = None) -> None:
     rows = accepted_rows(manifest, max_files)
     if not rows:
         raise ValueError("No accepted TIFFs")
     with stage_timer(cfg, "02_preprocess", {"files": len(rows), "max_frames": max_frames}):
         for index, row in enumerate(rows, 1):
             print(f"[preprocess {index}/{len(rows)}] {row['filename']}", flush=True)
+            if progress: progress("preprocess", "start", index, len(rows), row)
             preprocess_file(row, cfg, max_frames=max_frames, resume=resume, force=force)
+            if progress: progress("preprocess", "finish", index, len(rows), row)
 
 
 def main(argv: list[str] | None = None) -> None:

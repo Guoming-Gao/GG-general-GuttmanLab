@@ -1,0 +1,11 @@
+extends: common.yaml
+dataset: 20260617_ONI-gmgao-SPEN_SACD_SPT-dSPEN_FL_FVP
+input_dir: /Volumes/guttman/primarydata/imaging_rawdata/20260617_ONI-gmgao-SPEN_SACDlive_SPT-dSPEN_FL_FVP
+output_dir: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SPT/20260617_ONI-gmgao-SPEN_SACD_SPT-dSPEN_FL_FVP
+allowed_frame_intervals_s: [0.03, 0.10, 0.50]
+layout:
+  mode: single
+  expected_width: 428
+  unexpected_width_reason: unexpected_non_SPT_layout
+channels:
+  full: {name: spt, role: spt}

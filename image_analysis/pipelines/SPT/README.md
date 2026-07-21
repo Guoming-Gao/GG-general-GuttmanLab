@@ -14,21 +14,21 @@ Use the existing `smlm` environment. Its required dependencies are documented in
 `environment.yml`; Spotiflow and LapTrack currently resolve to the local checkouts
 under `/Users/gmgao/GGscripts/`.
 
-Open `ONI_SPT_pipeline.ipynb`, edit only its parameter cell, and run the 50-frame
-pilot. Review the MP4s and 1200-dpi trajectory overlay before enabling the full
-batch.
+Open `ONI_SPT_pipeline.ipynb`, edit only its parameter cell, and use **Run All**.
+The notebook performs a production preflight and then runs or safely resumes the
+configured batch; there is no pilot stage.
 
 Terminal equivalent:
 
 ```bash
-conda run -n smlm python run_ONI_SPT.py inspect --config configs/fvp-validation.yaml
-conda run -n smlm python run_ONI_SPT.py run --config configs/fvp-validation.yaml --max-files 1 --max-frames 50
+conda run -n smlm python run_ONI_SPT_batch.py preflight --config configs/production/batch.yaml
+conda run -n smlm python run_ONI_SPT_batch.py run --config configs/production/batch.yaml --resume
 ```
 
-Resume complete stage outputs or explicitly replace them:
+Run one dataset independently, or explicitly replace one reviewed stage:
 
 ```bash
-conda run -n smlm python run_ONI_SPT.py run --config CONFIG.yaml --resume
+conda run -n smlm python run_ONI_SPT.py run --config configs/production/fvp.yaml --resume
 conda run -n smlm python step04_detect_spots.py --config CONFIG.yaml --force
 ```
 
@@ -51,22 +51,23 @@ Conditions default to the filename prefix before the first case-insensitive
 `FOV` token. Exceptional names can be mapped explicitly under
 `analysis.condition_overrides` using either the TIFF filename or stem as the key.
 
-## Acquisition profiles
+## Production configuration
 
-- `configs/fvp-*.yaml`: one 428-pixel SPT channel.
-- `configs/drrm-*.yaml`: only 856-pixel inputs are accepted; left is Hoechst and
-  right is SPT. The five 428-pixel mistakes are listed in `unused_files.csv` and
-  never moved.
-- `configs/dual-spt-example.yaml`: both halves are independent SPT channels and
-  share a percentile-normalized segmentation source.
+- `configs/production/common.yaml` contains shared processing parameters,
+  including the explicit Spotiflow threshold.
+- Each production dataset has a short YAML that inherits `common.yaml` and
+  declares only its paths, timing, layout, and channel roles.
+- `configs/production/batch.yaml` defines execution order and exact expected
+  accepted/skipped file and frame counts.
 
-The revised validation profiles write to `validation_revised/`, leaving the old
-validation results unchanged.
+Dataset configs are independently runnable. The two mixed SACD/SPT profiles use
+top-level `*.tif` matching only, so acquisition subfolders are excluded. dRRM
+accepts only 856-pixel inputs and uses left Hoechst/right SPT.
 
 ## Output folders
 
 ```text
-00_run_metadata/                 manifests, resolved config, provenance, status
+00_run_metadata/                 manifests, source/resolved configs, provenance, ETA/status
 01_preprocessed/raw_channels/    standardized raw channel BigTIFFs
 01_preprocessed/bandpass_float32/ signed float32 DoG BigTIFFs and statistics
 01_preprocessed/mips/            raw channel MIPs
@@ -86,6 +87,11 @@ DoG is saved as signed `float32` in camera-intensity units. Negative values are
 not clipped and frames are not integer-quantized. Legacy TrackMate intensity
 columns use the positive DoG component without rounding; rich detection tables
 also retain signed-DoG and raw-intensity measurements.
+
+Every result folder contains the exact source configuration chain, standalone
+resolved processing parameters, batch configuration, command, dependency/model
+versions, and configuration fingerprint. Resume is refused if that fingerprint
+changes unless `--force` is explicitly supplied.
 
 ## Crop QC video
 

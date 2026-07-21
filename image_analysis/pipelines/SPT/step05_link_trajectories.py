@@ -214,12 +214,14 @@ def track_file(row: dict[str, Any], cfg: dict[str, Any], *, resume: bool = False
 
 
 def track_stage(cfg: dict[str, Any], manifest: pd.DataFrame, *, max_files: int | None = None,
-                resume: bool = False, force: bool = False) -> None:
+                resume: bool = False, force: bool = False, progress: Any | None = None) -> None:
     rows = accepted_rows(manifest, max_files)
     with stage_timer(cfg, "05_track", {"files": len(rows), **cfg["laptrack"]}):
         for index, row in enumerate(rows, 1):
             print(f"[track {index}/{len(rows)}] {row['filename']}", flush=True)
+            if progress: progress("track", "start", index, len(rows), row)
             track_file(row, cfg, resume=resume, force=force)
+            if progress: progress("track", "finish", index, len(rows), row)
 
 
 def main(argv: list[str] | None = None) -> None:

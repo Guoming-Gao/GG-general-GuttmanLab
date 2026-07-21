@@ -1,0 +1,26 @@
+name: 2026_SPEN_SPT_production
+base_output_dir: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SPT
+minimum_free_GiB: 200
+continue_on_dataset_error: true
+
+datasets:
+  - config: fvp.yaml
+    expected_accepted_files: 9
+    expected_accepted_frames: 8599
+    expected_skipped_files: 0
+  - config: didr.yaml
+    expected_accepted_files: 15
+    expected_accepted_frames: 15000
+    expected_skipped_files: 0
+  - config: dspen_fl_fvp_spt.yaml
+    expected_accepted_files: 9
+    expected_accepted_frames: 6000
+    expected_skipped_files: 0
+  - config: sha_fvp_spt.yaml
+    expected_accepted_files: 51
+    expected_accepted_frames: 34200
+    expected_skipped_files: 1
+  - config: drrm.yaml
+    expected_accepted_files: 12
+    expected_accepted_frames: 11300
+    expected_skipped_files: 5

@@ -1,0 +1,19 @@
+name: smlm
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.13
+  - numpy
+  - pandas
+  - scipy
+  - scikit-image
+  - tifffile
+  - imagecodecs
+  - matplotlib
+  - pyyaml
+  - pytest
+  - pip
+  - pip:
+      - quickpbsa==2021.0.1
+      - spotiflow>=0.6,<0.7
+

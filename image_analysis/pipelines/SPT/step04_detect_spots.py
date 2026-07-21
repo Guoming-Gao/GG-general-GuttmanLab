@@ -151,12 +151,15 @@ def settings_label(cfg: dict[str, Any]) -> str:
 
 
 def detect_stage(cfg: dict[str, Any], manifest: pd.DataFrame, *, max_files: int | None = None,
-                 resume: bool = False, force: bool = False, context: Any | None = None) -> None:
+                 resume: bool = False, force: bool = False, context: Any | None = None,
+                 progress: Any | None = None) -> None:
     rows = accepted_rows(manifest, max_files); context = context or load_spotiflow(cfg)
     with stage_timer(cfg, "04_detect", {"files": len(rows), "threshold": context.resolved_threshold}):
         for index, row in enumerate(rows, 1):
             print(f"[detect {index}/{len(rows)}] {row['filename']}", flush=True)
+            if progress: progress("detect", "start", index, len(rows), row)
             detect_file(row, cfg, context, resume=resume, force=force)
+            if progress: progress("detect", "finish", index, len(rows), row)
 
 
 def main(argv: list[str] | None = None) -> None:

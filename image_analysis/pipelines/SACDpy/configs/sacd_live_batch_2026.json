@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "repo_root": "/Users/gmgao/GGscripts/GG-general-GuttmanLab/image_analysis/pipelines/SACDpy",
+  "output_root": "/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SACDlive",
+  "initial_seconds_per_movie": 10.09,
+  "processing": {
+    "position_folder": "pos_0",
+    "glob_pattern": "*.tif",
+    "channel_name": "647",
+    "incomplete_grid_policy": "error",
+    "wavelength_nm": 647.0,
+    "pixel_nm": null,
+    "fallback_pixel_nm": 117.0,
+    "na": null,
+    "fallback_na": 1.45,
+    "mag": 2,
+    "iter1": 7,
+    "iter2": 8,
+    "ac_order": 2,
+    "subfactor": 0.8,
+    "ifbackground": false,
+    "backgroundfactor": 2.0,
+    "ifregistration": false,
+    "ifsparsedecon": false,
+    "fidelity": 100.0,
+    "tcontinuity": 0.1,
+    "sparsity": 1.0,
+    "sparse_iterations": 100,
+    "time_interval_source": "metadata",
+    "nominal_time_interval_s": null
+  },
+  "datasets": [
+    {
+      "raw_root": "/Volumes/guttman/primarydata/imaging_rawdata/20260529_ONI-gmgao-SPEN_SACDlive-Aux_Dox_undiff",
+      "mode": "legacy_provenance",
+      "exclude_fovs": {
+        "50ms_photobleached": "Excluded from the completed May run"
+      }
+    },
+    {
+      "raw_root": "/Volumes/guttman/primarydata/imaging_rawdata/20260611_ONI-gmgao-SPEN_SACDlive-FVP",
+      "exclude_fovs": {
+        "SHA-postFVP-2min-SPEN_JF646-200ms_30s_16f": "Failed acquisition: final time point contains only z0",
+        "SHA-undiff_bef_FVP-SPEN_JF646-100ms_30s_16f-FOV": "Failed acquisition: second time point stops after z2",
+        "dSPEN_FL-undiff_bef_FVP-SPEN_JF646-100ms_30s_16f-FOV": "Failed acquisition: final time point stops after z4",
+        "dSPEN_FL-undiff_bef_FVP-SPEN_JF646-100ms_30s_16f-FOV-1": "Failed acquisition: final time point contains only z0"
+      },
+      "output_prefix_aliases": {
+        "SHA-postFVP-60min-SPEN_JF646-200ms_30s_16f-remember to rename contents": "ONI-gmgao-SPEN_SACDlive-FVP_SHA-postFVP-60min-SPEN_JF646-200ms_30s_16f"
+      }
+    },
+    {
+      "raw_root": "/Volumes/guttman/primarydata/imaging_rawdata/20260617_ONI-gmgao-SPEN_SACDlive_SPT-dSPEN_FL_FVP",
+      "exclude_fovs": {
+        "dSPEN_FL-FVP2h_recover2h-SPEN_JFX650-200ms_45s_7f-FOV-1": "Failed acquisition: 4x5 grid instead of neighboring 7x5"
+      }
+    },
+    {
+      "raw_root": "/Volumes/guttman/primarydata/imaging_rawdata/20260617_ONI-gmgao-SPEN_SACDlive_SPT-SHA_FVP",
+      "exclude_fovs": {
+        "SHA-FVP2h-SPEN_JFX650-200ms_45s_7f-FOV": "Failed acquisition: 2x5 grid instead of neighboring 7x5",
+        "SHA-before-SPEN_JFX650-200ms_45s_7f-FOV-5": "Failed acquisition: 2x5 grid instead of neighboring 7x5"
+      }
+    },
+    {
+      "raw_root": "/Volumes/guttman/primarydata/imaging_rawdata/20260617_ONI-gmgao-SPEN_SACDlive-dSPEN_dRRMdIDR",
+      "exclude_fovs": {
+        "dSPEN_dRRM-SPEN_JFX650-200ms_45s_7f-FOV-1": "Failed acquisition: only one time point and two z planes",
+        "dSPEN_dIDR-SPEN_JFX650-50ms_20s_15f-FOV": "Failed acquisition: 9x5 grid instead of expected 15x5"
+      }
+    }
+  ]
+}

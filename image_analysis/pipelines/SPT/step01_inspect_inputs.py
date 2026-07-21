@@ -91,9 +91,14 @@ def build_manifest(cfg: dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame.from_records(records, columns=MANIFEST_COLUMNS)
 
 
-def inspect_inputs(config_path: str | Path) -> tuple[dict[str, Any], pd.DataFrame]:
+def inspect_inputs(
+    config_path: str | Path, *, resume: bool = False, force: bool = False,
+    batch_config_path: str | Path | None = None, command: str | None = None,
+) -> tuple[dict[str, Any], pd.DataFrame]:
     cfg = load_config(config_path)
-    write_run_metadata(cfg)
+    write_run_metadata(
+        cfg, resume=resume, force=force, batch_config_path=batch_config_path, command=command,
+    )
     manifest = build_manifest(cfg)
     metadata = output_dirs(cfg["output_dir"])["metadata"]
     atomic_csv(manifest, metadata / "input_manifest.csv")

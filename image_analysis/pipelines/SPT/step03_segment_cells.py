@@ -108,12 +108,15 @@ def segment_file(row: dict[str, Any], cfg: dict[str, Any], *, resume: bool = Fal
 
 
 def segment_stage(cfg: dict[str, Any], manifest: pd.DataFrame, *, max_files: int | None = None,
-                  resume: bool = False, force: bool = False, model: Any | None = None) -> None:
+                  resume: bool = False, force: bool = False, model: Any | None = None,
+                  progress: Any | None = None) -> None:
     rows = accepted_rows(manifest, max_files)
     with stage_timer(cfg, "03_segment", {"files": len(rows)}):
         for index, row in enumerate(rows, 1):
             print(f"[segment {index}/{len(rows)}] {row['filename']}", flush=True)
+            if progress: progress("segment", "start", index, len(rows), row)
             segment_file(row, cfg, resume=resume, force=force, model=model)
+            if progress: progress("segment", "finish", index, len(rows), row)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -126,4 +129,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
-

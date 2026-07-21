@@ -53,7 +53,9 @@ under `tests/`.
 
 - Validation report: `SACDpy_validation_report.md`
 - Batch single-image notebook: `SACDpy_pipeline-batch_sinlgeSACD.ipynb`
-- Batch SACD-video notebook: `SACDpy_pipeline-SACDvideo.ipynb`
+- Canonical timelapse z-stack notebook: `SACDpy_pipeline-batch_timelapse_zstack_SACD.ipynb`
+- Reproducible multi-dataset config: `configs/sacd_live_batch_2026.json`
+- Resumable runner: `scripts/run_sacd_live_batch.py`
 - Reproduce test-data validation:
 
 ```bash

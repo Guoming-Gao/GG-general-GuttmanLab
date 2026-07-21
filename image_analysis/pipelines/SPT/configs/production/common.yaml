@@ -1,0 +1,58 @@
+# Shared production processing parameters. Dataset YAML files inherit this file.
+file_glob: "*.tif"  # Top-level TIFFs only; subfolders are never traversed.
+
+expected_pixel_size_um: 0.117
+pixel_size_tolerance_um: 0.002
+frame_interval_tolerance_s: 0.003
+
+bandpass:
+  sigma_low: 1.0
+  sigma_high: 3.0
+
+segmentation:
+  model: cpsam
+  source: auto
+  diameter: 80
+  flow_threshold: 0.4
+  cellprob_threshold: 0.0
+  min_size: 15
+  device: auto
+
+spotiflow:
+  pretrained_model: general
+  probability_threshold: 0.4
+  min_distance: 1
+  exclude_border: 1
+  normalizer: auto
+  device: auto
+  model_cache_dir: ../../../BulkFluo_RDF/cache/spotiflow_models
+
+laptrack:
+  metric: sqeuclidean
+  max_link_distance_px: 5
+  gap_closing: true
+  gap_closing_max_frame_count: 2
+  min_track_length: 5
+
+legacy:
+  spot_radius_px: 2.5
+
+qc:
+  max_video_frames: 100
+  render_scale: 2
+  video_fps: 10
+  video_crf: 10
+  track_tail_frames: 20
+  track_overlay_dpi: 1200
+  track_linewidth_pt: 0.1
+  scale_bar_um: 1.0
+  crop_padding_px: 12
+
+analysis:
+  condition_regex: null
+  condition_overrides: {}
+  immobile_stepsize_nm: 30
+  alpha_threshold: 0.7
+  fit_r2_threshold: 0.7
+  focal_depth_um: 0.7
+  run_saspt: true

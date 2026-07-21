@@ -1,0 +1,27 @@
+output_root: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/stepwise_photobleach_counting
+file_glob: "*.tif"
+
+datasets:
+  - name: 20260624_ONI-gmgao-SPEN_SHA-stepwise_photobleach
+    input_dir: /Volumes/guttman/primarydata/imaging_rawdata/20260624_ONI-gmgao-SPEN_SHA-stepwise_photobleach
+    expected_files: 9
+  - name: 20260625_ONI-gmgao-SPEN_wOSS-stepwise_photobleach
+    input_dir: /Volumes/guttman/primarydata/imaging_rawdata/20260625_ONI-gmgao-SPEN_wOSS-stepwise_photobleach
+    expected_files: 18
+
+spotiflow:
+  pretrained_model: general
+  probability_threshold: 0.4
+  min_distance: 1
+  normalizer: auto
+  device: auto
+  detection_frames: 5
+  model_cache_dir: ../BulkFluo_RDF/cache/spotiflow_models
+
+# Filled after reviewing stage 05. Keys are generated from TIFF acquisition metadata.
+quickpbsa:
+  thresholds: {}
+
+qc:
+  minimum_free_space_gib: 50
+  threshold_pilot_traces_per_fov: 24
