@@ -1,0 +1,13 @@
+name: sacd-punctatools-legacy
+channels:
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip=24.3
+  - numpy=1.23.5
+  - scipy=1.9.3
+  - scikit-image=0.19.3
+  - tifffile
+  - pywavelets
+  - pip:
+      - git+https://github.com/stjude/punctatools.git@v0.2.0

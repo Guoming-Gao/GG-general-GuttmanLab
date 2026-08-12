@@ -22,6 +22,7 @@ phase-diagram = [
     "cellpose>=4.1,<5",
     "matplotlib",
     "pandas",
+    "spotiflow>=0.6,<0.7",
 ]
 
 [project.scripts]

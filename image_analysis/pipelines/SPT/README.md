@@ -42,6 +42,7 @@ conda run -n smlm python step04_detect_spots.py --config CONFIG.yaml --force
 6. `step06_calculate_diffusion.py` — historical AIO metrics and pooled saSPT.
 7. `step07_generate_reports.py` — condition comparison PDF, PNGs, and summaries.
 8. `step08_make_crop_qc_video.py` — regenerate a detailed cell/track crop video from existing results.
+9. `step09_deep_cell_analysis.py` — review-gated selected-cell diffusion analysis for existing results.
 
 The default LapTrack settings are `<5 px` between adjacent frames, `<5 px` gap
 closing over at most two frames, no splitting/merging, and at least five detected
@@ -114,6 +115,39 @@ conda run -n smlm python step08_make_crop_qc_video.py \
   --config CONFIG.yaml --fov FOV_NAME --channel spt --cell-id 3 \
   --cropped-tif CELL_CROP.tif --origin-x 120 --origin-y 80
 ```
+
+## SHA FVP selected-cell analysis
+
+Use `SHA_FVP_deep_analysis.ipynb` for the staged workflow, or run the commands
+directly. Inventory and 30 ms are intentionally reviewed before 100 ms and the
+final timing comparison:
+
+```bash
+conda run -n smlm python step09_deep_cell_analysis.py inventory \
+  --config configs/sha_fvp_deep_analysis.yaml
+conda run -n smlm python step09_deep_cell_analysis.py analyze-30ms \
+  --config /PATH/TO/RESULTS/deep_analysis_config.yaml --resume
+
+# Rebuild plots/reports from saved analysis tables without rerendering overlays.
+conda run -n smlm python step09_deep_cell_analysis.py refresh-30ms-report \
+  --config /PATH/TO/RESULTS/deep_analysis_config.yaml
+conda run -n smlm python step09_deep_cell_analysis.py refresh-100ms-report \
+  --config /PATH/TO/RESULTS/deep_analysis_config.yaml
+```
+
+The stage counts retained LapTrack trajectories for cell eligibility and stores
+the diffusion-valid AIO count separately. Each review gate has its own folder:
+`30ms_comparison/`, `100ms_comparison/`, and
+`30ms_vs_100ms_comparison/`. Individual plots are PNG and SVG; each stage also
+has one multipage PDF report. The 1200-dpi, 5-pixel-padded cell crops are split
+between `selected_cells/30ms/` and `selected_cells/100ms/`. Their trajectories
+use a plasma alpha scale (clipped to 0.3–1.0), with unavailable alpha values in
+gray. Each timing report includes a pooled empirical CDF of the per-trajectory
+mean step size alongside the corresponding histogram. Every valid trajectory
+contributes equally, matching the historical publication notebooks. The
+underlying adjacent-frame step-size curve tables remain available for
+reproducibility, but are not included as report figures. Existing preprocessing,
+tracking, and diffusion artifacts remain read-only.
 
 ## Historical tools
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import re
@@ -68,9 +69,12 @@ class PhaseDiagramConfig:
     cellpose_device: str = "auto"
     crop_padding_px: int = 10
     review_scale_bar_um: float = 2.0
-    review_lower_percentile: float = 1.0
-    review_upper_percentile: float = 99.8
+    review_lower_percentile: float = 3.0
+    review_upper_percentile: float = 99.5
     core_erosion_radius_fraction: float = 1.0 / 3.0
+    nucleus_area_quantile: float = 10.0
+    exclude_border_nuclei: bool = True
+    comparison_random_seed: int = 20260701
     overwrite: bool = False
 
 
@@ -401,6 +405,40 @@ def _fov_output_paths(config: PhaseDiagramConfig, plan: PhaseFOVPlan) -> dict[st
     }
 
 
+def _mask_touches_border(mask: np.ndarray) -> bool:
+    mask = np.asarray(mask, dtype=bool)
+    if mask.ndim != 2 or not np.any(mask):
+        return False
+    return bool(
+        np.any(mask[0])
+        or np.any(mask[-1])
+        or np.any(mask[:, 0])
+        or np.any(mask[:, -1])
+    )
+
+
+def _core_exclusion_reason(core_mask: np.ndarray, spen_mip: np.ndarray) -> str:
+    if not np.any(core_mask):
+        return "empty_core_after_equivalent_radius_erosion"
+    core_values = np.asarray(spen_mip[core_mask], dtype=np.float64)
+    if not np.all(np.isfinite(core_values)):
+        return "nonfinite_core_intensity"
+    if float(np.mean(core_values)) <= 0:
+        return "nonpositive_core_mean"
+    return ""
+
+
+def _nucleus_filter_flags(
+    nucleus_mask: np.ndarray,
+    *,
+    area_cutoff_px: float | None,
+    exclude_border: bool,
+) -> tuple[bool, bool]:
+    small = area_cutoff_px is not None and int(np.sum(nucleus_mask)) < area_cutoff_px
+    touches_border = _mask_touches_border(nucleus_mask)
+    return bool(small), bool(exclude_border and touches_border)
+
+
 def _export_nucleus_crops(
     plan: PhaseFOVPlan,
     config: PhaseDiagramConfig,
@@ -412,6 +450,10 @@ def _export_nucleus_crops(
     pixel_size_um: float | None = None,
     manual_review: dict[tuple[str, int], tuple[str, str]] | None = None,
     reuse_existing: bool = False,
+    area_cutoff_px: float | None = None,
+    exclude_border: bool = False,
+    display_limits: tuple[float, float] | None = None,
+    puncta_labels_by_key: dict[str, np.ndarray] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     records: list[dict[str, Any]] = []
     excluded_records: list[dict[str, Any]] = []
@@ -433,22 +475,24 @@ def _export_nucleus_crops(
         full_mask_values = np.asarray(spen_mip[nucleus_mask], dtype=np.float64)
         if not full_mask_values.size or not np.all(np.isfinite(full_mask_values)):
             raise ValueError(f"Nucleus {nucleus_id} in {plan.fov_name} has no finite SPEN SACD pixels")
-        core_mask, equivalent_radius_px, erosion_distance_px, max_inscribed_radius_px = make_intensity_core(
-            nucleus_mask,
+        core_crop, equivalent_radius_px, erosion_distance_px, max_inscribed_radius_px = make_intensity_core(
+            mask_crop,
             config.core_erosion_radius_fraction,
         )
         manual_use, manual_note = (manual_review or {}).get((plan.fov_name, nucleus_id), ("", ""))
         key = f"{plan.fov_name}__nucleus-{nucleus_id:04d}"
-        exclusion_reason = ""
-        if not np.any(core_mask):
-            exclusion_reason = "empty_core_after_equivalent_radius_erosion"
-            core_values = np.asarray([], dtype=np.float64)
-        else:
-            core_values = np.asarray(spen_mip[core_mask], dtype=np.float64)
-            if not np.all(np.isfinite(core_values)):
-                exclusion_reason = "nonfinite_core_intensity"
-            elif float(np.mean(core_values)) <= 0:
-                exclusion_reason = "nonpositive_core_mean"
+        core_values = np.asarray(spen_crop[core_crop], dtype=np.float64)
+        exclusion_reason = _core_exclusion_reason(core_crop, spen_crop)
+        small_nucleus, excluded_for_border = _nucleus_filter_flags(
+            nucleus_mask,
+            area_cutoff_px=area_cutoff_px,
+            exclude_border=exclude_border,
+        )
+        touches_border = _mask_touches_border(nucleus_mask)
+        if not exclusion_reason and small_nucleus:
+            exclusion_reason = "small_nucleus"
+        elif not exclusion_reason and excluded_for_border:
+            exclusion_reason = "touches_fov_border"
         if exclusion_reason:
             excluded_records.append(
                 {
@@ -460,11 +504,14 @@ def _export_nucleus_crops(
                     "fov_token": fov_token,
                     "nucleus_id": nucleus_id,
                     "exclusion_reason": exclusion_reason,
+                    "small_nucleus": small_nucleus,
+                    "touches_border": touches_border,
+                    "nucleus_area_cutoff_sacd_px": area_cutoff_px if area_cutoff_px is not None else "",
                     "area_sacd_px": int(nucleus_mask.sum()),
                     "equivalent_radius_sacd_px": equivalent_radius_px,
                     "erosion_distance_sacd_px": erosion_distance_px,
                     "max_inscribed_radius_sacd_px": max_inscribed_radius_px,
-                    "core_area_sacd_px": int(core_mask.sum()),
+                    "core_area_sacd_px": int(core_crop.sum()),
                     "manual_use": manual_use,
                     "manual_note": manual_note,
                 }
@@ -488,20 +535,16 @@ def _export_nucleus_crops(
                 review_png,
                 spen_crop,
                 mask_crop,
-                core_mask[y0:y1, x0:x1],
+                core_crop,
                 pixel_size_um=output_pixel_um,
                 scale_bar_um=config.review_scale_bar_um,
                 lower_percentile=config.review_lower_percentile,
                 upper_percentile=config.review_upper_percentile,
+                display_limits=display_limits,
+                puncta_labels=(puncta_labels_by_key or {}).get(key),
             )
 
         ys, xs = np.where(nucleus_mask)
-        touches_border = bool(
-            np.any(ys == 0)
-            or np.any(xs == 0)
-            or np.any(ys == labels.shape[0] - 1)
-            or np.any(xs == labels.shape[1] - 1)
-        )
         records.append(
             {
                 "nucleus_key": key,
@@ -522,8 +565,8 @@ def _export_nucleus_crops(
                 "equivalent_radius_sacd_px": equivalent_radius_px,
                 "erosion_distance_sacd_px": erosion_distance_px,
                 "max_inscribed_radius_sacd_px": max_inscribed_radius_px,
-                "core_area_sacd_px": int(core_mask.sum()),
-                "core_area_fraction": float(core_mask.sum() / nucleus_mask.sum()),
+                "core_area_sacd_px": int(core_crop.sum()),
+                "core_area_fraction": float(core_crop.sum() / nucleus_mask.sum()),
                 "centroid_y_sacd_px": float(np.mean(ys)),
                 "centroid_x_sacd_px": float(np.mean(xs)),
                 "bbox_y0_sacd_px": y0,
@@ -531,6 +574,11 @@ def _export_nucleus_crops(
                 "bbox_x0_sacd_px": x0,
                 "bbox_x1_sacd_px": x1,
                 "touches_border": touches_border,
+                "small_nucleus": small_nucleus,
+                "nucleus_area_cutoff_sacd_px": area_cutoff_px if area_cutoff_px is not None else "",
+                "review_vmin_sacd": display_limits[0] if display_limits is not None else "",
+                "review_vmax_sacd": display_limits[1] if display_limits is not None else "",
+                "review_normalization": "global_log" if display_limits is not None else "local_log",
                 "review_tif": str(review_tif),
                 "review_png": str(review_png),
                 "manual_use": manual_use,
@@ -550,11 +598,14 @@ def _make_nucleus_review_png(
     scale_bar_um: float,
     lower_percentile: float,
     upper_percentile: float,
+    display_limits: tuple[float, float] | None = None,
+    puncta_labels: np.ndarray | None = None,
 ) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
     from matplotlib.lines import Line2D
 
     image = np.asarray(spen_crop, dtype=np.float32)
@@ -563,7 +614,15 @@ def _make_nucleus_review_png(
     finite = image[mask & np.isfinite(image)]
     if finite.size == 0:
         raise ValueError("Cannot render a nucleus review PNG without finite masked SPEN pixels")
-    vmin, vmax = (float(value) for value in np.percentile(finite, [lower_percentile, upper_percentile]))
+    if display_limits is None:
+        vmin, vmax = (float(value) for value in np.percentile(finite, [lower_percentile, upper_percentile]))
+    else:
+        vmin, vmax = (float(value) for value in display_limits)
+    if vmin <= 0:
+        positive = finite[finite > 0]
+        if positive.size == 0:
+            raise ValueError("Log review rendering requires positive SPEN SACD pixels")
+        vmin = float(np.min(positive))
     if vmax <= vmin:
         vmin = float(np.min(finite))
         vmax = float(np.max(finite))
@@ -571,9 +630,20 @@ def _make_nucleus_review_png(
         vmax = vmin + 1.0
 
     fig, ax = plt.subplots(figsize=(5.4, 5.1))
-    shown = ax.imshow(image, cmap="magma", vmin=vmin, vmax=vmax, interpolation="nearest")
+    shown = ax.imshow(
+        image,
+        cmap="magma",
+        norm=LogNorm(vmin=vmin, vmax=vmax, clip=True),
+        interpolation="nearest",
+    )
     ax.contour(mask.astype(np.uint8), levels=[0.5], colors=["cyan"], linewidths=0.9)
     ax.contour(core.astype(np.uint8), levels=[0.5], colors=["lime"], linewidths=1.1, linestyles=":")
+    puncta = None if puncta_labels is None else np.asarray(puncta_labels)
+    if puncta is not None:
+        if puncta.shape != image.shape:
+            raise ValueError(f"Puncta label shape {puncta.shape} does not match review image {image.shape}")
+        if np.any(puncta > 0):
+            ax.contour((puncta > 0).astype(np.uint8), levels=[0.5], colors=["white"], linewidths=0.8)
     bar_px = scale_bar_um / pixel_size_um
     x0 = max(4.0, image.shape[1] * 0.08)
     y0 = image.shape[0] * 0.90
@@ -589,15 +659,20 @@ def _make_nucleus_review_png(
     )
     ax.set_axis_off()
     colorbar = fig.colorbar(shown, ax=ax, fraction=0.046, pad=0.025)
-    colorbar.set_label("SPEN SACD intensity (a.u.)")
-    fig.legend(
-        handles=[
+    colorbar.set_label("SPEN SACD intensity (a.u., log display)")
+    legend_handles = [
             Line2D([0], [0], color="cyan", linewidth=1.2, linestyle="-", label="CellposeSAM boundary"),
             Line2D([0], [0], color="lime", linewidth=1.4, linestyle=":", label="Intensity core (r_eq/3 erosion)"),
-        ],
+    ]
+    if puncta is not None:
+        legend_handles.append(
+            Line2D([0], [0], color="white", linewidth=1.2, linestyle="-", label="Selected puncta")
+        )
+    fig.legend(
+        handles=legend_handles,
         loc="lower center",
         bbox_to_anchor=(0.5, 0.01),
-        ncol=2,
+        ncol=len(legend_handles),
         frameon=False,
         fontsize=8,
     )
@@ -1011,6 +1086,368 @@ def _load_manual_review(path: Path) -> dict[tuple[str, int], tuple[str, str]]:
         }
 
 
+def determine_global_nucleus_filters(
+    config: PhaseDiagramConfig,
+    completions: list[dict[str, Any]],
+) -> tuple[float, tuple[float, float], dict[str, Any]]:
+    """Determine one pooled size cutoff and one pooled review display range.
+
+    Only nuclei with a valid eroded core contribute to the size distribution.
+    Display percentiles are area-weighted over full-mask SPEN pixels after the
+    size and border filters. No transformed intensity is returned or used.
+    """
+
+    valid_areas: list[int] = []
+    sources: list[tuple[dict[str, Any], dict[int, dict[str, Any]]]] = []
+    invalid_core_count = 0
+    for completion in completions:
+        fov_record = completion["fov_record"]
+        candidate_rows = list(completion.get("nucleus_records", []))
+        for row in completion.get("excluded_nucleus_records", []):
+            if row.get("exclusion_reason") in {"small_nucleus", "touches_fov_border"}:
+                candidate_rows.append(row)
+            else:
+                invalid_core_count += 1
+        candidates = {int(row["nucleus_id"]): row for row in candidate_rows}
+        if not candidates:
+            raise ValueError(f"Completion lacks reusable valid nucleus records: {fov_record['fov']}")
+        sources.append((fov_record, candidates))
+        valid_areas.extend(int(row["area_sacd_px"]) for row in candidates.values())
+
+    if not valid_areas:
+        raise ValueError("Cannot determine nucleus filters without valid nuclei")
+    area_cutoff_px = float(np.percentile(valid_areas, config.nucleus_area_quantile))
+    retained_pixel_count = 0
+    retained_nuclei = 0
+    retained_min = float("inf")
+    retained_max = float("-inf")
+    retained_by_condition: dict[str, int] = {}
+    exclusion_counts = {
+        "invalid_core": invalid_core_count,
+        "small_nucleus": 0,
+        "touches_fov_border": 0,
+    }
+    for fov_record, candidates in sources:
+        outputs = fov_record["outputs"]
+        spen_mip = tifffile.imread(outputs["spen_mip"])
+        labels = tifffile.imread(outputs["nuclei_labels"])
+        if spen_mip.shape != labels.shape:
+            raise AssertionError(f"SPEN/label shape mismatch in {fov_record['fov']}")
+        pooled_condition, _ = parse_review_condition(str(fov_record["condition"]))
+        for nucleus_id, candidate in candidates.items():
+            nucleus_mask = labels == nucleus_id
+            if int(candidate["area_sacd_px"]) < area_cutoff_px:
+                exclusion_counts["small_nucleus"] += 1
+                continue
+            if config.exclude_border_nuclei and _mask_touches_border(nucleus_mask):
+                exclusion_counts["touches_fov_border"] += 1
+                continue
+            values = np.asarray(spen_mip[nucleus_mask], dtype=np.float32)
+            if not np.all(np.isfinite(values)):
+                raise ValueError(f"Nonfinite retained SPEN pixels in {fov_record['fov']} nucleus {nucleus_id}")
+            retained_pixel_count += int(values.size)
+            retained_nuclei += 1
+            retained_min = min(retained_min, float(np.min(values)))
+            retained_max = max(retained_max, float(np.max(values)))
+            retained_by_condition[pooled_condition] = retained_by_condition.get(pooled_condition, 0) + 1
+
+    if retained_nuclei == 0:
+        raise ValueError("Nucleus filters removed every nucleus")
+    histogram_bins = 262_144
+    histogram_edges = np.linspace(retained_min, retained_max, histogram_bins + 1, dtype=np.float64)
+    histogram = np.zeros(histogram_bins, dtype=np.int64)
+
+    def iter_retained_values() -> Iterable[np.ndarray]:
+        for fov_record, candidates in sources:
+            outputs = fov_record["outputs"]
+            spen_mip = tifffile.imread(outputs["spen_mip"])
+            labels = tifffile.imread(outputs["nuclei_labels"])
+            for nucleus_id, candidate in candidates.items():
+                nucleus_mask = labels == nucleus_id
+                if int(candidate["area_sacd_px"]) < area_cutoff_px:
+                    continue
+                if config.exclude_border_nuclei and _mask_touches_border(nucleus_mask):
+                    continue
+                yield np.asarray(spen_mip[nucleus_mask], dtype=np.float32)
+
+    for values in iter_retained_values():
+        histogram += np.histogram(values, bins=histogram_edges)[0]
+    if int(np.sum(histogram)) != retained_pixel_count:
+        raise AssertionError("Streaming review histogram pixel count mismatch")
+    positions = [
+        (retained_pixel_count - 1) * percentile / 100.0
+        for percentile in (config.review_lower_percentile, config.review_upper_percentile)
+    ]
+    rank_indices = sorted(
+        {int(np.floor(position)) for position in positions}
+        | {int(np.ceil(position)) for position in positions}
+    )
+    cumulative = np.cumsum(histogram)
+    rank_bins = {
+        rank: int(np.searchsorted(cumulative, rank, side="right"))
+        for rank in rank_indices
+    }
+    target_bins = set(rank_bins.values())
+    collected: dict[int, list[np.ndarray]] = {index: [] for index in target_bins}
+    for values in iter_retained_values():
+        value_bins = np.searchsorted(histogram_edges, values, side="right") - 1
+        value_bins = np.clip(value_bins, 0, histogram_bins - 1)
+        for bin_index in target_bins:
+            selected = values[value_bins == bin_index]
+            if selected.size:
+                collected[bin_index].append(selected)
+    rank_values: dict[int, float] = {}
+    for bin_index, arrays in collected.items():
+        bin_values = np.concatenate(arrays)
+        before = int(cumulative[bin_index - 1]) if bin_index > 0 else 0
+        local_ranks = [rank - before for rank, value_bin in rank_bins.items() if value_bin == bin_index]
+        bin_values.partition(local_ranks)
+        for rank, value_bin in rank_bins.items():
+            if value_bin == bin_index:
+                rank_values[rank] = float(bin_values[rank - before])
+    display_values: list[float] = []
+    for position in positions:
+        lower_index = int(np.floor(position))
+        upper_index = int(np.ceil(position))
+        fraction = position - lower_index
+        display_values.append(
+            (1.0 - fraction) * rank_values[lower_index] + fraction * rank_values[upper_index]
+        )
+    display_limits = (display_values[0], display_values[1])
+    if display_limits[0] <= 0 or display_limits[1] <= display_limits[0]:
+        raise ValueError(f"Invalid global LogNorm display limits: {display_limits}")
+    metadata = {
+        "area_quantile_percent": config.nucleus_area_quantile,
+        "area_cutoff_sacd_px": area_cutoff_px,
+        "exclude_border_nuclei": config.exclude_border_nuclei,
+        "valid_nuclei_before_size_border_filters": len(valid_areas),
+        "retained_nuclei": retained_nuclei,
+        "retained_full_mask_pixels": retained_pixel_count,
+        "retained_by_condition": retained_by_condition,
+        "exclusion_counts_by_primary_reason": exclusion_counts,
+        "display_pixel_population": "pooled_full_nucleus_masks_after_size_and_border_filters",
+        "display_lower_percentile": config.review_lower_percentile,
+        "display_upper_percentile": config.review_upper_percentile,
+        "display_vmin_sacd": display_limits[0],
+        "display_vmax_sacd": display_limits[1],
+        "display_norm": "matplotlib.colors.LogNorm",
+        "detection_intensity_transform": "none",
+        "measurement_intensity_transform": "none",
+    }
+    return area_cutoff_px, display_limits, metadata
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def review_limits_from_manifest_tiffs(
+    records: list[dict[str, Any]],
+    lower_percentile: float,
+    upper_percentile: float,
+) -> tuple[tuple[float, float], int]:
+    """Compute exact pooled full-mask review limits from immutable review TIFFs."""
+
+    if not 0 <= lower_percentile < upper_percentile <= 100:
+        raise ValueError("Review percentiles must satisfy 0 <= lower < upper <= 100")
+    pooled: list[np.ndarray] = []
+    for record in records:
+        review = tifffile.imread(record["review_tif"])
+        if review.ndim != 3 or review.shape[0] != 3:
+            raise ValueError(f"Invalid three-layer review TIFF: {record['review_tif']}")
+        values = np.asarray(review[1][review[2] > 0.5], dtype=np.float32)
+        if not values.size or not np.all(np.isfinite(values)):
+            raise ValueError(f"Review TIFF has no finite masked SPEN pixels: {record['review_tif']}")
+        pooled.append(values)
+    if not pooled:
+        raise ValueError("No retained nuclei were supplied")
+    values = np.concatenate(pooled)
+    vmin, vmax = (
+        float(value)
+        for value in np.percentile(values, [lower_percentile, upper_percentile])
+    )
+    if vmin <= 0 or vmax <= vmin:
+        raise ValueError(f"Invalid pooled LogNorm limits: {(vmin, vmax)}")
+    return (vmin, vmax), int(values.size)
+
+
+def rerender_existing_nucleus_pngs(
+    config: PhaseDiagramConfig,
+    *,
+    expected_retained_nuclei: int | None = None,
+) -> tuple[float, float]:
+    """Atomically refresh PNG-only nucleus review artifacts.
+
+    Nucleus TIFFs are read-only inputs. Every replacement PNG, manifest, FOV
+    checkpoint is staged and validated before any
+    destination is changed. A per-file rollback journal restores the original
+    population if committing any replacement fails.
+    """
+
+    manifest_dir = config.output_root / "manifests"
+    manifest_path = manifest_dir / "nucleus_manifest.csv"
+    with manifest_path.open(newline="") as handle:
+        records = list(csv.DictReader(handle))
+    if expected_retained_nuclei is not None and len(records) != expected_retained_nuclei:
+        raise AssertionError(
+            f"Expected {expected_retained_nuclei} retained nuclei, found {len(records)}"
+        )
+    if len(records) != 1231 and expected_retained_nuclei == 1231:
+        raise AssertionError(f"Refusing to refresh an incomplete population of {len(records)} nuclei")
+
+    completion_paths = sorted((config.output_root / "reconstructions").rglob("_COMPLETE.json"))
+    completions = {path: json.loads(path.read_text()) for path in completion_paths}
+    pixel_size_by_fov = {
+        str(value["fov_record"]["fov"]): float(value["fov_record"]["output_pixel_nm"]) / 1000.0
+        for value in completions.values()
+    }
+    tif_hashes_before = {
+        Path(record["review_tif"]): _sha256_file(Path(record["review_tif"]))
+        for record in records
+    }
+    display_limits, pooled_pixel_count = review_limits_from_manifest_tiffs(
+        records,
+        config.review_lower_percentile,
+        config.review_upper_percentile,
+    )
+    print(
+        f"Pooled P{config.review_lower_percentile:g}/P{config.review_upper_percentile:g} "
+        f"LogNorm limits: {display_limits[0]:.12g}, {display_limits[1]:.12g} "
+        f"from {pooled_pixel_count:,} full-mask pixels",
+        flush=True,
+    )
+
+    attempt = config.output_root / ".work" / f"nucleus-png-refresh-{uuid.uuid4().hex[:8]}"
+    stage_png = attempt / "png"
+    stage_metadata = attempt / "metadata"
+    replacement_pairs: list[tuple[Path, Path]] = []
+    staged_records: list[dict[str, Any]] = []
+    try:
+        for index, record in enumerate(records, start=1):
+            review_tif = Path(record["review_tif"])
+            final_png = Path(record["review_png"])
+            staged_png = stage_png / record["pooled_condition"] / final_png.name
+            review = tifffile.imread(review_tif)
+            mask = review[2] > 0.5
+            core, _, _, _ = make_intensity_core(mask, config.core_erosion_radius_fraction)
+            _make_nucleus_review_png(
+                staged_png,
+                review[1],
+                mask,
+                core,
+                pixel_size_um=pixel_size_by_fov[str(record["fov"])],
+                scale_bar_um=config.review_scale_bar_um,
+                lower_percentile=config.review_lower_percentile,
+                upper_percentile=config.review_upper_percentile,
+                display_limits=display_limits,
+            )
+            if not staged_png.is_file() or staged_png.stat().st_size == 0:
+                raise AssertionError(f"Failed to stage review PNG: {staged_png}")
+            replacement_pairs.append((staged_png, final_png))
+            updated = dict(record)
+            updated["review_vmin_sacd"] = display_limits[0]
+            updated["review_vmax_sacd"] = display_limits[1]
+            updated["review_normalization"] = "global_log"
+            staged_records.append(updated)
+            if index % 100 == 0 or index == len(records):
+                print(f"Staged nucleus PNG {index}/{len(records)}", flush=True)
+
+        staged_manifest = stage_metadata / "nucleus_manifest.csv"
+        _write_csv(staged_manifest, staged_records)
+        replacement_pairs.append((staged_manifest, manifest_path))
+
+        filter_path = manifest_dir / "nucleus_filter_and_display.json"
+        filter_metadata = json.loads(filter_path.read_text())
+        filter_metadata.update(
+            {
+                "display_lower_percentile": config.review_lower_percentile,
+                "display_upper_percentile": config.review_upper_percentile,
+                "display_vmin_sacd": display_limits[0],
+                "display_vmax_sacd": display_limits[1],
+                "retained_full_mask_pixels": pooled_pixel_count,
+                "display_norm": "matplotlib.colors.LogNorm",
+                "detection_intensity_transform": "none",
+                "measurement_intensity_transform": "none",
+            }
+        )
+        staged_filter = stage_metadata / "nucleus_filter_and_display.json"
+        _write_json(staged_filter, filter_metadata)
+        replacement_pairs.append((staged_filter, filter_path))
+
+        run_config_path = manifest_dir / "run_config.json"
+        if run_config_path.is_file():
+            run_config = json.loads(run_config_path.read_text())
+            run_config["review_lower_percentile"] = config.review_lower_percentile
+            run_config["review_upper_percentile"] = config.review_upper_percentile
+            staged_run_config = stage_metadata / "run_config.json"
+            _write_json(staged_run_config, run_config)
+            replacement_pairs.append((staged_run_config, run_config_path))
+
+        updated_by_key = {row["nucleus_key"]: row for row in staged_records}
+        for completion_path, completion in completions.items():
+            completion["nucleus_filter_metadata"] = filter_metadata
+            for row in completion.get("nucleus_records", []):
+                updated = updated_by_key[str(row["nucleus_key"])]
+                row["review_vmin_sacd"] = display_limits[0]
+                row["review_vmax_sacd"] = display_limits[1]
+                row["review_normalization"] = "global_log"
+            staged_completion = (
+                stage_metadata / "checkpoints" / completion_path.parent.name / completion_path.name
+            )
+            _write_json(staged_completion, completion)
+            replacement_pairs.append((staged_completion, completion_path))
+
+        staged_png_count = sum(
+            1 for staged, final in replacement_pairs
+            if final.parent.parent.name == "nuclei" and final.suffix == ".png"
+        )
+        if staged_png_count != len(records):
+            raise AssertionError(
+                f"Expected {len(records)} staged nucleus PNGs, found {staged_png_count}"
+            )
+        for path, expected_hash in tif_hashes_before.items():
+            if _sha256_file(path) != expected_hash:
+                raise AssertionError(f"Nucleus TIFF changed during PNG staging: {path}")
+
+        backup_root = attempt / "rollback"
+        committed: list[tuple[Path, Path | None]] = []
+        try:
+            for staged, final in replacement_pairs:
+                backup = None
+                if final.exists():
+                    try:
+                        relative = final.relative_to(config.output_root)
+                    except ValueError:
+                        relative = Path("external") / final.name
+                    backup = backup_root / relative
+                    backup.parent.mkdir(parents=True, exist_ok=True)
+                    os.replace(final, backup)
+                final.parent.mkdir(parents=True, exist_ok=True)
+                committed.append((final, backup))
+                os.replace(staged, final)
+            for path, expected_hash in tif_hashes_before.items():
+                if _sha256_file(path) != expected_hash:
+                    raise AssertionError(f"Nucleus TIFF hash changed after PNG commit: {path}")
+            final_pngs = list((config.output_root / "nuclei").rglob("*.png"))
+            if len(final_pngs) != len(records):
+                raise AssertionError(f"Expected {len(records)} final PNGs, found {len(final_pngs)}")
+        except Exception:
+            for final, backup in reversed(committed):
+                if final.exists():
+                    final.unlink()
+                if backup is not None and backup.exists():
+                    final.parent.mkdir(parents=True, exist_ok=True)
+                    os.replace(backup, final)
+            raise
+    finally:
+        shutil.rmtree(attempt, ignore_errors=True)
+    return display_limits
+
+
 def repackage_existing_nuclei(
     config: PhaseDiagramConfig,
     *,
@@ -1023,19 +1460,33 @@ def repackage_existing_nuclei(
         raise FileNotFoundError(f"No completed FOV checkpoints found under {config.output_root}")
     original_text = {path: path.read_text() for path in completion_paths}
     original_completions = [json.loads(original_text[path]) for path in completion_paths]
+    area_cutoff_px, display_limits, filter_metadata = determine_global_nucleus_filters(
+        config,
+        original_completions,
+    )
+    print(
+        "Global nucleus filters: "
+        f"area >= {area_cutoff_px:g} SACD px, "
+        f"exclude_border={config.exclude_border_nuclei}, "
+        f"review LogNorm=({display_limits[0]:.6g}, {display_limits[1]:.6g})",
+        flush=True,
+    )
     manual_review = _load_manual_review(config.output_root / "manifests" / "nucleus_manifest.csv")
+    manual_review.update(
+        _load_manual_review(config.output_root / "manifests" / "excluded_nuclei.csv")
+    )
     failures_path = config.output_root / "manifests" / "failures.json"
     failures = json.loads(failures_path.read_text()) if failures_path.exists() else []
 
     work_root = config.output_root / ".work"
     resumable_attempts = sorted(
-        path for path in work_root.glob("nuclei-repackage-*")
+        path for path in work_root.glob("nuclei-global-repackage-*")
         if (path / "nuclei").is_dir()
     )
     attempt = (
         resumable_attempts[-1]
         if resumable_attempts
-        else work_root / f"nuclei-repackage-{uuid.uuid4().hex[:8]}"
+        else work_root / f"nuclei-global-repackage-{uuid.uuid4().hex[:8]}"
     )
     if resumable_attempts:
         print(f"Resuming staged nucleus repackaging from {attempt}", flush=True)
@@ -1081,6 +1532,9 @@ def repackage_existing_nuclei(
             pixel_size_um=pixel_size_um,
             manual_review=manual_review,
             reuse_existing=False,
+            area_cutoff_px=area_cutoff_px,
+            exclude_border=config.exclude_border_nuclei,
+            display_limits=display_limits,
         )
         expected_for_fov = len([value for value in np.unique(labels) if value > 0])
         if len(records) + len(excluded) != expected_for_fov:
@@ -1096,6 +1550,7 @@ def repackage_existing_nuclei(
         updated = json.loads(json.dumps(completion))
         updated["nucleus_records"] = final_records
         updated["excluded_nucleus_records"] = excluded
+        updated["nucleus_filter_metadata"] = filter_metadata
         updated["status"] = "repackaged_existing"
         updated["fov_record"]["n_nuclei"] = len(final_records)
         updated["fov_record"]["n_segmented_nuclei"] = len(final_records) + len(excluded)
@@ -1148,6 +1603,10 @@ def repackage_existing_nuclei(
         for completion_path, updated in updates_by_path:
             _write_json(completion_path, updated)
         consolidate_manifests(config, updated_completions, failures)
+        _write_json(
+            config.output_root / "manifests" / "nucleus_filter_and_display.json",
+            filter_metadata,
+        )
         if len(list(final_nuclei.rglob("*.tif"))) != len(final_records):
             raise AssertionError("Final nucleus TIFF count changed after the atomic swap")
         if len(list(final_nuclei.rglob("*.png"))) != len(final_records):
@@ -1254,7 +1713,26 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Rebuild nucleus review TIFF/PNG files from completed SACD and Cellpose outputs",
     )
+    parser.add_argument(
+        "--refresh-nucleus-pngs-only",
+        action="store_true",
+        help="Atomically rerender retained nucleus PNGs without rewriting nucleus TIFFs",
+    )
     parser.add_argument("--expected-nuclei", type=int, help="Require this many nuclei during repackaging")
+    parser.add_argument("--expected-retained-nuclei", type=int, help="Require this many nuclei after global filters")
+    parser.add_argument(
+        "--apply-spotiflow-hybrid-puncta",
+        action="store_true",
+        help=(
+            "Run pretrained Spotiflow general at p=0.5, construct constrained "
+            "hybrid puncta, and publish the complete phase-diagram analysis"
+        ),
+    )
+    parser.add_argument(
+        "--spotiflow-device",
+        choices=("auto", "cpu", "mps", "cuda"),
+        default="auto",
+    )
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--stop-on-error", action="store_true")
     return parser
@@ -1268,6 +1746,32 @@ def main(argv: list[str] | None = None) -> int:
         overwrite=args.overwrite,
         cellpose_device=args.cellpose_device,
     )
+    if args.apply_spotiflow_hybrid_puncta:
+        from .puncta import apply_spotiflow_hybrid
+
+        with (config.output_root / "manifests" / "nucleus_manifest.csv").open(newline="") as handle:
+            records = list(csv.DictReader(handle))
+        nucleus_rows, puncta_rows = apply_spotiflow_hybrid(
+            records,
+            config.output_root,
+            device=args.spotiflow_device,
+        )
+        print(
+            f"Spotiflow hybrid quantified {len(nucleus_rows)} nuclei and "
+            f"{len(puncta_rows)} SPEN puncta",
+            flush=True,
+        )
+        return 0
+    if args.refresh_nucleus_pngs_only:
+        limits = rerender_existing_nucleus_pngs(
+            config,
+            expected_retained_nuclei=args.expected_retained_nuclei,
+        )
+        print(
+            f"Refreshed nucleus PNGs at shared LogNorm limits {limits[0]:.12g}..{limits[1]:.12g}",
+            flush=True,
+        )
+        return 0
     if args.consolidate_only:
         completions, failures = rebuild_manifests_from_completions(config)
         print(f"Consolidated: {len(completions)} completed, {len(failures)} failed", flush=True)
@@ -1278,6 +1782,10 @@ def main(argv: list[str] | None = None) -> int:
             expected_nuclei=args.expected_nuclei,
         )
         total_nuclei = sum(len(item["nucleus_records"]) for item in completions)
+        if args.expected_retained_nuclei is not None and total_nuclei != args.expected_retained_nuclei:
+            raise AssertionError(
+                f"Expected {args.expected_retained_nuclei} retained nuclei, found {total_nuclei}"
+            )
         print(
             f"Repackaged: {len(completions)} FOVs, {total_nuclei} nuclei, {len(failures)} failures",
             flush=True,

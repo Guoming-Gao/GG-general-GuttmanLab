@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +14,7 @@ from sacdpy.phase_diagram import (
     _export_nucleus_crops,
     _stage_z_summary,
     calculate_dispersion_scores,
+    determine_global_nucleus_filters,
     discover_phase_fovs,
     get_bbox_with_padding,
     make_dispersion_phase_diagram,
@@ -22,6 +24,8 @@ from sacdpy.phase_diagram import (
     parse_fov_token,
     parse_review_condition,
     preprocess_cellpose_image,
+    rerender_existing_nucleus_pngs,
+    review_limits_from_manifest_tiffs,
     run_cellpose_nuclei,
     split_dual_view,
 )
@@ -35,6 +39,89 @@ class FakeCellposeModel:
 
 
 class PhaseDiagramTests(unittest.TestCase):
+    def test_review_defaults_are_p3_p99_5(self) -> None:
+        config = PhaseDiagramConfig()
+        self.assertEqual(config.review_lower_percentile, 3.0)
+        self.assertEqual(config.review_upper_percentile, 99.5)
+
+    def test_manifest_tiff_percentiles_use_only_full_mask_pixels(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "review.tif"
+            stack = np.zeros((3, 4, 4), dtype=np.float32)
+            stack[1] = (np.arange(16, dtype=np.float32) + 1).reshape(4, 4)
+            stack[2, 1:3, 1:3] = 1
+            tifffile.imwrite(path, stack, imagej=True, metadata={"axes": "CYX"})
+            limits, count = review_limits_from_manifest_tiffs(
+                [{"review_tif": str(path)}], 3.0, 99.5
+            )
+        expected = np.percentile(np.asarray([6, 7, 10, 11], dtype=np.float32), [3, 99.5])
+        np.testing.assert_allclose(limits, expected)
+        self.assertEqual(count, 4)
+
+    def test_png_refresh_failure_keeps_original_png_and_tiff(self) -> None:
+        import csv
+        import hashlib
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            review_dir = root / "nuclei" / "dSPEN_FL"
+            review_dir.mkdir(parents=True)
+            review_tif = review_dir / "cell.tif"
+            review_png = review_dir / "cell.png"
+            stack = np.ones((3, 20, 20), dtype=np.float32)
+            stack[1] = np.arange(400, dtype=np.float32).reshape(20, 20) + 10
+            stack[2] = 0
+            stack[2, 2:18, 2:18] = 1
+            tifffile.imwrite(
+                review_tif,
+                stack,
+                imagej=True,
+                metadata={"axes": "CYX", "unit": "um"},
+                resolution=(10, 10),
+            )
+            review_png.write_bytes(b"original-png")
+            row = {
+                "nucleus_key": "FOV__nucleus-0001",
+                "pooled_condition": "dSPEN_FL",
+                "fov": "FOV",
+                "review_tif": str(review_tif),
+                "review_png": str(review_png),
+                "review_vmin_sacd": "1",
+                "review_vmax_sacd": "2",
+                "review_normalization": "global_log",
+            }
+            manifests = root / "manifests"
+            manifests.mkdir()
+            with (manifests / "nucleus_manifest.csv").open("w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=list(row))
+                writer.writeheader()
+                writer.writerow(row)
+            (manifests / "nucleus_filter_and_display.json").write_text(
+                json.dumps({"retained_nuclei": 1})
+            )
+            checkpoint = root / "reconstructions" / "condition" / "FOV" / "_COMPLETE.json"
+            checkpoint.parent.mkdir(parents=True)
+            checkpoint.write_text(
+                json.dumps(
+                    {
+                        "fov_record": {"fov": "FOV", "output_pixel_nm": 100},
+                        "nucleus_records": [row],
+                    }
+                )
+            )
+            tif_hash = hashlib.sha256(review_tif.read_bytes()).hexdigest()
+            with patch(
+                "sacdpy.phase_diagram._make_nucleus_review_png",
+                side_effect=RuntimeError("injected rendering failure"),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "injected"):
+                    rerender_existing_nucleus_pngs(
+                        PhaseDiagramConfig(output_root=root)
+                    )
+            self.assertEqual(review_png.read_bytes(), b"original-png")
+            self.assertEqual(hashlib.sha256(review_tif.read_bytes()).hexdigest(), tif_hash)
+
     def test_parse_condition_keeps_biological_prefix(self) -> None:
         self.assertEqual(
             parse_condition("dSPEN_dRRM-p1x-Hoechst-SPEN_JFX650-200ms-FOV-mysterycell"),
@@ -197,6 +284,56 @@ class PhaseDiagramTests(unittest.TestCase):
                 {row["exclusion_reason"] for row in excluded},
                 {"empty_core_after_equivalent_radius_erosion", "nonpositive_core_mean"},
             )
+
+    def test_global_filter_is_pooled_size_then_border_with_fixed_display(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            completions = []
+            for index, side in enumerate((10, 12, 14, 16)):
+                labels = np.zeros((40, 40), dtype=np.uint16)
+                if index == 3:
+                    labels[:side, :side] = 1
+                else:
+                    labels[10 : 10 + side, 10 : 10 + side] = 1
+                spen = np.full(labels.shape, float(index + 1) * 100, dtype=np.float32)
+                labels_path = root / f"labels-{index}.tif"
+                spen_path = root / f"spen-{index}.tif"
+                tifffile.imwrite(labels_path, labels)
+                tifffile.imwrite(spen_path, spen)
+                completions.append(
+                    {
+                        "fov_record": {
+                            "fov": f"FOV-{index}",
+                            "condition": "dSPEN_FL-1x",
+                            "outputs": {
+                                "nuclei_labels": str(labels_path),
+                                "spen_mip": str(spen_path),
+                            },
+                        },
+                        "nucleus_records": [
+                            {
+                                "nucleus_id": 1,
+                                "area_sacd_px": int(np.sum(labels == 1)),
+                            }
+                        ],
+                        "excluded_nucleus_records": [],
+                    }
+                )
+            config = PhaseDiagramConfig(
+                output_root=root,
+                nucleus_area_quantile=25.0,
+                exclude_border_nuclei=True,
+                review_lower_percentile=5.0,
+                review_upper_percentile=95.0,
+            )
+            cutoff, limits, metadata = determine_global_nucleus_filters(config, completions)
+
+        self.assertGreater(cutoff, 100)
+        self.assertLess(cutoff, 144)
+        self.assertEqual(metadata["exclusion_counts_by_primary_reason"]["small_nucleus"], 1)
+        self.assertEqual(metadata["exclusion_counts_by_primary_reason"]["touches_fov_border"], 1)
+        self.assertEqual(metadata["retained_nuclei"], 2)
+        self.assertGreater(limits[1], limits[0])
 
     def test_dispersion_phase_diagram_has_three_score_panels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

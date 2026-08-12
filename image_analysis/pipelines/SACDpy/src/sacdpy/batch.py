@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 
+import numpy as np
+
 from .params import SACDParams
 from .reconstruction import reconstruct
 from .tiffio import read_tiff_stack, write_tiff_image
@@ -117,6 +119,33 @@ def params_for_file(
     )
 
 
+def select_frame_range(
+    stack: np.ndarray,
+    frame_start: int | None = None,
+    frame_end: int | None = None,
+) -> np.ndarray:
+    """Select a 1-based, inclusive frame range from a TYX TIFF stack."""
+
+    arr = np.asarray(stack)
+    if arr.ndim != 3:
+        raise ValueError(f"Batch input TIFF must be a 3D TYX stack; received shape {arr.shape}.")
+
+    frame_count = arr.shape[0]
+    start = 1 if frame_start is None else frame_start
+    end = frame_count if frame_end is None else frame_end
+
+    if start < 1:
+        raise ValueError("frame_start must be >= 1.")
+    if end < start:
+        raise ValueError("frame_end must be >= frame_start.")
+    if end > frame_count:
+        raise ValueError(
+            f"Requested frames {start}-{end}, but the input contains only {frame_count} frame(s)."
+        )
+
+    return arr[start - 1 : end]
+
+
 def run_batch_reconstruction(
     input_files: list[Path],
     *,
@@ -132,6 +161,8 @@ def run_batch_reconstruction(
     ac_order: int = 2,
     subfactor: float = 0.8,
     frames_per_sacd: int | None = None,
+    frame_start: int | None = None,
+    frame_end: int | None = None,
     ifregistration: bool = False,
     ifbackground: bool = False,
     backgroundfactor: float = 2.0,
@@ -204,15 +235,20 @@ def run_batch_reconstruction(
                 sparsity=sparsity,
                 sparse_iterations=sparse_iterations,
             )
-            stack = read_tiff_stack(input_file)
-            sacd = reconstruct(stack, params)
+            selected_tyx = select_frame_range(
+                read_tiff_stack(input_file),
+                frame_start=frame_start,
+                frame_end=frame_end,
+            )
+            selected_yxt = np.moveaxis(selected_tyx, 0, -1)
+            sacd = reconstruct(selected_yxt, params)
             write_tiff_image(output_file, sacd)
             results.append(
                 BatchResult(
                     input=input_file,
                     output=output_file,
                     status="written",
-                    input_shape=stack.shape,
+                    input_shape=selected_tyx.shape,
                     output_shape=sacd.shape,
                     wavelength_nm=params.wavelength_nm,
                     frames_per_sacd=params.frames_per_sacd,

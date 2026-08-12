@@ -1,0 +1,41 @@
+{
+  "dataset_root": "/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SACDlive/20260617_ONI-gmgao-SPEN_SACDlive-SHA_bef_FVP_rec",
+  "output_folder": "selected_nucleus",
+  "frame_index": 1,
+  "pixel_size_um": 0.0585,
+  "cellpose_model": "cpsam",
+  "cellpose_diameter_px": 140.0,
+  "cellpose_flow_threshold": 0.4,
+  "cellpose_cellprob_threshold": 0.0,
+  "cellpose_lower_percentile": 1.0,
+  "cellpose_upper_percentile": 99.8,
+  "cellpose_device": "cpu",
+  "crop_padding_px": 5,
+  "nucleus_area_quantile": 10.0,
+  "pilot_seed": 20260722,
+  "pilot_per_condition_per_stratum": 2,
+  "display_lower_percentile": 5.0,
+  "display_upper_percentile": 95.0,
+  "png_dpi": 1200,
+  "png_max_edge_inches": 3.0,
+  "scale_bar_um": 2.0,
+  "bootstrap_iterations": 10000,
+  "fixed_threshold_enabled": true,
+  "fixed_threshold_multipliers": [
+    1.25,
+    1.5,
+    2.0,
+    3.0
+  ],
+  "punctatools": {
+    "minsize_um": 0.2,
+    "maxsize_um": 2.0,
+    "num_sigma": 5,
+    "overlap": 1.0,
+    "threshold_detection": 0.001,
+    "threshold_background": 0.0,
+    "threshold_segmentation": 0.001,
+    "segmentation_mode": 0,
+    "maxrad_um": null
+  }
+}

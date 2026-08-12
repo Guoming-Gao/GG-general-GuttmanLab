@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "repo_root": "/Users/gmgao/GGscripts/GG-general-GuttmanLab/image_analysis/pipelines/SACDpy",
+  "raw_root": "/Volumes/gmgaoSSD/Qing/DEFAULT_USER/20260811_CB_4color",
+  "output_root": "/Volumes/gmgaoSSD/Qing/DEFAULT_USER/20260811_CB_4color/SACDpy_results",
+  "initial_seconds_per_reconstruction": 10.0,
+  "processing": {
+    "position_folder": "pos_0",
+    "glob_pattern": "*.tif",
+    "pixel_nm": null,
+    "fallback_pixel_nm": 117.0,
+    "na": null,
+    "fallback_na": 1.45,
+    "mag": 2,
+    "iter1": 7,
+    "iter2": 8,
+    "ac_order": 2,
+    "subfactor": 0.8,
+    "ifbackground": false,
+    "backgroundfactor": 2.0,
+    "ifregistration": false,
+    "ifsparsedecon": false,
+    "fidelity": 100.0,
+    "tcontinuity": 0.1,
+    "sparsity": 1.0,
+    "sparse_iterations": 100,
+    "channels": [
+      {
+        "name": "405",
+        "wavelength_nm": 405.0,
+        "metadata_wavelengths_nm": [405.0],
+        "camera_half": "left"
+      },
+      {
+        "name": "488",
+        "wavelength_nm": 488.0,
+        "metadata_wavelengths_nm": [488.0],
+        "camera_half": "left"
+      },
+      {
+        "name": "561",
+        "wavelength_nm": 561.0,
+        "metadata_wavelengths_nm": [561.0],
+        "camera_half": "left"
+      },
+      {
+        "name": "647",
+        "wavelength_nm": 647.0,
+        "metadata_wavelengths_nm": [640.0, 647.0],
+        "camera_half": "right"
+      }
+    ]
+  },
+  "selected_fov_folders": [],
+  "exclude_fovs": {},
+  "output_prefix_aliases": {}
+}

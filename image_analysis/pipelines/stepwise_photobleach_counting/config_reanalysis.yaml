@@ -1,0 +1,56 @@
+source_results_root: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/stepwise_photobleach_counting
+output_root: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/stepwise_photobleach_counting
+
+datasets:
+  - name: 20260624_ONI-gmgao-SPEN_SHA-stepwise_photobleach
+    input_dir: /Volumes/guttman/primarydata/imaging_rawdata/20260624_ONI-gmgao-SPEN_SHA-stepwise_photobleach
+    expected_files: 9
+  - name: 20260625_ONI-gmgao-SPEN_wOSS-stepwise_photobleach
+    input_dir: /Volumes/guttman/primarydata/imaging_rawdata/20260625_ONI-gmgao-SPEN_wOSS-stepwise_photobleach
+    expected_files: 18
+
+spotiflow:
+  pretrained_model: general
+  probability_threshold: 0.4
+  sensitivity_thresholds: [0.5, 0.6, 0.7]
+
+analysis_units:
+  signal_radius_px: 2.0
+  background_inner_radius_px: 3.5
+  background_outer_radius_px: 5.0
+  grouped_link_distance_px: 4.0
+  minimum_signal_fraction: 0.5
+  minimum_background_pixels: 10
+  extended_background_gap_px: 2.0
+  extended_background_width_px: 2.0
+  minimum_extended_area_px: 20
+  maximum_extended_area_px: 1000
+
+calibration:
+  minimum_step_events: 30
+  minimum_baseline_pass_fraction: 0.8
+  maximum_area_step_spearman: 0.2
+  candidate_threshold_multipliers: [0.3, 0.4, 0.5, 0.6, 0.7]
+  bootstrap_iterations: 1000
+  visually_approved:
+    - 640nm_12pct_100p006ms_1x:seed_level_cluster
+    - 640nm_12pct_100p006ms_1x:grouped_cluster
+    - 640nm_14p9929pct_100p006ms_1x:seed_level_cluster
+    - 640nm_14p9929pct_100p006ms_1x:grouped_cluster
+    - 640nm_20pct_100p006ms_1x:seed_level_cluster
+    - 640nm_20pct_100p006ms_1x:grouped_cluster
+    - 640nm_30pct_30p0029ms_1x:seed_level_cluster
+    - 640nm_30pct_30p0029ms_1x:grouped_cluster
+
+quickpbsa:
+  maxiter: 200
+  num_cores: 3
+  fov_processes: 5
+  maximum_validated_count: 40
+  preliminary: {crop: true, bg_frames: 500}
+  filter: {subtracted: true, percentile_step: 90, length_laststep: 20}
+  refinement: {}
+
+qc:
+  minimum_free_space_gib: 50
+  maximum_review_traces: 30

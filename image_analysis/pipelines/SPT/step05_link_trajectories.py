@@ -143,7 +143,13 @@ def save_trajectory_overlay(dog_path: Path, mask: np.ndarray, tracks: pd.DataFra
     height, width = mip.shape; figsize = (max(3, width/100), max(3, height/100))
     fig, ax = plt.subplots(figsize=figsize)
     ax.imshow(mip, cmap="gray", vmin=0, vmax=upper, interpolation="nearest")
-    ax.contour(find_boundaries(mask), levels=[0.5], colors="cyan", linewidths=0.1)
+    # Draw the boundary pixels themselves.  Contouring ``find_boundaries(mask)``
+    # outlines both sides of that boolean band and produces the distracting
+    # double cyan line seen in the original full-FOV QC images.
+    boundary = find_boundaries(mask, mode="inner")
+    boundary_rgba = np.zeros((*boundary.shape, 4), dtype=np.float32)
+    boundary_rgba[boundary] = (0.0, 1.0, 1.0, 0.85)
+    ax.imshow(boundary_rgba, interpolation="nearest")
     cmap = plt.get_cmap("turbo")
     for index, (track_id, group) in enumerate(tracks.groupby("trackID")):
         ordered = group.sort_values("frame"); color = cmap((index * 0.61803398875) % 1)

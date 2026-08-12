@@ -1,0 +1,55 @@
+# Deep selected-cell analysis for the renamed SHA before/FVP/recovery result tree.
+schema_version: 3
+result_root: /Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SPT/20260617_ONI-gmgao-SPEN_SPT-SHA_FVP_bef_2h_rec
+
+trajectory_cutoff: 50
+cell_bbox_padding_px: 5
+scale_bar_um: 1.0
+overlay_dpi: 1200
+trajectory_linewidth_pt: 0.1
+
+pairing_minimum_iou: 0.5
+bootstrap_iterations: 5000
+random_seed: 20260722
+
+output_folders:
+  30ms: 30ms_comparison
+  100ms: 100ms_comparison
+  timing_comparison: 30ms_vs_100ms_comparison
+  selected_cells: selected_cells
+
+selected_overlay:
+  colormap: plasma
+  alpha_min: 0.3
+  alpha_max: 1.0
+  missing_alpha_color: '#9e9e9e'
+  distinguish_gap_closing: false
+  legend_frame: false
+
+step_size_distribution:
+  link_policy: adjacent_only
+  minimum_nm: 0.0
+  maximum_nm: 600.0
+  histogram_bins: 60
+  cdf_grid_points: 601
+  timing_comparison_cohort: matched_fvp_recovery_independent_before
+
+plots:
+  raster_format: png
+  vector_format: svg
+  retain_report_pdf: true
+  legend_include_cells: true
+  legend_include_tracks: true
+  legend_frame: false
+
+phases:
+  Before: SHA-before
+  FVP 2 h: SHA-FVP2h
+  Recovery 2 h: SHA-FVP2h_recover2h
+
+analysis:
+  immobile_stepsize_nm: 30.0
+  alpha_threshold: 0.7
+  fit_r2_threshold: 0.7
+  focal_depth_um: 0.7
+  pixel_size_um: 0.117
