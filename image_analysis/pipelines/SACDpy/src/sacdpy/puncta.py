@@ -1,7 +1,7 @@
 """2D SPEN-puncta analysis for SACD phase-diagram data.
 
 Spotiflow is used only to detect seed coordinates. Final punctum masks are
-constructed on untouched linear SACD intensities with deterministic grouping,
+constructed on unnormalized SACD values in the configured intensity space with deterministic grouping,
 bounded local growth, and a fixed-footprint fallback. Logarithms are confined
 to review rendering and the phase diagram's x-axis.
 """
@@ -224,7 +224,7 @@ class _UnionFind:
 
 
 def robust_local_background(values: np.ndarray) -> tuple[float, float]:
-    """Return upper-clipped median and MAD noise in native linear units."""
+    """Return upper-clipped median and MAD noise in the configured SACD intensity space."""
 
     data = np.asarray(values, dtype=np.float32)
     data = data[np.isfinite(data)]
@@ -505,7 +505,7 @@ def quantify_nucleus_puncta(
     pixel_size_um: float,
     provenance: Mapping[int, Mapping[str, Any]] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Measure final puncta on untouched linear SACD values."""
+    """Measure final puncta on unnormalized values in the configured SACD intensity space."""
 
     image = np.asarray(image, dtype=np.float64)
     core = np.asarray(core_mask, dtype=bool)

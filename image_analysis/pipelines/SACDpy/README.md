@@ -10,10 +10,17 @@ The first implementation covers the default 2D SACD workflow:
 3. lateral Fourier interpolation
 4. autocumulant calculation
 5. post Richardson-Lucy deconvolution
+6. autocumulant-order root conversion to the public SACD intensity space
 
-Advanced MATLAB options such as registration, wavelet background subtraction,
-GPU execution, and sparse Hessian deconvolution are intentionally not included
-in this first core port.
+`reconstruct()` returns float32 order-root SACD intensity by default: an order
+`n` raw cumulant is raised to `1 / n` after post-deconvolution. This follows the
+original SACDm visualization convention without thresholding, percentile
+stretching, max normalization, or integer conversion. The result is
+intensity-like but remains in arbitrary units. Use
+`SACDParams(intensity_transform="raw_cumulant")` (or CLI
+`--intensity-transform raw-cumulant`) only for MATLAB core-parity diagnostics
+and explicit backward-compatibility work; raw-cumulant magnitude is not a
+calibrated camera intensity.
 
 ## CLI
 

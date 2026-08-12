@@ -16,6 +16,7 @@ class SACDParams:
     iter1: int = 7
     iter2: int = 8
     ac_order: int = 2
+    intensity_transform: str = "order_root"
     frames_per_sacd: int | None = None
     scale: float | None = None
     subfactor: float = 0.8
@@ -40,6 +41,8 @@ class SACDParams:
             raise ValueError("RL iteration counts must be nonnegative.")
         if not 2 <= self.ac_order <= 6:
             raise ValueError("ac_order must be in the MATLAB-supported range 2..6.")
+        if self.intensity_transform not in {"order_root", "raw_cumulant"}:
+            raise ValueError("intensity_transform must be 'order_root' or 'raw_cumulant'.")
         if self.frames_per_sacd is not None:
             if self.frames_per_sacd <= 0:
                 raise ValueError("frames_per_sacd must be positive when provided.")

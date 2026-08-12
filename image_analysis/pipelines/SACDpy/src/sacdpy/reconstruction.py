@@ -18,7 +18,9 @@ def reconstruct(stack: np.ndarray, params: SACDParams | None = None) -> np.ndarr
     Input stacks are accepted as `TYX` by default when the first axis is much
     smaller than the two spatial axes. Otherwise, 3D input is treated as `YXT`.
     When `params.frames_per_sacd` is set, full non-overlapping chunks are
-    reconstructed and multiple results are returned as a `TYX` stack.
+    reconstructed and multiple results are returned as a `TYX` stack. Public
+    results use the autocumulant order-root intensity transform by default;
+    set ``intensity_transform='raw_cumulant'`` only for diagnostic parity.
     """
 
     params = params or SACDParams()
@@ -92,7 +94,24 @@ def _reconstruct_single_window(
     post_kernel = psf_high ** params.resolved_scale()
     post_kernel = post_kernel / post_kernel.sum()
     result = richardson_lucy_image(ac, post_kernel, params.iter2)
-    return result.astype(np.float32, copy=False)
+    return apply_intensity_transform(result, params)
+
+
+def apply_intensity_transform(result: np.ndarray, params: SACDParams) -> np.ndarray:
+    """Convert raw cumulant units to the configured public SACD intensity space."""
+
+    values = np.asarray(result)
+    if not np.all(np.isfinite(values)):
+        raise ValueError("SACD reconstruction produced non-finite values.")
+    if np.any(values < 0):
+        raise ValueError(
+            "SACD reconstruction must be nonnegative before the intensity transform."
+        )
+    if params.intensity_transform == "order_root":
+        values = np.power(values, 1.0 / params.ac_order)
+    elif params.intensity_transform != "raw_cumulant":
+        raise ValueError(f"Unsupported intensity transform: {params.intensity_transform!r}")
+    return values.astype(np.float32, copy=False)
 
 
 def as_yxt(stack: np.ndarray) -> np.ndarray:

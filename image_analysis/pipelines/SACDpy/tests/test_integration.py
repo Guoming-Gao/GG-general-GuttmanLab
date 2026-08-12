@@ -40,7 +40,12 @@ class IntegrationTests(unittest.TestCase):
                 ref = tifffile.imread(ref_path).astype(np.float64)
                 result = reconstruct(
                     raw,
-                    SACDParams(pixel_nm=117.0, wavelength_nm=wavelength, na=1.45),
+                    SACDParams(
+                        pixel_nm=117.0,
+                        wavelength_nm=wavelength,
+                        na=1.45,
+                        intensity_transform="raw_cumulant",
+                    ),
                 ).astype(np.float64)
 
                 self.assertEqual(result.shape, ref.shape)

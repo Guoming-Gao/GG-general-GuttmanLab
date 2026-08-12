@@ -199,9 +199,11 @@ class DiscreteTimelapseTests(unittest.TestCase):
                 self.assertEqual(tif.series[0].axes, "TZYX")
                 self.assertEqual(tif.imagej_metadata["spacing"], 0.75)
                 self.assertEqual(tif.imagej_metadata["finterval"], 30.0)
+                self.assertEqual(tif.imagej_metadata["intensity_transform"], "order_root")
             with tifffile.TiffFile(mip_path) as tif:
                 self.assertEqual(tif.series[0].shape, mip.shape)
                 self.assertEqual(tif.series[0].axes, "TYX")
+                self.assertEqual(tif.imagej_metadata["intensity_transform"], "order_root")
 
 
 if __name__ == "__main__":

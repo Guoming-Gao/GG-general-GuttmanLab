@@ -9,6 +9,8 @@ The Python implementation in `src/sacdpy` is a valid core port of the MATLAB SAC
 
 This report supersedes the earlier validation run that used `NA=1.3`. The microscope objective used for the provided data has `NA=1.45`, and the ImageJ references were generated with that value.
 
+> **Intensity-space update (2026-08-12):** `sacdpy.reconstruct()` now returns the autocumulant order-root result by default (`raw ** (1 / ACorder)`). Direct MATLAB core-parity validation uses the explicit `intensity_transform="raw_cumulant"` diagnostic mode. Raw-cumulant absolute magnitude is not calibrated camera intensity; routine outputs are float32 order-root SACD intensity without thresholding or max normalization.
+
 This attestation applies to the core SACD path:
 
 1. per-frame offset removal

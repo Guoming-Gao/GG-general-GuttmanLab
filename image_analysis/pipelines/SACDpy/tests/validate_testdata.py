@@ -50,10 +50,11 @@ def main() -> int:
                 na=args.na,
                 iter1=args.iter1,
                 iter2=args.iter2,
+                intensity_transform="raw_cumulant",
             ),
         )
         out = args.out_dir / f"sacdpy-{side}.tif"
-        write_tiff_image(out, result)
+        write_tiff_image(out, result, intensity_transform="raw_cumulant")
         metrics = validation_metrics(result, tifffile.imread(ref))
         print(
             f"{side}: output={out} shape={result.shape} "

@@ -15,6 +15,7 @@
     "iter1": 7,
     "iter2": 8,
     "ac_order": 2,
+    "intensity_transform": "order_root",
     "subfactor": 0.8,
     "ifbackground": false,
     "backgroundfactor": 2.0,

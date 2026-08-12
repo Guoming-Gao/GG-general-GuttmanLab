@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
 import re
+import shutil
 import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -16,7 +18,7 @@ import numpy as np
 import tifffile
 
 from .params import SACDParams
-from .reconstruction import reconstruct
+from .reconstruction import apply_intensity_transform, reconstruct
 
 
 _ONI_ZSTACK_RE = re.compile(
@@ -47,6 +49,18 @@ class MovieInfo:
 
 
 @dataclass(frozen=True)
+class ChannelOutputPaths:
+    channel: str
+    stack: Path
+    mip: Path
+    raw_max_mip: Path
+
+    @property
+    def all(self) -> tuple[Path, Path, Path]:
+        return self.stack, self.mip, self.raw_max_mip
+
+
+@dataclass(frozen=True)
 class FOVPlan:
     raw_root: Path
     output_root: Path
@@ -56,8 +70,7 @@ class FOVPlan:
     pos_xy: int
     movies: tuple[MovieInfo, ...]
     channels: tuple[ChannelSpec, ...]
-    stack_output: Path
-    mip_output: Path
+    outputs: tuple[ChannelOutputPaths, ...]
     pixel_nm: float
     na: float
     z_spacing_um: float | None
@@ -69,6 +82,13 @@ class FOVPlan:
     @property
     def reconstruction_count(self) -> int:
         return len(self.movies) * len(self.channels)
+
+    @property
+    def all_outputs(self) -> tuple[Path, ...]:
+        return tuple(path for output in self.outputs for path in output.all)
+
+    def output_for(self, channel: str) -> ChannelOutputPaths:
+        return next(output for output in self.outputs if output.channel == channel)
 
 
 @dataclass(frozen=True)
@@ -253,8 +273,8 @@ def build_batch_plan(config: dict) -> BatchPlan:
         _validate_consistent_movies(movies)
 
         output_prefix = str(aliases.get(relative_fov, prefix))
-        stack_output, mip_output = output_paths(output_root, output_prefix, pos_xy)
-        for path in (stack_output, mip_output):
+        outputs = output_paths(output_root, output_prefix, channels)
+        for path in (path for output in outputs for path in output.all):
             if path in planned_paths:
                 raise ValueError(f"Output path collision: {path}")
             planned_paths.add(path)
@@ -279,8 +299,7 @@ def build_batch_plan(config: dict) -> BatchPlan:
                 pos_xy=pos_xy,
                 movies=movies,
                 channels=channels,
-                stack_output=stack_output,
-                mip_output=mip_output,
+                outputs=outputs,
                 pixel_nm=float(pixel_nm),
                 na=float(na),
                 z_spacing_um=_infer_z_spacing_um(movies),
@@ -315,10 +334,29 @@ def _infer_z_spacing_um(movies: Iterable[MovieInfo]) -> float | None:
     return float(median(spacings)) if spacings else None
 
 
-def output_paths(output_root: str | Path, prefix: str, pos_xy: int) -> tuple[Path, Path]:
+def output_paths(
+    output_root: str | Path,
+    prefix: str,
+    channels: Iterable[ChannelSpec],
+) -> tuple[ChannelOutputPaths, ...]:
     root = Path(output_root)
-    stem = f"{prefix}-SACDpy-4color-posXY{pos_xy}"
-    return root / f"{stem}-CZYX.ome.tif", root / f"{stem}-MIP-CYX.ome.tif"
+    return tuple(
+        ChannelOutputPaths(
+            channel=channel.name,
+            stack=root / f"{prefix}__{channel.name}-SACD-ZYX.tif",
+            mip=root / f"{prefix}__{channel.name}-SACD-MIP-YX.tif",
+            raw_max_mip=root / f"{prefix}__{channel.name}-raw-max-MIP-YX.tif",
+        )
+        for channel in channels
+    )
+
+
+def legacy_ome_paths(fov: FOVPlan) -> tuple[Path, Path]:
+    stem = f"{fov.prefix}-SACDpy-4color-posXY{fov.pos_xy}"
+    return (
+        fov.output_root / f"{stem}-CZYX.ome.tif",
+        fov.output_root / f"{stem}-MIP-CYX.ome.tif",
+    )
 
 
 def preflight_summary(plan: BatchPlan) -> dict:
@@ -329,7 +367,7 @@ def preflight_summary(plan: BatchPlan) -> dict:
         "movies": sum(len(fov.movies) for fov in plan.fovs),
         "channels": [channel.name for channel in plan.fovs[0].channels] if plan.fovs else [],
         "reconstructions": plan.reconstruction_count,
-        "outputs": len(plan.fovs) * 2,
+        "outputs": len(plan.fovs) * len(plan.fovs[0].channels) * 3 if plan.fovs else 0,
         "exclusions": len(plan.exclusions),
     }
 
@@ -362,6 +400,7 @@ def _params_for_channel(fov: FOVPlan, channel: ChannelSpec, processing: dict) ->
         iter1=int(processing.get("iter1", 7)),
         iter2=int(processing.get("iter2", 8)),
         ac_order=int(processing.get("ac_order", 2)),
+        intensity_transform=str(processing.get("intensity_transform", "order_root")),
         subfactor=float(processing.get("subfactor", 0.8)),
         frames_per_sacd=None,
         ifbackground=bool(processing.get("ifbackground", False)),
@@ -381,22 +420,47 @@ def process_fov(
     *,
     progress_callback: Callable[[dict], None] | None = None,
 ) -> dict:
-    existing = [path for path in (fov.stack_output, fov.mip_output) if path.exists()]
+    intensity_transform = str(processing.get("intensity_transform", "order_root"))
+    existing = [path for path in fov.all_outputs if path.exists()]
     if existing:
-        if len(existing) != 2:
-            raise FileExistsError(f"Partial final output pair exists: {existing}")
-        shapes = validate_output_pair(fov.stack_output, fov.mip_output, fov.channels)
-        return _result_record(fov, "skipped_existing", 0.0, shapes=shapes)
+        if len(existing) != len(fov.all_outputs):
+            raise FileExistsError(f"Partial final multicolor output set exists: {existing}")
+        shapes = validate_fov_outputs(
+            fov,
+            intensity_transform=intensity_transform,
+            mag=int(processing.get("mag", 2)),
+        )
+        return _result_record(
+            fov,
+            "skipped_existing",
+            0.0,
+            shapes=shapes,
+            intensity_transform=intensity_transform,
+        )
+    legacy_existing = [path for path in legacy_ome_paths(fov) if path.exists()]
+    if legacy_existing:
+        raise ValueError(
+            f"Legacy raw-cumulant OME outputs exist for {fov.relative_fov}. "
+            "Run migrate_legacy_ome_dataset before normal batch processing."
+        )
 
     fov.output_root.mkdir(parents=True, exist_ok=True)
-    partial_stack = _partial_path(fov.stack_output)
-    partial_mip = _partial_path(fov.mip_output)
-    for partial in (partial_stack, partial_mip):
+    partial_outputs = tuple(
+        ChannelOutputPaths(
+            output.channel,
+            _partial_path(output.stack),
+            _partial_path(output.mip),
+            _partial_path(output.raw_max_mip),
+        )
+        for output in fov.outputs
+    )
+    for partial in (path for output in partial_outputs for path in output.all):
         if partial.exists():
             partial.unlink()
 
     started = perf_counter()
     channel_planes: list[list[np.ndarray]] = [[] for _ in fov.channels]
+    raw_max_mips: list[np.ndarray | None] = [None for _ in fov.channels]
     input_shape: tuple[int, ...] | None = None
     completed_reconstructions = 0
     for movie in fov.movies:
@@ -405,6 +469,12 @@ def process_fov(
         for channel_index, channel in enumerate(fov.channels):
             reconstruction_started = perf_counter()
             selected = select_channel_frames(raw, movie.frame_ranges[channel_index], channel.camera_half)
+            frame_max = np.max(selected, axis=0)
+            raw_max_mips[channel_index] = (
+                frame_max
+                if raw_max_mips[channel_index] is None
+                else np.maximum(raw_max_mips[channel_index], frame_max)
+            )
             sacd = reconstruct(selected, _params_for_channel(fov, channel, processing))
             if sacd.ndim != 2:
                 raise ValueError(f"Expected one 2D SACD image, got {sacd.shape} for {movie.path}")
@@ -423,106 +493,436 @@ def process_fov(
                     }
                 )
 
-    stack = np.stack([np.stack(planes, axis=0) for planes in channel_planes], axis=0)
-    mip = np.max(stack, axis=1).astype(np.float32, copy=False)
-    pixel_um = fov.pixel_nm / 1000.0 / int(processing.get("mag", 2))
-    write_ome_tiff(
-        partial_stack,
-        stack,
-        axes="CZYX",
-        channels=fov.channels,
-        pixel_size_um=pixel_um,
-        z_spacing_um=fov.z_spacing_um,
+    stacks = [np.stack(planes, axis=0).astype(np.float32, copy=False) for planes in channel_planes]
+    raw_references = [_require_uint16(image) for image in raw_max_mips]
+    output_pixel_um = fov.pixel_nm / 1000.0 / int(processing.get("mag", 2))
+    raw_pixel_um = fov.pixel_nm / 1000.0
+    for channel, paths, stack, raw_reference in zip(
+        fov.channels, partial_outputs, stacks, raw_references, strict=True
+    ):
+        write_imagej_tiff(
+            paths.stack,
+            stack,
+            axes="ZYX",
+            pixel_size_um=output_pixel_um,
+            z_spacing_um=fov.z_spacing_um,
+            intensity_transform=intensity_transform,
+        )
+        write_imagej_tiff(
+            paths.mip,
+            np.max(stack, axis=0).astype(np.float32, copy=False),
+            axes="YX",
+            pixel_size_um=output_pixel_um,
+            intensity_transform=intensity_transform,
+        )
+        write_imagej_tiff(
+            paths.raw_max_mip,
+            raw_reference,
+            axes="YX",
+            pixel_size_um=raw_pixel_um,
+            reference_projection="frame_max_then_z_max",
+        )
+    shapes = validate_output_set(
+        partial_outputs,
+        fov.channels,
+        intensity_transform=intensity_transform,
+        expected_stacks=stacks,
+        expected_raw_max_mips=raw_references,
     )
-    write_ome_tiff(
-        partial_mip,
-        mip,
-        axes="CYX",
-        channels=fov.channels,
-        pixel_size_um=pixel_um,
-    )
-    shapes = validate_output_pair(partial_stack, partial_mip, fov.channels)
-    partial_stack.replace(fov.stack_output)
-    partial_mip.replace(fov.mip_output)
+    for partial, final in zip(partial_outputs, fov.outputs, strict=True):
+        for partial_path, final_path in zip(partial.all, final.all, strict=True):
+            partial_path.replace(final_path)
     return _result_record(
         fov,
         "written",
         perf_counter() - started,
         shapes=shapes,
         input_shape=input_shape,
+        intensity_transform=intensity_transform,
     )
 
 
-def write_ome_tiff(
+def write_imagej_tiff(
     path: str | Path,
     image: np.ndarray,
     *,
     axes: str,
-    channels: Iterable[ChannelSpec],
     pixel_size_um: float,
     z_spacing_um: float | None = None,
+    intensity_transform: str | None = None,
+    reference_projection: str | None = None,
 ) -> None:
-    arr = np.asarray(image, dtype=np.float32)
-    channel_tuple = tuple(channels)
+    arr = np.asarray(image)
     if arr.ndim != len(axes):
         raise ValueError(f"Image ndim {arr.ndim} does not match axes {axes!r}")
-    if "C" not in axes or arr.shape[axes.index("C")] != len(channel_tuple):
-        raise ValueError("OME image channel axis does not match channel metadata")
     metadata: dict[str, object] = {
         "axes": axes,
-        "Channel": {
-            "Name": [channel.name for channel in channel_tuple],
-            "ExcitationWavelength": [channel.wavelength_nm for channel in channel_tuple],
-            "ExcitationWavelengthUnit": ["nm"] * len(channel_tuple),
-        },
-        "PhysicalSizeX": float(pixel_size_um),
-        "PhysicalSizeXUnit": "µm",
-        "PhysicalSizeY": float(pixel_size_um),
-        "PhysicalSizeYUnit": "µm",
+        "unit": "um",
     }
+    if intensity_transform is not None:
+        metadata["intensity_transform"] = intensity_transform
+    if reference_projection is not None:
+        metadata["reference_projection"] = reference_projection
     if "Z" in axes and z_spacing_um is not None:
-        metadata["PhysicalSizeZ"] = float(z_spacing_um)
-        metadata["PhysicalSizeZUnit"] = "µm"
+        metadata["spacing"] = float(z_spacing_um)
     tifffile.imwrite(
         path,
         arr,
-        ome=True,
+        imagej=True,
         bigtiff=arr.nbytes >= 4_000_000_000,
         photometric="minisblack",
+        resolution=(1.0 / pixel_size_um, 1.0 / pixel_size_um),
         metadata=metadata,
     )
 
 
-def validate_output_pair(
+def validate_output_set(
+    outputs: Iterable[ChannelOutputPaths],
+    channels: Iterable[ChannelSpec],
+    *,
+    intensity_transform: str = "order_root",
+    expected_stacks: Iterable[np.ndarray] | None = None,
+    expected_raw_max_mips: Iterable[np.ndarray] | None = None,
+    output_pixel_um: float | None = None,
+    raw_pixel_um: float | None = None,
+    z_spacing_um: float | None = None,
+) -> dict:
+    output_tuple = tuple(outputs)
+    channel_tuple = tuple(channels)
+    expected_stack_tuple = tuple(expected_stacks) if expected_stacks is not None else None
+    expected_raw_tuple = (
+        tuple(expected_raw_max_mips) if expected_raw_max_mips is not None else None
+    )
+    if len(output_tuple) != len(channel_tuple):
+        raise ValueError("Output set does not match configured channels")
+    shapes: dict[str, dict[str, list[int]]] = {}
+    for index, (paths, channel) in enumerate(zip(output_tuple, channel_tuple, strict=True)):
+        if paths.channel != channel.name:
+            raise ValueError(f"Output channel {paths.channel!r} does not match {channel.name!r}")
+        with tifffile.TiffFile(paths.stack) as tif:
+            stack_shape, stack_axes, stack_dtype = tif.series[0].shape, tif.series[0].axes, tif.series[0].dtype
+            stack_metadata = tif.imagej_metadata or {}
+            stack_pixel_um = _pixel_size_um(tif)
+        with tifffile.TiffFile(paths.mip) as tif:
+            mip_shape, mip_axes, mip_dtype = tif.series[0].shape, tif.series[0].axes, tif.series[0].dtype
+            mip_metadata = tif.imagej_metadata or {}
+            mip_pixel_um = _pixel_size_um(tif)
+        with tifffile.TiffFile(paths.raw_max_mip) as tif:
+            raw_shape, raw_axes, raw_dtype = tif.series[0].shape, tif.series[0].axes, tif.series[0].dtype
+            raw_metadata = tif.imagej_metadata or {}
+            raw_observed_pixel_um = _pixel_size_um(tif)
+        if stack_axes != "ZYX" or mip_axes != "YX" or raw_axes != "YX":
+            raise ValueError(f"Unexpected axes for {channel.name}: {stack_axes}, {mip_axes}, {raw_axes}")
+        if stack_dtype != np.dtype("float32") or mip_dtype != np.dtype("float32"):
+            raise ValueError(f"Unexpected SACD dtype for {channel.name}: {stack_dtype}, {mip_dtype}")
+        if raw_dtype != np.dtype("uint16"):
+            raise ValueError(f"Unexpected raw reference dtype for {channel.name}: {raw_dtype}")
+        if (
+            stack_metadata.get("intensity_transform") != intensity_transform
+            or mip_metadata.get("intensity_transform") != intensity_transform
+        ):
+            raise ValueError(f"Incompatible intensity transform for channel {channel.name}")
+        if raw_metadata.get("reference_projection") != "frame_max_then_z_max":
+            raise ValueError(f"Incorrect raw reference provenance for channel {channel.name}")
+        if output_pixel_um is not None and (
+            not np.isclose(stack_pixel_um, output_pixel_um)
+            or not np.isclose(mip_pixel_um, output_pixel_um)
+        ):
+            raise ValueError(f"Incorrect SACD pixel calibration for channel {channel.name}")
+        if raw_pixel_um is not None and not np.isclose(raw_observed_pixel_um, raw_pixel_um):
+            raise ValueError(f"Incorrect raw pixel calibration for channel {channel.name}")
+        if z_spacing_um is not None and not np.isclose(
+            float(stack_metadata.get("spacing", np.nan)), z_spacing_um
+        ):
+            raise ValueError(f"Incorrect z spacing for channel {channel.name}")
+        stack = tifffile.imread(paths.stack)
+        mip = tifffile.imread(paths.mip)
+        raw_mip = tifffile.imread(paths.raw_max_mip)
+        if not np.all(np.isfinite(stack)) or np.any(stack < 0):
+            raise ValueError(f"Invalid SACD values for channel {channel.name}")
+        if not np.array_equal(mip, np.max(stack, axis=0)):
+            raise ValueError(f"Saved SACD MIP is not max(Z) for channel {channel.name}")
+        if expected_stack_tuple is not None and not np.array_equal(stack, expected_stack_tuple[index]):
+            raise ValueError(f"Saved SACD stack differs from expected values for channel {channel.name}")
+        if expected_raw_tuple is not None and not np.array_equal(raw_mip, expected_raw_tuple[index]):
+            raise ValueError(f"Saved raw reference differs from expected values for channel {channel.name}")
+        shapes[channel.name] = {
+            "stack_shape": list(stack_shape),
+            "mip_shape": list(mip_shape),
+            "raw_max_mip_shape": list(raw_shape),
+        }
+    return {"output_shapes": shapes}
+
+
+def validate_fov_outputs(
+    fov: FOVPlan,
+    *,
+    intensity_transform: str = "order_root",
+    mag: int = 2,
+    expected_raw_max_mips: Iterable[np.ndarray] | None = None,
+) -> dict:
+    return validate_output_set(
+        fov.outputs,
+        fov.channels,
+        intensity_transform=intensity_transform,
+        expected_raw_max_mips=expected_raw_max_mips,
+        output_pixel_um=fov.pixel_nm / 1000.0 / mag,
+        raw_pixel_um=fov.pixel_nm / 1000.0,
+        z_spacing_um=fov.z_spacing_um,
+    )
+
+
+def validate_dataset_outputs(
+    config: dict,
+    *,
+    verify_raw_references: bool = False,
+    progress_callback: Callable[[dict], None] | None = None,
+) -> list[dict]:
+    """Independently validate every new-format file in a configured dataset."""
+    plan = build_batch_plan(config)
+    processing = config["processing"]
+    intensity_transform = str(processing.get("intensity_transform", "order_root"))
+    mag = int(processing.get("mag", 2))
+    validations: list[dict] = []
+    for index, fov in enumerate(plan.fovs, start=1):
+        raw_references: list[np.ndarray] | None = None
+        if verify_raw_references:
+            maxima: list[np.ndarray | None] = [None for _ in fov.channels]
+            for movie in fov.movies:
+                raw = tifffile.imread(movie.path)
+                for channel_index, channel in enumerate(fov.channels):
+                    selected = select_channel_frames(
+                        raw, movie.frame_ranges[channel_index], channel.camera_half
+                    )
+                    frame_max = np.max(selected, axis=0)
+                    maxima[channel_index] = (
+                        frame_max
+                        if maxima[channel_index] is None
+                        else np.maximum(maxima[channel_index], frame_max)
+                    )
+            raw_references = [_require_uint16(image) for image in maxima]
+        validation = {
+            "relative_fov": fov.relative_fov,
+            **validate_fov_outputs(
+                fov,
+                intensity_transform=intensity_transform,
+                mag=mag,
+                expected_raw_max_mips=raw_references,
+            ),
+        }
+        validations.append(validation)
+        _emit(
+            progress_callback,
+            {
+                "event": "validation_complete",
+                "relative_fov": fov.relative_fov,
+                "completed_fovs": index,
+                "total_fovs": len(plan.fovs),
+                "validated_files": index * len(fov.channels) * 3,
+            },
+        )
+    return validations
+
+
+def _pixel_size_um(tif: tifffile.TiffFile) -> float:
+    metadata = tif.imagej_metadata or {}
+    if metadata.get("unit") not in {"um", "micron"}:
+        raise ValueError(f"TIFF calibration unit is not micrometers: {metadata.get('unit')!r}")
+
+    def resolution(tag_name: str) -> float:
+        value = tif.pages[0].tags[tag_name].value
+        return float(value[0]) / float(value[1]) if isinstance(value, tuple) else float(value)
+
+    x_pixels_per_um = resolution("XResolution")
+    y_pixels_per_um = resolution("YResolution")
+    if not np.isclose(x_pixels_per_um, y_pixels_per_um):
+        raise ValueError("TIFF X/Y pixel calibrations differ")
+    return 1.0 / x_pixels_per_um
+
+
+def validate_legacy_ome_pair(
     stack_path: str | Path,
     mip_path: str | Path,
-    channels: Iterable[ChannelSpec] | None = None,
-) -> dict:
-    stack_path, mip_path = Path(stack_path), Path(mip_path)
+    channels: Iterable[ChannelSpec],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Validate one historical raw-cumulant OME pair before explicit migration."""
+    channel_tuple = tuple(channels)
     with tifffile.TiffFile(stack_path) as tif:
-        stack_shape = tuple(tif.series[0].shape)
         stack_axes = tif.series[0].axes
-        stack_dtype = tif.series[0].dtype
-        stack_xml = tif.ome_metadata or ""
+        stack = tif.asarray()
+        ome_metadata = tif.ome_metadata or ""
     with tifffile.TiffFile(mip_path) as tif:
-        mip_shape = tuple(tif.series[0].shape)
         mip_axes = tif.series[0].axes
-        mip_dtype = tif.series[0].dtype
-        mip_xml = tif.ome_metadata or ""
+        mip = tif.asarray()
     if stack_axes != "CZYX" or mip_axes != "CYX":
-        raise ValueError(f"Unexpected output axes: {stack_axes}, {mip_axes}")
-    if stack_dtype != np.dtype("float32") or mip_dtype != np.dtype("float32"):
-        raise ValueError(f"Unexpected output dtypes: {stack_dtype}, {mip_dtype}")
-    channel_tuple = tuple(channels or ())
-    for channel in channel_tuple:
-        marker = f'Name="{channel.name}"'
-        if marker not in stack_xml or marker not in mip_xml:
-            raise ValueError(f"Missing OME channel name {channel.name!r}")
-    stack = tifffile.imread(stack_path)
-    mip = tifffile.imread(mip_path)
+        raise ValueError(f"Unexpected legacy OME axes: {stack_axes}, {mip_axes}")
+    if stack.dtype != np.float32 or mip.dtype != np.float32:
+        raise ValueError(f"Unexpected legacy OME dtypes: {stack.dtype}, {mip.dtype}")
+    if stack.shape[0] != len(channel_tuple) or mip.shape[0] != len(channel_tuple):
+        raise ValueError("Legacy OME channel count does not match the current configuration")
+    if not np.all(np.isfinite(stack)) or np.any(stack < 0):
+        raise ValueError("Legacy OME stack contains nonfinite or negative values")
     if not np.array_equal(mip, np.max(stack, axis=1)):
-        raise ValueError("Saved CYX MIP does not equal max(saved CZYX, axis=Z)")
-    return {"stack_shape": list(stack_shape), "mip_shape": list(mip_shape)}
+        raise ValueError("Legacy OME MIP is not exactly max(Z) of its stack")
+    missing_names = [channel.name for channel in channel_tuple if channel.name not in ome_metadata]
+    if missing_names:
+        raise ValueError(f"Legacy OME metadata is missing channel name(s): {missing_names}")
+    return stack, mip
+
+
+def migrate_legacy_ome_dataset(
+    config: dict,
+    config_path: str | Path,
+    *,
+    progress_callback: Callable[[dict], None] | None = None,
+) -> list[dict]:
+    """Explicitly migrate one configured raw-cumulant OME dataset without rerunning SACD."""
+    plan = build_batch_plan(config)
+    processing = config["processing"]
+    intensity_transform = str(processing.get("intensity_transform", "order_root"))
+    if intensity_transform != "order_root":
+        raise ValueError("Legacy OME migration requires intensity_transform='order_root'")
+    if any(path.exists() for fov in plan.fovs for path in fov.all_outputs):
+        raise FileExistsError("New-format outputs already exist; migration will not overwrite them")
+    legacy_pairs = [(fov, legacy_ome_paths(fov)) for fov in plan.fovs]
+    missing = [str(path) for _, pair in legacy_pairs for path in pair if not path.is_file()]
+    if missing:
+        raise FileNotFoundError(f"Missing legacy OME input(s): {missing}")
+
+    staging_root = plan.output_root / ".order_root_migration"
+    if staging_root.exists():
+        raise FileExistsError(
+            f"Migration staging directory already exists: {staging_root}. "
+            "Inspect or remove it before retrying."
+        )
+    staging_root.mkdir(parents=True)
+    staged_sets: list[tuple[FOVPlan, tuple[ChannelOutputPaths, ...], list[np.ndarray], list[np.ndarray]]] = []
+    results: list[dict] = []
+    try:
+        for fov_index, (fov, (legacy_stack_path, legacy_mip_path)) in enumerate(
+            legacy_pairs, start=1
+        ):
+            raw_stack, _ = validate_legacy_ome_pair(
+                legacy_stack_path, legacy_mip_path, fov.channels
+            )
+            params = SACDParams(
+                ac_order=int(processing.get("ac_order", 2)),
+                intensity_transform="order_root",
+            )
+            params.validate_core()
+            transformed = apply_intensity_transform(raw_stack, params)
+            stacks = [transformed[index] for index in range(len(fov.channels))]
+            raw_max_mips: list[np.ndarray | None] = [None for _ in fov.channels]
+            for movie in fov.movies:
+                raw = tifffile.imread(movie.path)
+                for channel_index, channel in enumerate(fov.channels):
+                    selected = select_channel_frames(
+                        raw, movie.frame_ranges[channel_index], channel.camera_half
+                    )
+                    frame_max = np.max(selected, axis=0)
+                    raw_max_mips[channel_index] = (
+                        frame_max
+                        if raw_max_mips[channel_index] is None
+                        else np.maximum(raw_max_mips[channel_index], frame_max)
+                    )
+            raw_references = [_require_uint16(image) for image in raw_max_mips]
+            staged_outputs = output_paths(staging_root, fov.prefix, fov.channels)
+            output_pixel_um = fov.pixel_nm / 1000.0 / int(processing.get("mag", 2))
+            raw_pixel_um = fov.pixel_nm / 1000.0
+            for paths, stack, raw_reference in zip(
+                staged_outputs, stacks, raw_references, strict=True
+            ):
+                write_imagej_tiff(
+                    paths.stack,
+                    stack,
+                    axes="ZYX",
+                    pixel_size_um=output_pixel_um,
+                    z_spacing_um=fov.z_spacing_um,
+                    intensity_transform="order_root",
+                )
+                write_imagej_tiff(
+                    paths.mip,
+                    np.max(stack, axis=0).astype(np.float32, copy=False),
+                    axes="YX",
+                    pixel_size_um=output_pixel_um,
+                    intensity_transform="order_root",
+                )
+                write_imagej_tiff(
+                    paths.raw_max_mip,
+                    raw_reference,
+                    axes="YX",
+                    pixel_size_um=raw_pixel_um,
+                    reference_projection="frame_max_then_z_max",
+                )
+            shapes = validate_output_set(
+                staged_outputs,
+                fov.channels,
+                intensity_transform="order_root",
+                expected_stacks=stacks,
+                expected_raw_max_mips=raw_references,
+                output_pixel_um=output_pixel_um,
+                raw_pixel_um=raw_pixel_um,
+                z_spacing_um=fov.z_spacing_um,
+            )
+            staged_sets.append((fov, staged_outputs, stacks, raw_references))
+            result = _result_record(
+                fov,
+                "migrated_order_root",
+                0.0,
+                shapes=shapes,
+                input_shape=fov.movies[0].shape,
+                intensity_transform="order_root",
+            )
+            results.append(result)
+            _emit(
+                progress_callback,
+                {
+                    "event": "migration_staged",
+                    "relative_fov": fov.relative_fov,
+                    "completed_fovs": fov_index,
+                    "total_fovs": len(plan.fovs),
+                },
+            )
+
+        # Publication starts only after every staged file has passed exact validation.
+        for fov, staged_outputs, _, _ in staged_sets:
+            for staged, final in zip(staged_outputs, fov.outputs, strict=True):
+                for staged_path, final_path in zip(staged.all, final.all, strict=True):
+                    os.replace(staged_path, final_path)
+        for fov, _, stacks, raw_references in staged_sets:
+            validate_output_set(
+                fov.outputs,
+                fov.channels,
+                intensity_transform="order_root",
+                expected_stacks=stacks,
+                expected_raw_max_mips=raw_references,
+                output_pixel_um=fov.pixel_nm / 1000.0 / int(processing.get("mag", 2)),
+                raw_pixel_um=fov.pixel_nm / 1000.0,
+                z_spacing_um=fov.z_spacing_um,
+            )
+
+        _prepare_provenance(plan, config, Path(config_path))
+        manifest = _load_manifest(plan.output_root)
+        manifest["fovs"] = results
+        manifest["exclusions"] = list(plan.exclusions)
+        manifest["intensity_transform"] = "order_root"
+        manifest["output_format"] = "separate_imagej_tiff_v1"
+        manifest["migration"] = {
+            "completed_at": utc_now(),
+            "source_intensity_transform": "raw_cumulant",
+            "transform": f"power_1_over_{int(processing.get('ac_order', 2))}",
+            "legacy_ome_files_removed": len(legacy_pairs) * 2,
+        }
+        manifest["updated_at"] = utc_now()
+        _write_json(plan.output_root / "_processing" / "manifest.json", manifest)
+        for _, pair in legacy_pairs:
+            for path in pair:
+                path.unlink()
+        shutil.rmtree(staging_root)
+        return results
+    except Exception:
+        # Keep staged files for diagnosis; legacy inputs are retained until the success path above.
+        raise
 
 
 def run_batch(
@@ -535,6 +935,7 @@ def run_batch(
     plan = build_batch_plan(config)
     _prepare_provenance(plan, config, Path(config_path))
     processing = config["processing"]
+    intensity_transform = str(processing.get("intensity_transform", "order_root"))
     manifest = _load_manifest(plan.output_root)
     completed_reconstructions = 0
     elapsed_processing = 0.0
@@ -546,9 +947,21 @@ def run_batch(
             (item for item in manifest["fovs"] if item.get("relative_fov") == fov.relative_fov),
             None,
         )
-        if previous and previous.get("status") in {"written", "skipped_existing"}:
+        if previous and previous.get("status") in {
+            "written", "skipped_existing", "migrated_order_root"
+        }:
+            if previous.get("intensity_transform") != intensity_transform:
+                raise ValueError(
+                    f"Existing FOV {fov.relative_fov} uses intensity_transform="
+                    f"{previous.get('intensity_transform')!r}, expected {intensity_transform!r}. "
+                    "Use a new output location; untagged and raw-cumulant outputs cannot be resumed."
+                )
             try:
-                validate_output_pair(fov.stack_output, fov.mip_output, fov.channels)
+                validate_fov_outputs(
+                    fov,
+                    intensity_transform=intensity_transform,
+                    mag=int(processing.get("mag", 2)),
+                )
             except (FileNotFoundError, ValueError):
                 previous = None
         if previous is not None:
@@ -569,7 +982,13 @@ def run_batch(
             result = process_fov(fov, processing, progress_callback=step_callback)
             newly_written += result["status"] == "written"
         except Exception as exc:
-            result = _result_record(fov, "failed", 0.0, error=repr(exc))
+            result = _result_record(
+                fov,
+                "failed",
+                0.0,
+                error=repr(exc),
+                intensity_transform=intensity_transform,
+            )
         results.append(result)
         manifest = _upsert_manifest(plan.output_root, manifest, result, plan.exclusions)
 
@@ -614,6 +1033,10 @@ def _prepare_provenance(plan: BatchPlan, config: dict, config_path: Path) -> Non
             {
                 "created_at": utc_now(),
                 "config_source": str(config_path),
+                "intensity_transform": str(
+                    config.get("processing", {}).get("intensity_transform", "order_root")
+                ),
+                "output_format": "separate_imagej_tiff_v1",
                 "exclusions": list(plan.exclusions),
                 "fovs": [],
             },
@@ -631,6 +1054,7 @@ def _result_record(
     shapes: dict | None = None,
     input_shape: Iterable[int] | None = None,
     error: str | None = None,
+    intensity_transform: str | None = None,
 ) -> dict:
     return {
         "updated_at": utc_now(),
@@ -645,8 +1069,16 @@ def _result_record(
         "pixel_nm": fov.pixel_nm,
         "na": fov.na,
         "z_spacing_um": fov.z_spacing_um,
-        "stack_output": str(fov.stack_output),
-        "mip_output": str(fov.mip_output),
+        "intensity_transform": intensity_transform,
+        "output_format": "separate_imagej_tiff_v1",
+        "outputs": {
+            output.channel: {
+                "stack": str(output.stack),
+                "mip": str(output.mip),
+                "raw_max_mip": str(output.raw_max_mip),
+            }
+            for output in fov.outputs
+        },
         "runtime_s": runtime_s,
         "status": status,
         "error": error,
@@ -656,6 +1088,15 @@ def _result_record(
 def _partial_path(path: str | Path) -> Path:
     path = Path(path)
     return path.with_name(f"{path.stem}.partial{path.suffix}")
+
+
+def _require_uint16(image: np.ndarray | None) -> np.ndarray:
+    if image is None:
+        raise ValueError("Raw reference was not constructed")
+    arr = np.asarray(image)
+    if arr.dtype != np.uint16:
+        raise ValueError(f"Raw reference source must be uint16, got {arr.dtype}")
+    return arr
 
 
 def _exclusion(relative_fov: str, reason: str) -> dict[str, str]:

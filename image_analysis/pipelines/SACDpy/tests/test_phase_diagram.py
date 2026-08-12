@@ -43,6 +43,7 @@ class PhaseDiagramTests(unittest.TestCase):
         config = PhaseDiagramConfig()
         self.assertEqual(config.review_lower_percentile, 3.0)
         self.assertEqual(config.review_upper_percentile, 99.5)
+        self.assertEqual(config.intensity_transform, "order_root")
 
     def test_manifest_tiff_percentiles_use_only_full_mask_pixels(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -211,6 +211,23 @@ def run_batch(
             (item for item in manifest["fovs"] if item.get("relative_fov") == fov.relative_fov), None
         )
         if previous and previous.get("status") in {"written", "skipped_existing"}:
+            expected_transform = str(defaults.get("intensity_transform", "order_root"))
+            observed_transform = previous.get("intensity_transform")
+            if observed_transform != expected_transform:
+                raise ValueError(
+                    f"Existing FOV {fov.relative_fov} uses intensity_transform="
+                    f"{observed_transform!r}, expected {expected_transform!r}. "
+                    "Use a new output location; historical outputs are not migrated automatically."
+                )
+            try:
+                validate_output_pair(
+                    fov.stack_output,
+                    fov.mip_output,
+                    intensity_transform=expected_transform,
+                )
+            except (FileNotFoundError, ValueError):
+                previous = None
+        if previous and previous.get("status") in {"written", "skipped_existing"}:
             completed_movies += fov.movie_count
             result = {**previous, "status": "resumed_manifest"}
             results.append(result)
@@ -223,7 +240,13 @@ def run_batch(
             result = process_fov(fov, defaults)
             newly_written += result["status"] == "written"
         except Exception as exc:
-            result = _result_record(fov, status="failed", runtime_s=0.0, error=repr(exc))
+            result = _result_record(
+                fov,
+                status="failed",
+                runtime_s=0.0,
+                error=repr(exc),
+                intensity_transform=str(defaults.get("intensity_transform", "order_root")),
+            )
         results.append(result)
         _upsert_manifest(fov.result_dir, result)
 
@@ -257,13 +280,20 @@ def run_batch(
 
 
 def process_fov(fov: FOVPlan, defaults: dict) -> dict:
+    intensity_transform = str(defaults.get("intensity_transform", "order_root"))
     final_paths = (fov.stack_output, fov.mip_output)
     existing = [path for path in final_paths if path.exists()]
     if existing:
         if len(existing) != 2:
             raise FileExistsError(f"Partial final output pair exists: {existing}")
-        shapes = validate_output_pair(*final_paths)
-        return _result_record(fov, "skipped_existing", 0.0, shapes=shapes)
+        shapes = validate_output_pair(*final_paths, intensity_transform=intensity_transform)
+        return _result_record(
+            fov,
+            "skipped_existing",
+            0.0,
+            shapes=shapes,
+            intensity_transform=intensity_transform,
+        )
 
     fov.result_dir.mkdir(parents=True, exist_ok=True)
     partial_stack = _partial_path(fov.stack_output)
@@ -280,6 +310,7 @@ def process_fov(fov: FOVPlan, defaults: dict) -> dict:
         iter1=int(defaults["iter1"]),
         iter2=int(defaults["iter2"]),
         ac_order=int(defaults["ac_order"]),
+        intensity_transform=intensity_transform,
         subfactor=float(defaults["subfactor"]),
         frames_per_sacd=None,
         ifbackground=bool(defaults.get("ifbackground", False)),
@@ -315,6 +346,7 @@ def process_fov(fov: FOVPlan, defaults: dict) -> dict:
         pixel_size_um=pixel_um,
         z_spacing_um=fov.z_spacing_um,
         time_interval_s=fov.time_interval_s,
+        intensity_transform=intensity_transform,
     )
     write_timelapse_tiff(
         partial_mip,
@@ -322,8 +354,13 @@ def process_fov(fov: FOVPlan, defaults: dict) -> dict:
         axes="TYX",
         pixel_size_um=pixel_um,
         time_interval_s=fov.time_interval_s,
+        intensity_transform=intensity_transform,
     )
-    shapes = validate_output_pair(partial_stack, partial_mip)
+    shapes = validate_output_pair(
+        partial_stack,
+        partial_mip,
+        intensity_transform=intensity_transform,
+    )
     partial_stack.replace(fov.stack_output)
     partial_mip.replace(fov.mip_output)
     return _result_record(
@@ -332,19 +369,32 @@ def process_fov(fov: FOVPlan, defaults: dict) -> dict:
         perf_counter() - started,
         shapes=shapes,
         input_shape=input_shape,
+        intensity_transform=intensity_transform,
     )
 
 
-def validate_output_pair(stack_path: str | Path, mip_path: str | Path) -> dict:
+def validate_output_pair(
+    stack_path: str | Path,
+    mip_path: str | Path,
+    *,
+    intensity_transform: str = "order_root",
+) -> dict:
     stack_path, mip_path = Path(stack_path), Path(mip_path)
     with tifffile.TiffFile(stack_path) as tif:
         stack_shape, stack_axes, stack_dtype = tif.series[0].shape, tif.series[0].axes, tif.series[0].dtype
+        stack_transform = (tif.imagej_metadata or {}).get("intensity_transform")
     with tifffile.TiffFile(mip_path) as tif:
         mip_shape, mip_axes, mip_dtype = tif.series[0].shape, tif.series[0].axes, tif.series[0].dtype
+        mip_transform = (tif.imagej_metadata or {}).get("intensity_transform")
     if stack_axes != "TZYX" or mip_axes != "TYX":
         raise ValueError(f"Unexpected axes: {stack_axes}, {mip_axes}")
     if stack_dtype != np.dtype("float32") or mip_dtype != np.dtype("float32"):
         raise ValueError(f"Unexpected dtypes: {stack_dtype}, {mip_dtype}")
+    if stack_transform != intensity_transform or mip_transform != intensity_transform:
+        raise ValueError(
+            f"Incompatible intensity transforms: {stack_transform!r}, {mip_transform!r}; "
+            f"expected {intensity_transform!r}"
+        )
     stack = tifffile.imread(stack_path)
     mip = tifffile.imread(mip_path)
     if not np.array_equal(mip, np.max(stack, axis=1)):
@@ -376,6 +426,15 @@ def _prepare_provenance(config: dict, config_path: Path, plan: BatchPlan, repo_r
                 {
                     "created_at": utc_now(),
                     "mode": mode,
+                    "intensity_transform": (
+                        "historical_untagged"
+                        if mode == "legacy_provenance"
+                        else str(
+                            config.get("processing", {}).get(
+                                "intensity_transform", "order_root"
+                            )
+                        )
+                    ),
                     "existing_outputs": existing if mode == "legacy_provenance" else [],
                     "exclusions": [x for x in plan.exclusions if x["dataset_name"] == result_dir.name],
                     "fovs": [],
@@ -408,6 +467,7 @@ def _result_record(
     shapes: dict | None = None,
     input_shape: Iterable[int] | None = None,
     error: str | None = None,
+    intensity_transform: str | None = None,
 ) -> dict:
     return {
         "updated_at": utc_now(),
@@ -423,6 +483,7 @@ def _result_record(
         "na": fov.na,
         "z_spacing_um": fov.z_spacing_um,
         "time_interval_s": fov.time_interval_s,
+        "intensity_transform": intensity_transform,
         "stack_output": str(fov.stack_output),
         "mip_output": str(fov.mip_output),
         "runtime_s": runtime_s,

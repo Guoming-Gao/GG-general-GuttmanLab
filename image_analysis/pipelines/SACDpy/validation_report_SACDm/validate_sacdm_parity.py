@@ -8,7 +8,7 @@ import platform
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -468,6 +468,8 @@ Validation data:
 
 Parameters used for final validation: `pixel=117 nm`, `NA=1.45`, `mag=2`, `iter1=7`, `iter2=8`, `ACorder=2`, `subfactor=0.8`, left wavelength `560 nm`, right wavelength `647 nm`.
 
+Direct core-parity metrics intentionally use `intensity_transform="raw_cumulant"` on both sides. The script also verifies that the public default equals the raw result raised to `1 / ACorder`. Raw-cumulant absolute magnitude is not a calibrated camera intensity; routine pipelines use order-root SACD intensity without thresholding or max normalization.
+
 Direct MATLAB execution available in this environment: `{matlab_available}`. MATLAB R2026a with Image Processing Toolbox and Wavelet Toolbox was used to generate `matlab_reference/sacdm-left.tif` and `matlab_reference/sacdm-right.tif`. A local compatibility shim for `Generate_PSF.m` is recorded in `matlab_patch/` because the original loop syntax fails in current MATLAB when `size(s1)` returns a vector.
 
 ## Final Image Metrics
@@ -505,6 +507,7 @@ The optional branches were compared against deterministic MATLAB fixtures genera
 | Autocumulant | `SACD_core/cumulant.m` | `src/sacdpy/cumulant.py` | Faithful in mathematical structure for orders 2-6. Python rejects order 1, whereas MATLAB returns `0` for order 1. |
 | Sparse Hessian post-deconvolution | `SACDm.m:155-158`, `Sparse/*` | `src/sacdpy/sparse_hessian.py` | Implemented as a CPU NumPy port and covered by small-array execution tests. |
 | Post RL deconvolution | `SACDm.m:159-160` calls MATLAB `deconvlucy(cum, psfv2.^scale, iter2)` | `src/sacdpy/reconstruction.py` plus `deconvolution.py` | Aligned for default use through the MATLAB `deconvlucy` port. |
+| Public intensity transform | `demo.m` applies an order root for visualization | `src/sacdpy/reconstruction.py` | The public default applies `raw ** (1 / ACorder)` after post-RL. `raw_cumulant` remains available only for parity and explicit compatibility work. |
 
 ## Stage Diagnostics
 
@@ -553,16 +556,32 @@ def main() -> int:
     stage_rows: list[dict[str, object]] = []
 
     for case in CASES:
-        params = SACDParams(pixel_nm=117.0, wavelength_nm=case.wavelength_nm, na=1.45)
+        params = SACDParams(
+            pixel_nm=117.0,
+            wavelength_nm=case.wavelength_nm,
+            na=1.45,
+            intensity_transform="raw_cumulant",
+        )
         raw = tifffile.imread(case.raw)
         reference = tifffile.imread(case.reference).astype(np.float64)
         result, records = reconstruct_stages(raw, params)
         direct_result = reconstruct(raw, params)
         if not np.allclose(result, direct_result, rtol=1e-6, atol=1e-6):
             raise RuntimeError(f"Stage reconstruction diverged from sacdpy.reconstruct for {case.name}")
+        default_result = reconstruct(
+            raw,
+            replace(params, intensity_transform="order_root"),
+        )
+        if not np.allclose(
+            default_result,
+            np.power(direct_result, 1.0 / params.ac_order),
+            rtol=2e-6,
+            atol=1e-6,
+        ):
+            raise RuntimeError(f"Order-root default check failed for {case.name}")
 
         output_path = paths["outputs"] / f"sacdpy-{case.name}.tif"
-        write_tiff_image(output_path, result)
+        write_tiff_image(output_path, result, intensity_transform="raw_cumulant")
 
         imagej_metrics = final_metrics(result, reference)
         final_rows.append({"case": case.name, "reference": "SACDj/ImageJ fixture", **imagej_metrics})

@@ -9,7 +9,7 @@ import numpy as np
 
 from .params import SACDParams
 from .reconstruction import reconstruct
-from .tiffio import read_tiff_stack, write_tiff_image
+from .tiffio import read_intensity_transform, read_tiff_stack, write_tiff_image
 
 
 @dataclass(frozen=True)
@@ -21,6 +21,7 @@ class BatchResult:
     output_shape: tuple[int, ...] | None = None
     wavelength_nm: float | None = None
     frames_per_sacd: int | None = None
+    intensity_transform: str | None = None
 
 
 def find_input_files(
@@ -87,6 +88,7 @@ def params_for_file(
     iter1: int = 7,
     iter2: int = 8,
     ac_order: int = 2,
+    intensity_transform: str = "order_root",
     subfactor: float = 0.8,
     frames_per_sacd: int | None = None,
     ifregistration: bool = False,
@@ -106,6 +108,7 @@ def params_for_file(
         iter1=iter1,
         iter2=iter2,
         ac_order=ac_order,
+        intensity_transform=intensity_transform,
         subfactor=subfactor,
         frames_per_sacd=frames_per_sacd,
         ifregistration=ifregistration,
@@ -159,6 +162,7 @@ def run_batch_reconstruction(
     iter1: int = 7,
     iter2: int = 8,
     ac_order: int = 2,
+    intensity_transform: str = "order_root",
     subfactor: float = 0.8,
     frames_per_sacd: int | None = None,
     frame_start: int | None = None,
@@ -209,7 +213,21 @@ def run_batch_reconstruction(
                 progress.update(task_id, description=f"Processing {input_file.name}")
 
             if output_file.exists() and not overwrite_outputs:
-                results.append(BatchResult(input=input_file, output=output_file, status="skipped_existing"))
+                observed_transform = read_intensity_transform(output_file)
+                if observed_transform != intensity_transform:
+                    raise ValueError(
+                        f"Existing output {output_file} uses intensity_transform="
+                        f"{observed_transform!r}, expected {intensity_transform!r}. "
+                        "Use a new output location or explicitly overwrite it."
+                    )
+                results.append(
+                    BatchResult(
+                        input=input_file,
+                        output=output_file,
+                        status="skipped_existing",
+                        intensity_transform=intensity_transform,
+                    )
+                )
                 if progress is not None and task_id is not None:
                     progress.advance(task_id)
                 continue
@@ -224,6 +242,7 @@ def run_batch_reconstruction(
                 iter1=iter1,
                 iter2=iter2,
                 ac_order=ac_order,
+                intensity_transform=intensity_transform,
                 subfactor=subfactor,
                 frames_per_sacd=frames_per_sacd,
                 ifregistration=ifregistration,
@@ -242,7 +261,11 @@ def run_batch_reconstruction(
             )
             selected_yxt = np.moveaxis(selected_tyx, 0, -1)
             sacd = reconstruct(selected_yxt, params)
-            write_tiff_image(output_file, sacd)
+            write_tiff_image(
+                output_file,
+                sacd,
+                intensity_transform=params.intensity_transform,
+            )
             results.append(
                 BatchResult(
                     input=input_file,
@@ -252,6 +275,7 @@ def run_batch_reconstruction(
                     output_shape=sacd.shape,
                     wavelength_nm=params.wavelength_nm,
                     frames_per_sacd=params.frames_per_sacd,
+                    intensity_transform=params.intensity_transform,
                 )
             )
             if progress is not None and task_id is not None:

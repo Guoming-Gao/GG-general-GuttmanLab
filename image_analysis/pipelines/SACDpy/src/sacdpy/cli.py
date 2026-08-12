@@ -19,6 +19,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--iter2", type=int, default=8, help="Post-RL iterations.")
     parser.add_argument("--ac-order", type=int, default=2, help="Autocumulant order.")
     parser.add_argument(
+        "--intensity-transform",
+        choices=("order-root", "raw-cumulant"),
+        default="order-root",
+        help="Output intensity space. Defaults to the SACDm order-root presentation transform.",
+    )
+    parser.add_argument(
         "--frames-per-sacd",
         type=int,
         default=None,
@@ -47,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         iter1=args.iter1,
         iter2=args.iter2,
         ac_order=args.ac_order,
+        intensity_transform=args.intensity_transform.replace("-", "_"),
         frames_per_sacd=args.frames_per_sacd,
         scale=args.scale,
         subfactor=args.subfactor,
@@ -61,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     stack = read_tiff_stack(args.input)
     result = reconstruct(stack, params)
-    write_tiff_image(args.output, result)
+    write_tiff_image(args.output, result, intensity_transform=params.intensity_transform)
     return 0
 
 

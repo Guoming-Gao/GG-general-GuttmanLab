@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
+import tifffile
 
 from sacdpy.batch import (
     find_input_files,
@@ -93,6 +94,22 @@ class BatchTests(unittest.TestCase):
         self.assertEqual(params.tcontinuity, 0.25)
         self.assertEqual(params.sparsity, 2.0)
         self.assertEqual(params.sparse_iterations, 5)
+        self.assertEqual(params.intensity_transform, "order_root")
+
+    def test_batch_rejects_untagged_existing_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            input_file = root / "sample-left_frames_1-50.tif"
+            input_file.touch()
+            output_file = sacdpy_output_path(input_file)
+            tifffile.imwrite(output_file, np.ones((4, 5), dtype=np.float32))
+            with self.assertRaisesRegex(ValueError, "intensity_transform=None"):
+                run_batch_reconstruction(
+                    [input_file],
+                    pixel_nm=117.0,
+                    na=1.45,
+                    default_wavelength_nm=561.0,
+                )
 
     def test_select_frame_range_uses_one_based_inclusive_bounds_for_tyx(self) -> None:
         frame_values = np.arange(500, dtype=np.uint16)[:, None, None]

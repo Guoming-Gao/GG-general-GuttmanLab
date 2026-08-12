@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-import numpy as np
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
+
+import numpy as np
 
 from sacdpy.background import background_estimation
 from sacdpy.cumulant import cumulant
@@ -12,7 +15,7 @@ from sacdpy.fourier import fourier_interpolate
 from sacdpy.params import SACDParams
 from sacdpy.psf import airy_kernel, generate_rsf
 from sacdpy.registration import register_stack
-from sacdpy.reconstruction import as_yxt, reconstruct
+from sacdpy.reconstruction import apply_intensity_transform, as_yxt, reconstruct
 from sacdpy.sparse_hessian import sparse_hessian_core
 from sacdpy.tiffio import read_tiff_stack, write_tiff_image
 
@@ -70,6 +73,41 @@ class CoreTests(unittest.TestCase):
         result = reconstruct(stack, self._fast_params(frames_per_sacd=25))
         self.assertEqual(result.shape, (2, 12, 10))
 
+    def test_order_root_transform_supports_orders_two_through_six(self) -> None:
+        values = np.array([[0.0, 1.0, 64.0, 729.0]], dtype=np.float32)
+        for order in range(2, 7):
+            params = SACDParams(ac_order=order, intensity_transform="order_root")
+            transformed = apply_intensity_transform(values, params)
+            np.testing.assert_allclose(transformed, values ** (1.0 / order), rtol=1e-6)
+            self.assertEqual(transformed.dtype, np.float32)
+
+    def test_raw_cumulant_transform_is_unchanged(self) -> None:
+        values = np.array([[0.0, 4.0, 9.0]], dtype=np.float32)
+        params = SACDParams(ac_order=2, intensity_transform="raw_cumulant")
+        np.testing.assert_array_equal(apply_intensity_transform(values, params), values)
+
+    def test_order_root_uses_ac_order_independently_of_post_psf_scale(self) -> None:
+        values = np.array([64.0], dtype=np.float32)
+        params = SACDParams(ac_order=3, scale=2, intensity_transform="order_root")
+        np.testing.assert_allclose(apply_intensity_transform(values, params), [4.0])
+
+    def test_transform_rejects_negative_and_nonfinite_values(self) -> None:
+        params = SACDParams(ac_order=2)
+        with self.assertRaisesRegex(ValueError, "finite"):
+            apply_intensity_transform(np.array([np.inf]), params)
+        with self.assertRaisesRegex(ValueError, "nonnegative"):
+            apply_intensity_transform(np.array([-1.0]), params)
+
+    def test_default_reconstruction_is_root_of_raw_for_single_and_chunked(self) -> None:
+        stack = np.random.default_rng(12).random((6, 5, 50))
+        for frames_per_sacd in (None, 25):
+            default_params = self._fast_params(frames_per_sacd=frames_per_sacd)
+            raw_params = self._fast_params(frames_per_sacd=frames_per_sacd)
+            raw_params.intensity_transform = "raw_cumulant"
+            default = reconstruct(stack, default_params)
+            raw = reconstruct(stack, raw_params)
+            np.testing.assert_allclose(default, np.sqrt(raw), rtol=2e-6, atol=1e-6)
+
     def test_reconstruct_drops_partial_frame_chunk(self) -> None:
         stack = np.random.default_rng(3).random((6, 5, 55))
         result = reconstruct(stack, self._fast_params(frames_per_sacd=25))
@@ -122,8 +160,13 @@ class CoreTests(unittest.TestCase):
             check=True,
             capture_output=True,
             text=True,
+            env={
+                **os.environ,
+                "PYTHONPATH": str(Path(__file__).parents[1] / "src"),
+            },
         )
         self.assertIn("--frames-per-sacd", result.stdout)
+        self.assertIn("--intensity-transform", result.stdout)
 
     def test_write_tiff_image_preserves_3d_tyx_shape(self) -> None:
         stack = np.random.default_rng(5).random((2, 8, 9)).astype(np.float32)

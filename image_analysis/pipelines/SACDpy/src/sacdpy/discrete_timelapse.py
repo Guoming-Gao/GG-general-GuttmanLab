@@ -359,6 +359,7 @@ def write_timelapse_tiff(
     pixel_size_um: float | None = None,
     z_spacing_um: float | None = None,
     time_interval_s: float | None = None,
+    intensity_transform: str = "order_root",
 ) -> None:
     """Write assembled SACD timelapse outputs as float32 ImageJ TIFFs."""
 
@@ -366,7 +367,10 @@ def write_timelapse_tiff(
     if arr.ndim != len(axes):
         raise ValueError(f"Image ndim {arr.ndim} does not match axes {axes!r}.")
 
-    metadata: dict[str, object] = {"axes": axes}
+    metadata: dict[str, object] = {
+        "axes": axes,
+        "intensity_transform": intensity_transform,
+    }
     if pixel_size_um is not None:
         metadata["unit"] = "um"
     if "Z" in axes and z_spacing_um is not None:

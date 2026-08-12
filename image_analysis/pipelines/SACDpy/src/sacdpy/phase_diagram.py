@@ -52,6 +52,7 @@ class PhaseDiagramConfig:
     iter1: int = 7
     iter2: int = 8
     ac_order: int = 2
+    intensity_transform: str = "order_root"
     subfactor: float = 0.8
     ifbackground: bool = False
     backgroundfactor: float = 2.0
@@ -308,6 +309,7 @@ def _sacd_params(config: PhaseDiagramConfig, *, pixel_nm: float, na: float, wave
         iter1=config.iter1,
         iter2=config.iter2,
         ac_order=config.ac_order,
+        intensity_transform=config.intensity_transform,
         subfactor=config.subfactor,
         frames_per_sacd=None,
         ifbackground=config.ifbackground,
@@ -347,11 +349,14 @@ def _write_imagej(
     axes: str,
     pixel_size_um: float,
     z_spacing_um: float | None = None,
+    intensity_transform: str | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
     arr = np.asarray(image)
     metadata: dict[str, Any] = {"axes": axes, "unit": "um"}
+    if intensity_transform is not None:
+        metadata["intensity_transform"] = intensity_transform
     if "Z" in axes and z_spacing_um is not None:
         metadata["spacing"] = float(z_spacing_um)
     tifffile.imwrite(
@@ -780,6 +785,8 @@ def _validate_fov_outputs(
     paths: dict[str, Path],
     nucleus_records: list[dict[str, Any]],
     excluded_records: list[dict[str, Any]],
+    *,
+    intensity_transform: str,
 ) -> None:
     required = [
         "hoechst_stack",
@@ -796,6 +803,13 @@ def _validate_fov_outputs(
         raise FileNotFoundError(f"Missing required FOV outputs: {missing}")
     hoechst_stack = tifffile.imread(paths["hoechst_stack"])
     spen_stack = tifffile.imread(paths["spen_stack"])
+    for name in ("hoechst_stack", "hoechst_mip", "spen_stack", "spen_mip"):
+        with tifffile.TiffFile(paths[name]) as tif:
+            observed = (tif.imagej_metadata or {}).get("intensity_transform")
+        if observed != intensity_transform:
+            raise AssertionError(
+                f"{name} intensity_transform={observed!r}, expected {intensity_transform!r}"
+            )
     if not np.array_equal(tifffile.imread(paths["hoechst_mip"]), np.max(hoechst_stack, axis=0)):
         raise AssertionError("Saved Hoechst MIP does not equal max(saved stack, axis=Z)")
     if not np.array_equal(tifffile.imread(paths["spen_mip"]), np.max(spen_stack, axis=0)):
@@ -859,6 +873,19 @@ def process_phase_fov(plan: PhaseFOVPlan, config: PhaseDiagramConfig, model: Any
     final_paths = _fov_output_paths(config, plan)
     if final_paths["complete"].exists() and not config.overwrite:
         completion = json.loads(final_paths["complete"].read_text())
+        observed_transform = completion.get("fov_record", {}).get("intensity_transform")
+        if observed_transform != config.intensity_transform:
+            raise ValueError(
+                f"Existing FOV {plan.fov_name} uses intensity_transform="
+                f"{observed_transform!r}, expected {config.intensity_transform!r}. "
+                "Use a new output root; historical phase-diagram outputs are not migrated automatically."
+            )
+        _validate_fov_outputs(
+            final_paths,
+            completion.get("nucleus_records", []),
+            completion.get("excluded_nucleus_records", []),
+            intensity_transform=config.intensity_transform,
+        )
         completion["status"] = "skipped_existing"
         return completion
     previous_completion = (
@@ -923,10 +950,10 @@ def process_phase_fov(plan: PhaseFOVPlan, config: PhaseDiagramConfig, model: Any
     hoechst_mip = np.max(hoechst_stack, axis=0).astype(np.float32, copy=False)
     spen_mip = np.max(spen_stack, axis=0).astype(np.float32, copy=False)
 
-    _write_imagej(stage_paths["hoechst_stack"], hoechst_stack, axes="ZYX", pixel_size_um=output_pixel_um, z_spacing_um=z_spacing_um)
-    _write_imagej(stage_paths["hoechst_mip"], hoechst_mip, axes="YX", pixel_size_um=output_pixel_um)
-    _write_imagej(stage_paths["spen_stack"], spen_stack, axes="ZYX", pixel_size_um=output_pixel_um, z_spacing_um=z_spacing_um)
-    _write_imagej(stage_paths["spen_mip"], spen_mip, axes="YX", pixel_size_um=output_pixel_um)
+    _write_imagej(stage_paths["hoechst_stack"], hoechst_stack, axes="ZYX", pixel_size_um=output_pixel_um, z_spacing_um=z_spacing_um, intensity_transform=config.intensity_transform)
+    _write_imagej(stage_paths["hoechst_mip"], hoechst_mip, axes="YX", pixel_size_um=output_pixel_um, intensity_transform=config.intensity_transform)
+    _write_imagej(stage_paths["spen_stack"], spen_stack, axes="ZYX", pixel_size_um=output_pixel_um, z_spacing_um=z_spacing_um, intensity_transform=config.intensity_transform)
+    _write_imagej(stage_paths["spen_mip"], spen_mip, axes="YX", pixel_size_um=output_pixel_um, intensity_transform=config.intensity_transform)
     _write_imagej(stage_paths["raw_hoechst_mip"], raw_hoechst_mip, axes="YX", pixel_size_um=raw_pixel_um)
     _write_imagej(stage_paths["raw_spen_mip"], raw_spen_mip, axes="YX", pixel_size_um=raw_pixel_um)
 
@@ -943,7 +970,12 @@ def process_phase_fov(plan: PhaseFOVPlan, config: PhaseDiagramConfig, model: Any
         pixel_size_um=output_pixel_um,
     )
     _make_qc_overlay(stage_paths["qc_overlay"], hoechst_mip, labels)
-    _validate_fov_outputs(stage_paths, nucleus_records, excluded_records)
+    _validate_fov_outputs(
+        stage_paths,
+        nucleus_records,
+        excluded_records,
+        intensity_transform=config.intensity_transform,
+    )
 
     final_paths["recon_dir"].mkdir(parents=True, exist_ok=True)
     final_paths["qc_dir"].mkdir(parents=True, exist_ok=True)
@@ -991,6 +1023,7 @@ def process_phase_fov(plan: PhaseFOVPlan, config: PhaseDiagramConfig, model: Any
         "na": na,
         "input_shape": list(input_shape or ()),
         "sacd_stack_shape": list(hoechst_stack.shape),
+        "intensity_transform": config.intensity_transform,
         "n_nuclei": len(final_records),
         "n_segmented_nuclei": len(final_records) + len(excluded_records),
         "n_excluded_nuclei": len(excluded_records),
@@ -1065,6 +1098,7 @@ def consolidate_manifests(config: PhaseDiagramConfig, completions: list[dict[str
         "total_retained_nuclei": len(nucleus_rows),
         "total_excluded_nuclei": len(excluded_rows),
         "total_source_movies": sum(len(item["fov_record"]["source_files"]) for item in completions),
+        "intensity_transform": config.intensity_transform,
         "conditions": {
             condition: sum(1 for row in fov_rows if row["condition"] == condition)
             for condition in sorted({row["condition"] for row in fov_rows})
