@@ -1,0 +1,106 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-08-16 12:03:56
+  Workflow ID: 51e4a602-f7ff-4576-8b34-9f4cb66fdb0a
+  Platform: macOS-26.5.1-arm64-arm-64bit
+  Host: dhcp-78-97.caltech.edu
+  User: gmgao
+  Snakemake version: 9.25.1
+  Python version: 3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:34:53) [Clang 19.1.7 ]
+  Command: /opt/miniconda3/envs/bioinfo/bin/snakemake --snakefile metagene_analysis/workflow/Snakefile --configfile metagene_analysis/config/config.yaml --runtime-source-cache-path /tmp/spen-smk-runtime --cores 4 --rerun-incomplete
+  Snakefile: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow/Snakefile
+  Base directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow
+  Run directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Working directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Config file(s): [PosixPath('/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml')]
+  Config MD5: e643f0c67ab15874c655de6805448e5f
+
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 4
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count
+---------------  -------
+metagene_suite         1
+raw_p_volcano          6
+summaries              1
+volcano               12
+volcano_apeglm         6
+execution_audit        1
+report                 1
+all                    1
+total                 29
+
+Select jobs to execute...
+Execute 4 jobs...
+[Sun Aug 16 12:03:58 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png
+    jobid: 59
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Sun Aug 16 12:03:58 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png
+    jobid: 58
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Sun Aug 16 12:03:58 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png
+    jobid: 46
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Sun Aug 16 12:03:58 2026]
+localrule raw_p_volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png
+    jobid: 69
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Select jobs to execute...
+RuleException:
+CalledProcessError in file "/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow/Snakefile", line 120:
+Command 'set -euo pipefail;  PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png --class-col class_fdr05 --title 'Aux1h vs ctrl | total | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue' returned non-zero exit status 2.
+[Sun Aug 16 12:04:00 2026]
+Error in rule raw_p_volcano:
+    message: None
+    jobid: 69
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png
+    shell:
+        PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png --class-col class_fdr05 --title 'Aux1h vs ctrl | total | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue
+        (command exited with non-zero exit code)
+[Sun Aug 16 12:04:02 2026]
+Finished jobid: 46 (Rule: volcano)
+1 of 29 steps (3%) done
+[Sun Aug 16 12:04:02 2026]
+Finished jobid: 59 (Rule: volcano)
+2 of 29 steps (7%) done
+[Sun Aug 16 12:04:02 2026]
+Finished jobid: 58 (Rule: volcano)
+3 of 29 steps (10%) done
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look below for error messages
+[Sun Aug 16 12:04:02 2026]
+Error in rule raw_p_volcano:
+    message: None
+    jobid: 69
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png
+    shell:
+        PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png --class-col class_fdr05 --title 'Aux1h vs ctrl | total | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue
+        (command exited with non-zero exit code)
+Complete log(s): /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/.snakemake/log/2026-08-16T120356.795451.snakemake.log
+WorkflowError:
+At least one job did not complete successfully.

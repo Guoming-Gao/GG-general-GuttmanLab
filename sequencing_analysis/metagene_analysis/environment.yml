@@ -1,0 +1,26 @@
+name: bioinfo
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - r-base=4.4
+  - bioconductor-deseq2
+  - bioconductor-apeglm
+  - bioconductor-edger
+  - r-data.table
+  - r-ggplot2
+  - r-rmarkdown
+  - snakemake-minimal
+  - bedtools
+  - samtools
+  - openjdk=21
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - seaborn
+  - pysam
+  - pybigwig
+  - pyyaml
+  - pytest

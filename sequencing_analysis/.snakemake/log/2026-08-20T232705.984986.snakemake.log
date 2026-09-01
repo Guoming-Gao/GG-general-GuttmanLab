@@ -1,0 +1,24 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-08-20 23:27:06
+  Workflow ID: 9e96fd22-e8bc-4bc1-af40-03a0298f3662
+  Platform: macOS-26.5.1-arm64-arm-64bit
+  Host: dhcp-78-97.caltech.edu
+  User: gmgao
+  Snakemake version: 9.25.1
+  Python version: 3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:34:53) [Clang 19.1.7 ]
+  Command: /opt/miniconda3/envs/bioinfo/bin/snakemake --snakefile metagene_analysis/workflow/Snakefile --configfile metagene_analysis/config/config.yaml --cores 1 --rerun-incomplete --printshellcmds
+  Snakefile: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow/Snakefile
+  Base directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow
+  Run directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Working directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Config file(s): [PosixPath('/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml')]
+  Config MD5: 1aa7a72985a8dd7981d1490452dc01c5
+
+Building DAG of jobs...
+LockException:
+Error: Directory cannot be locked. Please make sure that no other Snakemake process is trying to create the same files in the following directory:
+/Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis
+If you are sure that no other instances of snakemake are running on this directory, the remaining lock was likely caused by a kill signal or a power loss. It can be removed with the --unlock argument.

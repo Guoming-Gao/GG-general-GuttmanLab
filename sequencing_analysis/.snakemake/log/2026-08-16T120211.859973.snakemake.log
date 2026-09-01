@@ -1,0 +1,31 @@
+Traceback (most recent call last):
+
+  File "/opt/miniconda3/envs/bioinfo/lib/python3.12/site-packages/snakemake/cli.py", line 2205, in args_to_api
+    any_lint = workflow_api.lint()
+               ^^^^^^^^^^^^^^^^^^^
+
+  File "/opt/miniconda3/envs/bioinfo/lib/python3.12/site-packages/snakemake/api.py", line 319, in _handle_no_dag
+    return method(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/opt/miniconda3/envs/bioinfo/lib/python3.12/site-packages/snakemake/api.py", line 380, in lint
+    workflow = self._get_workflow(check_envvars=False)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/opt/miniconda3/envs/bioinfo/lib/python3.12/site-packages/snakemake/api.py", line 427, in _get_workflow
+    return Workflow(
+           ^^^^^^^^^
+
+  File "<string>", line 21, in __init__
+
+  File "/opt/miniconda3/envs/bioinfo/lib/python3.12/site-packages/snakemake/workflow.py", line 219, in __post_init__
+    self._sourcecache = SourceCache(
+                        ^^^^^^^^^^^^
+
+  File "/opt/miniconda3/envs/bioinfo/lib/python3.12/site-packages/snakemake/sourcecache.py", line 794, in __init__
+    os.makedirs(runtime_cache_parent, exist_ok=True)
+
+  File "<frozen os>", line 225, in makedirs
+
+PermissionError: [Errno 1] Operation not permitted: '/Users/gmgao/Library/Caches/snakemake/snakemake/source-cache/snakemake-runtime-cache'
+

@@ -1,0 +1,790 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-08-13 20:32:07
+  Workflow ID: 64f4422c-e1c4-4e1e-a928-8f8fcb56a8bb
+  Platform: macOS-26.5.1-arm64-arm-64bit
+  Host: dhcp-78-97.caltech.edu
+  User: gmgao
+  Snakemake version: 9.25.1
+  Python version: 3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:34:53) [Clang 19.1.7 ]
+  Command: /opt/miniconda3/envs/bioinfo/bin/snakemake --snakefile metagene_analysis/workflow/Snakefile --configfile metagene_analysis/config/config.yaml --cores 4 --runtime-source-cache-path /tmp/spen-smk-runtime --printshellcmds --show-failed-logs
+  Snakefile: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow/Snakefile
+  Base directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow
+  Run directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Working directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Config file(s): [PosixPath('/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml')]
+  Config MD5: e643f0c67ab15874c655de6805448e5f
+
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 4
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count
+---------------  -------
+config_snapshot        1
+deseq                  6
+gene_covariates        1
+manifest               1
+validate               1
+versions               1
+classify               6
+qc                     1
+agreement              2
+ma                     6
+raw_p_volcano          6
+summaries              1
+volcano               12
+volcano_apeglm         6
+metagene_suite         1
+execution_audit        1
+report                 1
+all                    1
+total                 55
+
+Select jobs to execute...
+Execute 4 jobs...
+[Thu Aug 13 20:32:08 2026]
+localrule deseq:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_nascent_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_metadata.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux1h_vs_ctrl__nascent.session.txt
+    jobid: 23
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux1h_vs_ctrl__nascent.session.txt) && /opt/miniconda3/envs/bioinfo/bin/Rscript /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/scripts/run_deseq2.R /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_nascent_counts.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_metadata.tsv Aux1h ctrl /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__nascent.tsv 0.05 /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__nascent.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux1h_vs_ctrl__nascent.session.txt
+[Thu Aug 13 20:32:08 2026]
+localrule deseq:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/late_nascent_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/late_metadata.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/DoxAux24h_vs_Dox__nascent.session.txt
+    jobid: 36
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__nascent.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/DoxAux24h_vs_Dox__nascent.session.txt) && /opt/miniconda3/envs/bioinfo/bin/Rscript /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/scripts/run_deseq2.R /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/late_nascent_counts.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/late_metadata.tsv DoxAux24h Dox /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__nascent.tsv 0.05 /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__nascent.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/DoxAux24h_vs_Dox__nascent.session.txt
+[Thu Aug 13 20:32:08 2026]
+localrule versions:
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/software_versions.json
+    jobid: 80
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/software_versions.json
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli versions --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/software_versions.json
+[Thu Aug 13 20:32:08 2026]
+localrule validate:
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv
+    jobid: 54
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli validate --config /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv
+Select jobs to execute...
+[Thu Aug 13 20:32:11 2026]
+Finished jobid: 80 (Rule: versions)
+1 of 55 steps (2%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:11 2026]
+localrule deseq:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_total_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_metadata.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux2h_vs_ctrl__total.session.txt
+    jobid: 34
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux2h_vs_ctrl__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux2h_vs_ctrl__total.session.txt) && /opt/miniconda3/envs/bioinfo/bin/Rscript /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/scripts/run_deseq2.R /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_total_counts.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_metadata.tsv Aux2h ctrl /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__total.tsv 0.05 /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux2h_vs_ctrl__total.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux2h_vs_ctrl__total.session.txt
+[Thu Aug 13 20:32:11 2026]
+Finished jobid: 54 (Rule: validate)
+2 of 55 steps (4%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:11 2026]
+localrule gene_covariates:
+    input: /Volumes/guttman/genomes/mm10/annotation/gencode.vM25.annotation.gtf
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotation/gene_covariates.tsv
+    jobid: 41
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotation/gene_covariates.tsv
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli gene-covariates --gtf /Volumes/guttman/genomes/mm10/annotation/gencode.vM25.annotation.gtf --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotation/gene_covariates.tsv
+Select jobs to execute...
+[Thu Aug 13 20:32:20 2026]
+Finished jobid: 36 (Rule: deseq)
+3 of 55 steps (5%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:20 2026]
+localrule manifest:
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/input_manifest.tsv
+    jobid: 51
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/input_manifest.tsv
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/input_manifest.tsv) && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli manifest --config /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/input_manifest.tsv
+Select jobs to execute...
+[Thu Aug 13 20:32:20 2026]
+Finished jobid: 23 (Rule: deseq)
+4 of 55 steps (7%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:20 2026]
+localrule deseq:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_total_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_metadata.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux1h_vs_ctrl__total.session.txt
+    jobid: 30
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux1h_vs_ctrl__total.session.txt) && /opt/miniconda3/envs/bioinfo/bin/Rscript /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/scripts/run_deseq2.R /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_total_counts.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_metadata.tsv Aux1h ctrl /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__total.tsv 0.05 /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__total.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux1h_vs_ctrl__total.session.txt
+Select jobs to execute...
+[Thu Aug 13 20:32:24 2026]
+Finished jobid: 41 (Rule: gene_covariates)
+5 of 55 steps (9%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:24 2026]
+localrule classify:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    jobid: 35
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__nascent.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/DoxAux24h_vs_Dox__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv) && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli merge-annotation --de /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__nascent.tsv --annotation /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/DoxAux24h_vs_Dox__nascent.tsv && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli classify --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/DoxAux24h_vs_Dox__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv --delta 0.2630344058337938
+[Thu Aug 13 20:32:24 2026]
+Finished jobid: 51 (Rule: manifest)
+6 of 55 steps (11%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:24 2026]
+localrule deseq:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/late_total_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/late_metadata.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/DoxAux24h_vs_Dox__total.session.txt
+    jobid: 38
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__total.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/DoxAux24h_vs_Dox__total.session.txt) && /opt/miniconda3/envs/bioinfo/bin/Rscript /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/scripts/run_deseq2.R /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/late_total_counts.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/late_metadata.tsv DoxAux24h Dox /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__total.tsv 0.05 /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__total.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/DoxAux24h_vs_Dox__total.session.txt
+Select jobs to execute...
+[Thu Aug 13 20:32:26 2026]
+Finished jobid: 34 (Rule: deseq)
+7 of 55 steps (13%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:26 2026]
+localrule deseq:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_nascent_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_metadata.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux2h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux2h_vs_ctrl__nascent.session.txt
+    jobid: 32
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux2h_vs_ctrl__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux2h_vs_ctrl__nascent.session.txt) && /opt/miniconda3/envs/bioinfo/bin/Rscript /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/scripts/run_deseq2.R /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_nascent_counts.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/early_metadata.tsv Aux2h ctrl /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__nascent.tsv 0.05 /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux2h_vs_ctrl__nascent.tsv /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/logs/deseq/Aux2h_vs_ctrl__nascent.session.txt
+Select jobs to execute...
+[Thu Aug 13 20:32:27 2026]
+Finished jobid: 35 (Rule: classify)
+8 of 55 steps (15%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:27 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr10.png
+    jobid: 60
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr10.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr10.png --class-col class_fdr10 --title 'DoxAux24h vs Dox | nascent | fdr10' --delta 0.2630344058337938 --fdr 0.1
+Select jobs to execute...
+[Thu Aug 13 20:32:29 2026]
+Finished jobid: 60 (Rule: volcano)
+9 of 55 steps (16%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:29 2026]
+localrule raw_p_volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__nascent.png
+    jobid: 72
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__nascent.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__nascent.png --class-col class_fdr05 --title 'DoxAux24h vs Dox | nascent | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue
+Select jobs to execute...
+[Thu Aug 13 20:32:31 2026]
+Finished jobid: 72 (Rule: raw_p_volcano)
+10 of 55 steps (18%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:31 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png
+    jobid: 46
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png --class-col class_fdr05 --title 'DoxAux24h vs Dox | nascent | fdr05' --delta 0.2630344058337938 --fdr 0.05
+Select jobs to execute...
+[Thu Aug 13 20:32:33 2026]
+Finished jobid: 46 (Rule: volcano)
+11 of 55 steps (20%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:33 2026]
+localrule classify:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    jobid: 22
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux1h_vs_ctrl__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv) && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli merge-annotation --de /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__nascent.tsv --annotation /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux1h_vs_ctrl__nascent.tsv && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli classify --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux1h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv --delta 0.2630344058337938
+Select jobs to execute...
+[Thu Aug 13 20:32:35 2026]
+Finished jobid: 38 (Rule: deseq)
+12 of 55 steps (22%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:35 2026]
+localrule classify:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    jobid: 37
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__total.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/DoxAux24h_vs_Dox__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv) && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli merge-annotation --de /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/DoxAux24h_vs_Dox__total.tsv --annotation /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/DoxAux24h_vs_Dox__total.tsv && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli classify --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/DoxAux24h_vs_Dox__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv --delta 0.2630344058337938
+Select jobs to execute...
+[Thu Aug 13 20:32:36 2026]
+Finished jobid: 22 (Rule: classify)
+13 of 55 steps (24%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:36 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr10.png
+    jobid: 56
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr10.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr10.png --class-col class_fdr10 --title 'Aux1h vs ctrl | nascent | fdr10' --delta 0.2630344058337938 --fdr 0.1
+[Thu Aug 13 20:32:36 2026]
+Finished jobid: 30 (Rule: deseq)
+14 of 55 steps (25%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:36 2026]
+localrule qc:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/nodox.fixed.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/nodox.scaled.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/nodox.features.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/dox.fixed.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/dox.scaled.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/dox.features.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/qc/replicate_qc.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/clap_replicate_qc.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/expression_sample_correlations.tsv
+    jobid: 50
+    reason: Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__nascent.tsv
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli qc --root /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis
+Select jobs to execute...
+[Thu Aug 13 20:32:38 2026]
+Finished jobid: 32 (Rule: deseq)
+15 of 55 steps (27%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:39 2026]
+localrule classify:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    jobid: 29
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux1h_vs_ctrl__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv) && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli merge-annotation --de /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux1h_vs_ctrl__total.tsv --annotation /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux1h_vs_ctrl__total.tsv && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli classify --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --delta 0.2630344058337938
+[Thu Aug 13 20:32:39 2026]
+Finished jobid: 56 (Rule: volcano)
+16 of 55 steps (29%) done
+[Thu Aug 13 20:32:39 2026]
+Finished jobid: 37 (Rule: classify)
+17 of 55 steps (31%) done
+Select jobs to execute...
+Execute 2 jobs...
+[Thu Aug 13 20:32:39 2026]
+localrule classify:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    jobid: 31
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux2h_vs_ctrl__nascent.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv) && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli merge-annotation --de /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__nascent.tsv --annotation /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux2h_vs_ctrl__nascent.tsv && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli classify --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux2h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv --delta 0.2630344058337938
+[Thu Aug 13 20:32:39 2026]
+localrule ma:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__nascent.png
+    jobid: 74
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__nascent.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli ma --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__nascent.png --class-col class_fdr05 --title 'Aux1h vs ctrl | nascent'
+Select jobs to execute...
+[Thu Aug 13 20:32:43 2026]
+Finished jobid: 74 (Rule: ma)
+18 of 55 steps (33%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:43 2026]
+localrule raw_p_volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__nascent.png
+    jobid: 68
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__nascent.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__nascent.png --class-col class_fdr05 --title 'Aux1h vs ctrl | nascent | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue
+Select jobs to execute...
+[Thu Aug 13 20:32:44 2026]
+Finished jobid: 29 (Rule: classify)
+19 of 55 steps (35%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:44 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png
+    jobid: 42
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png --class-col class_fdr05 --title 'Aux1h vs ctrl | nascent | fdr05' --delta 0.2630344058337938 --fdr 0.05
+Select jobs to execute...
+[Thu Aug 13 20:32:46 2026]
+Finished jobid: 31 (Rule: classify)
+20 of 55 steps (36%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:46 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__nascent__fdr05.png
+    jobid: 66
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__nascent__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__nascent__fdr05.png --class-col class_fdr05_apeglm_sensitivity --title 'DoxAux24h vs Dox | nascent | apeglm sensitivity' --delta 0.2630344058337938 --fdr 0.05 --lfc-column log2FoldChange_apeglm
+[Thu Aug 13 20:32:46 2026]
+Finished jobid: 68 (Rule: raw_p_volcano)
+21 of 55 steps (38%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:47 2026]
+localrule classify:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    jobid: 33
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux2h_vs_ctrl__total.tsv) $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv) && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli merge-annotation --de /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/raw/Aux2h_vs_ctrl__total.tsv --annotation /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/count_matrices/gene_annotation.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux2h_vs_ctrl__total.tsv && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli classify --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotated_de/Aux2h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv --delta 0.2630344058337938
+[Thu Aug 13 20:32:48 2026]
+Finished jobid: 42 (Rule: volcano)
+22 of 55 steps (40%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:48 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png
+    jobid: 43
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png --class-col class_fdr05 --title 'Aux1h vs ctrl | total | fdr05' --delta 0.2630344058337938 --fdr 0.05
+Select jobs to execute...
+[Thu Aug 13 20:32:49 2026]
+Finished jobid: 66 (Rule: volcano_apeglm)
+23 of 55 steps (42%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:49 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__nascent__fdr05.png
+    jobid: 62
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__nascent__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__nascent__fdr05.png --class-col class_fdr05_apeglm_sensitivity --title 'Aux1h vs ctrl | nascent | apeglm sensitivity' --delta 0.2630344058337938 --fdr 0.05 --lfc-column log2FoldChange_apeglm
+Select jobs to execute...
+[Thu Aug 13 20:32:50 2026]
+Finished jobid: 43 (Rule: volcano)
+24 of 55 steps (44%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:50 2026]
+localrule raw_p_volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png
+    jobid: 69
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png --class-col class_fdr05 --title 'Aux1h vs ctrl | total | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue
+Select jobs to execute...
+[Thu Aug 13 20:32:51 2026]
+Finished jobid: 50 (Rule: qc)
+25 of 55 steps (45%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:51 2026]
+localrule ma:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__total.png
+    jobid: 75
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__total.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli ma --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__total.png --class-col class_fdr05 --title 'Aux1h vs ctrl | total'
+[Thu Aug 13 20:32:51 2026]
+Finished jobid: 33 (Rule: classify)
+26 of 55 steps (47%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:51 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png
+    jobid: 45
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png --class-col class_fdr05 --title 'Aux2h vs ctrl | total | fdr05' --delta 0.2630344058337938 --fdr 0.05
+[Thu Aug 13 20:32:51 2026]
+Finished jobid: 62 (Rule: volcano_apeglm)
+27 of 55 steps (49%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:51 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__total__fdr05.png
+    jobid: 67
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__total__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__total__fdr05.png --class-col class_fdr05_apeglm_sensitivity --title 'DoxAux24h vs Dox | total | apeglm sensitivity' --delta 0.2630344058337938 --fdr 0.05 --lfc-column log2FoldChange_apeglm
+Select jobs to execute...
+[Thu Aug 13 20:32:52 2026]
+Finished jobid: 69 (Rule: raw_p_volcano)
+28 of 55 steps (51%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:52 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png
+    jobid: 44
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png --class-col class_fdr05 --title 'Aux2h vs ctrl | nascent | fdr05' --delta 0.2630344058337938 --fdr 0.05
+Select jobs to execute...
+[Thu Aug 13 20:32:52 2026]
+Finished jobid: 75 (Rule: ma)
+29 of 55 steps (53%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:52 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__total__fdr05.png
+    jobid: 65
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__total__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__total__fdr05.png --class-col class_fdr05_apeglm_sensitivity --title 'Aux2h vs ctrl | total | apeglm sensitivity' --delta 0.2630344058337938 --fdr 0.05 --lfc-column log2FoldChange_apeglm
+Select jobs to execute...
+[Thu Aug 13 20:32:53 2026]
+Finished jobid: 45 (Rule: volcano)
+30 of 55 steps (55%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:53 2026]
+localrule ma:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__total.png
+    jobid: 77
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__total.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli ma --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__total.png --class-col class_fdr05 --title 'Aux2h vs ctrl | total'
+[Thu Aug 13 20:32:53 2026]
+Finished jobid: 67 (Rule: volcano_apeglm)
+31 of 55 steps (56%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:53 2026]
+localrule summaries:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/class_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/fdr05_to_fdr10_changes.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/nascent_total_concordance.tsv
+    jobid: 53
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/class_counts.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: None
+Select jobs to execute...
+[Thu Aug 13 20:32:54 2026]
+Finished jobid: 44 (Rule: volcano)
+32 of 55 steps (58%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:55 2026]
+localrule ma:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__nascent.png
+    jobid: 76
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__nascent.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli ma --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__nascent.png --class-col class_fdr05 --title 'Aux2h vs ctrl | nascent'
+[Thu Aug 13 20:32:55 2026]
+Finished jobid: 65 (Rule: volcano_apeglm)
+33 of 55 steps (60%) done
+[Thu Aug 13 20:32:55 2026]
+Finished jobid: 77 (Rule: ma)
+34 of 55 steps (62%) done
+Select jobs to execute...
+Execute 2 jobs...
+[Thu Aug 13 20:32:55 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__total__fdr05.png
+    jobid: 63
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__total__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__total__fdr05.png --class-col class_fdr05_apeglm_sensitivity --title 'Aux1h vs ctrl | total | apeglm sensitivity' --delta 0.2630344058337938 --fdr 0.05 --lfc-column log2FoldChange_apeglm
+[Thu Aug 13 20:32:55 2026]
+localrule ma:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__nascent.png
+    jobid: 78
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__nascent.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli ma --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__nascent.png --class-col class_fdr05 --title 'DoxAux24h vs Dox | nascent'
+Select jobs to execute...
+[Thu Aug 13 20:32:56 2026]
+Finished jobid: 76 (Rule: ma)
+35 of 55 steps (64%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:56 2026]
+localrule agreement:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total.fdr05.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total.fdr10.tsv
+    jobid: 40
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total.fdr10.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total.fdr05.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    wildcards: readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli agreement --one /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --two /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv --output-prefix /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total --delta 0.2630344058337938
+[Thu Aug 13 20:32:56 2026]
+Finished jobid: 53 (Rule: summaries)
+36 of 55 steps (65%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:57 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__nascent__fdr05.png
+    jobid: 64
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__nascent__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__nascent__fdr05.png --class-col class_fdr05_apeglm_sensitivity --title 'Aux2h vs ctrl | nascent | apeglm sensitivity' --delta 0.2630344058337938 --fdr 0.05 --lfc-column log2FoldChange_apeglm
+[Thu Aug 13 20:32:57 2026]
+Finished jobid: 78 (Rule: ma)
+37 of 55 steps (67%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:57 2026]
+localrule ma:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__total.png
+    jobid: 79
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__total.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli ma --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__total.png --class-col class_fdr05 --title 'DoxAux24h vs Dox | total'
+Select jobs to execute...
+[Thu Aug 13 20:32:57 2026]
+Finished jobid: 63 (Rule: volcano_apeglm)
+38 of 55 steps (69%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:57 2026]
+localrule raw_p_volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__total.png
+    jobid: 71
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__total.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__total.png --class-col class_fdr05 --title 'Aux2h vs ctrl | total | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue
+Select jobs to execute...
+[Thu Aug 13 20:32:58 2026]
+Finished jobid: 40 (Rule: agreement)
+39 of 55 steps (71%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:58 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr10.png
+    jobid: 61
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr10.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr10.png --class-col class_fdr10 --title 'DoxAux24h vs Dox | total | fdr10' --delta 0.2630344058337938 --fdr 0.1
+[Thu Aug 13 20:32:58 2026]
+Finished jobid: 79 (Rule: ma)
+40 of 55 steps (73%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:58 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr10.png
+    jobid: 57
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr10.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr10.png --class-col class_fdr10 --title 'Aux1h vs ctrl | total | fdr10' --delta 0.2630344058337938 --fdr 0.1
+[Thu Aug 13 20:32:58 2026]
+Finished jobid: 64 (Rule: volcano_apeglm)
+41 of 55 steps (75%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:32:58 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png
+    jobid: 58
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png --class-col class_fdr10 --title 'Aux2h vs ctrl | nascent | fdr10' --delta 0.2630344058337938 --fdr 0.1
+Select jobs to execute...
+[Thu Aug 13 20:32:59 2026]
+Finished jobid: 71 (Rule: raw_p_volcano)
+42 of 55 steps (76%) done
+Execute 1 jobs...
+[Thu Aug 13 20:32:59 2026]
+localrule raw_p_volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__total.png
+    jobid: 73
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__total.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__total.png --class-col class_fdr05 --title 'DoxAux24h vs Dox | total | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue
+Select jobs to execute...
+[Thu Aug 13 20:33:00 2026]
+Finished jobid: 61 (Rule: volcano)
+43 of 55 steps (78%) done
+Execute 1 jobs...
+[Thu Aug 13 20:33:00 2026]
+localrule config_snapshot:
+    input: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/config.snapshot.yaml
+    jobid: 81
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/config.snapshot.yaml
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/config.snapshot.yaml) && cp /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/config.snapshot.yaml
+Select jobs to execute...
+[Thu Aug 13 20:33:00 2026]
+Finished jobid: 81 (Rule: config_snapshot)
+44 of 55 steps (80%) done
+Execute 1 jobs...
+[Thu Aug 13 20:33:00 2026]
+localrule raw_p_volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__nascent.png
+    jobid: 70
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__nascent.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__nascent.png --class-col class_fdr05 --title 'Aux2h vs ctrl | nascent | raw p-value view' --delta 0.2630344058337938 --fdr 0.05 --p-column pvalue
+[Thu Aug 13 20:33:00 2026]
+Finished jobid: 57 (Rule: volcano)
+45 of 55 steps (82%) done
+[Thu Aug 13 20:33:00 2026]
+Finished jobid: 58 (Rule: volcano)
+46 of 55 steps (84%) done
+Select jobs to execute...
+Execute 2 jobs...
+[Thu Aug 13 20:33:01 2026]
+localrule agreement:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent.fdr05.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent.fdr10.tsv
+    jobid: 39
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent.fdr10.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent.fdr05.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    wildcards: readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli agreement --one /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv --two /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv --output-prefix /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent --delta 0.2630344058337938
+[Thu Aug 13 20:33:01 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png
+    jobid: 47
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png --class-col class_fdr05 --title 'DoxAux24h vs Dox | total | fdr05' --delta 0.2630344058337938 --fdr 0.05
+[Thu Aug 13 20:33:01 2026]
+Finished jobid: 73 (Rule: raw_p_volcano)
+47 of 55 steps (85%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:33:01 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png
+    jobid: 59
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli volcano --input /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png --class-col class_fdr10 --title 'Aux2h vs ctrl | total | fdr10' --delta 0.2630344058337938 --fdr 0.1
+[Thu Aug 13 20:33:02 2026]
+Finished jobid: 70 (Rule: raw_p_volcano)
+48 of 55 steps (87%) done
+[Thu Aug 13 20:33:02 2026]
+Finished jobid: 39 (Rule: agreement)
+49 of 55 steps (89%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:33:03 2026]
+localrule metagene_suite:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/nodox.fixed.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/nodox.scaled.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/nodox.features.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/dox.fixed.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/dox.scaled.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/clap_matrices/normalized/dox.features.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent.fdr05.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent.fdr10.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total.fdr05.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total.fdr10.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotation/gene_covariates.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv
+    jobid: 2
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total.fdr10.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__total.fdr05.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent.fdr05.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/early_agreement__nascent.fdr10.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/intermediate/annotation/gene_covariates.tsv
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: None
+[Thu Aug 13 20:33:03 2026]
+Finished jobid: 47 (Rule: volcano)
+50 of 55 steps (91%) done
+[Thu Aug 13 20:33:03 2026]
+Finished jobid: 59 (Rule: volcano)
+51 of 55 steps (93%) done
+[Thu Aug 13 20:35:55 2026]
+Finished jobid: 2 (Rule: metagene_suite)
+52 of 55 steps (95%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:35:55 2026]
+localrule execution_audit:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/class_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tests/pytest.xml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv
+    jobid: 52
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/class_counts.tsv
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli audit --root /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv
+[Thu Aug 13 20:35:56 2026]
+Finished jobid: 52 (Rule: execution_audit)
+53 of 55 steps (96%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:35:56 2026]
+localrule report:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/historical_clap_summary.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/historical/historical_peak_density_metagene.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/historical/historical_replicate_overlap.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/qc/replicate_qc.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/input_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html
+    jobid: 1
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html; Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/input_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/qc/replicate_qc.png
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: mkdir -p $(dirname /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html) && PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli report --output-root /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis --output /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html
+[Thu Aug 13 20:35:59 2026]
+Finished jobid: 1 (Rule: report)
+54 of 55 steps (98%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:35:59 2026]
+localrule all:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/class_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/software_versions.json, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/config.snapshot.yaml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tests/pytest.xml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/historical_clap_summary.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/historical/historical_peak_density_metagene.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/historical/historical_replicate_overlap.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/qc/replicate_qc.png
+    jobid: 0
+    reason: Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/qc/replicate_qc.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/class_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/software_versions.json, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/config.snapshot.yaml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr10.png
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: None
+[Thu Aug 13 20:35:59 2026]
+Finished jobid: 0 (Rule: all)
+55 of 55 steps (100%) done
+Complete log(s): /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/.snakemake/log/2026-08-13T203207.296983.snakemake.log

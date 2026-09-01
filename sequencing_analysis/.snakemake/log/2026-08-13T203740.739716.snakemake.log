@@ -1,0 +1,301 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-08-13 20:37:40
+  Workflow ID: beec3740-2e0d-41cb-97b7-0208e52529df
+  Platform: macOS-26.5.1-arm64-arm-64bit
+  Host: dhcp-78-97.caltech.edu
+  User: gmgao
+  Snakemake version: 9.25.1
+  Python version: 3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:34:53) [Clang 19.1.7 ]
+  Command: /opt/miniconda3/envs/bioinfo/bin/snakemake --snakefile metagene_analysis/workflow/Snakefile --configfile metagene_analysis/config/config.yaml --cores 4 --runtime-source-cache-path /tmp/spen-smk-runtime --forcerun volcano volcano_apeglm tests execution_audit report --show-failed-logs
+  Snakefile: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow/Snakefile
+  Base directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow
+  Run directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Working directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Config file(s): [PosixPath('/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml')]
+  Config MD5: e643f0c67ab15874c655de6805448e5f
+
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 4
+Rules claiming more threads will be scaled down.
+Job stats:
+job                count
+---------------  -------
+tests                  1
+volcano               12
+volcano_apeglm         6
+execution_audit        1
+report                 1
+all                    1
+total                 22
+
+Select jobs to execute...
+Execute 4 jobs...
+[Thu Aug 13 20:37:44 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__total__fdr05.png
+    jobid: 67
+    reason: Forced execution
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:44 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__nascent__fdr05.png
+    jobid: 66
+    reason: Forced execution
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:44 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr10.png
+    jobid: 61
+    reason: Forced execution
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:44 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png
+    jobid: 45
+    reason: Forced execution
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Select jobs to execute...
+[Thu Aug 13 20:37:46 2026]
+Finished jobid: 67 (Rule: volcano_apeglm)
+1 of 22 steps (5%) done
+Execute 1 jobs...
+[Thu Aug 13 20:37:46 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png
+    jobid: 58
+    reason: Forced execution
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:46 2026]
+Finished jobid: 61 (Rule: volcano)
+2 of 22 steps (9%) done
+[Thu Aug 13 20:37:46 2026]
+Finished jobid: 66 (Rule: volcano_apeglm)
+3 of 22 steps (14%) done
+[Thu Aug 13 20:37:46 2026]
+Finished jobid: 45 (Rule: volcano)
+4 of 22 steps (18%) done
+Select jobs to execute...
+Execute 3 jobs...
+[Thu Aug 13 20:37:46 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png
+    jobid: 41
+    reason: Forced execution
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:46 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__nascent__fdr05.png
+    jobid: 64
+    reason: Forced execution
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:47 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr10.png
+    jobid: 56
+    reason: Forced execution
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Select jobs to execute...
+[Thu Aug 13 20:37:48 2026]
+Finished jobid: 58 (Rule: volcano)
+5 of 22 steps (23%) done
+Execute 1 jobs...
+[Thu Aug 13 20:37:48 2026]
+localrule tests:
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tests/pytest.xml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tests/pytest.log
+    jobid: 54
+    reason: Forced execution
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Select jobs to execute...
+[Thu Aug 13 20:37:49 2026]
+Finished jobid: 64 (Rule: volcano_apeglm)
+6 of 22 steps (27%) done
+Execute 1 jobs...
+[Thu Aug 13 20:37:49 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__total__fdr05.png
+    jobid: 65
+    reason: Forced execution
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:49 2026]
+Finished jobid: 56 (Rule: volcano)
+7 of 22 steps (32%) done
+[Thu Aug 13 20:37:49 2026]
+Finished jobid: 41 (Rule: volcano)
+8 of 22 steps (36%) done
+Select jobs to execute...
+Execute 2 jobs...
+[Thu Aug 13 20:37:49 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr10.png
+    jobid: 60
+    reason: Forced execution
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=nascent, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:49 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png
+    jobid: 44
+    reason: Forced execution
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Select jobs to execute...
+[Thu Aug 13 20:37:51 2026]
+Finished jobid: 65 (Rule: volcano_apeglm)
+9 of 22 steps (41%) done
+Execute 1 jobs...
+[Thu Aug 13 20:37:51 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr10.png
+    jobid: 57
+    reason: Forced execution
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:51 2026]
+Finished jobid: 60 (Rule: volcano)
+10 of 22 steps (45%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:37:51 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png
+    jobid: 42
+    reason: Forced execution
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:51 2026]
+Finished jobid: 44 (Rule: volcano)
+11 of 22 steps (50%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:37:51 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/DoxAux24h_vs_Dox__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png
+    jobid: 46
+    reason: Forced execution
+    wildcards: contrast=DoxAux24h_vs_Dox, readout=total, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Select jobs to execute...
+[Thu Aug 13 20:37:52 2026]
+Finished jobid: 54 (Rule: tests)
+12 of 22 steps (55%) done
+Execute 1 jobs...
+[Thu Aug 13 20:37:52 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__nascent__fdr05.png
+    jobid: 62
+    reason: Forced execution
+    wildcards: contrast=Aux1h_vs_ctrl, readout=nascent
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Select jobs to execute...
+[Thu Aug 13 20:37:54 2026]
+Finished jobid: 57 (Rule: volcano)
+13 of 22 steps (59%) done
+Execute 1 jobs...
+[Thu Aug 13 20:37:54 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png
+    jobid: 59
+    reason: Forced execution
+    wildcards: contrast=Aux2h_vs_ctrl, readout=total, fdrtag=fdr10
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:54 2026]
+Finished jobid: 42 (Rule: volcano)
+14 of 22 steps (64%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:37:54 2026]
+localrule volcano_apeglm:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux1h_vs_ctrl__total.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__total__fdr05.png
+    jobid: 63
+    reason: Forced execution
+    wildcards: contrast=Aux1h_vs_ctrl, readout=total
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:54 2026]
+Finished jobid: 46 (Rule: volcano)
+15 of 22 steps (68%) done
+[Thu Aug 13 20:37:54 2026]
+Finished jobid: 62 (Rule: volcano_apeglm)
+16 of 22 steps (73%) done
+Select jobs to execute...
+Execute 2 jobs...
+[Thu Aug 13 20:37:54 2026]
+localrule volcano:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/gene_classes/Aux2h_vs_ctrl__nascent.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png
+    jobid: 43
+    reason: Forced execution
+    wildcards: contrast=Aux2h_vs_ctrl, readout=nascent, fdrtag=fdr05
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:54 2026]
+localrule execution_audit:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/class_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tests/pytest.xml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv
+    jobid: 51
+    reason: Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tests/pytest.xml
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:56 2026]
+Finished jobid: 51 (Rule: execution_audit)
+17 of 22 steps (77%) done
+[Thu Aug 13 20:37:56 2026]
+Finished jobid: 59 (Rule: volcano)
+18 of 22 steps (82%) done
+[Thu Aug 13 20:37:56 2026]
+Finished jobid: 63 (Rule: volcano_apeglm)
+19 of 22 steps (86%) done
+[Thu Aug 13 20:37:56 2026]
+Finished jobid: 43 (Rule: volcano)
+20 of 22 steps (91%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:37:56 2026]
+localrule report:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/historical_clap_summary.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/historical/historical_peak_density_metagene.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/historical/historical_replicate_overlap.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/qc/replicate_qc.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/input_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html
+    jobid: 0
+    reason: Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:59 2026]
+Finished jobid: 0 (Rule: report)
+21 of 22 steps (95%) done
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 13 20:37:59 2026]
+localrule all:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/metagene_manifest.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux1h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/Aux2h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_raw_p/DoxAux24h_vs_Dox__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux1h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/Aux2h_vs_ctrl__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__nascent.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/ma/DoxAux24h_vs_Dox__total.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/class_counts.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/validation.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/software_versions.json, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/inputs_manifest/config.snapshot.yaml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tests/pytest.xml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/historical_clap_summary.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/historical/historical_peak_density_metagene.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/historical/historical_replicate_overlap.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/qc/replicate_qc.png
+    jobid: 55
+    reason: Input files updated by another job: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/execution_audit.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tests/pytest.xml, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux1h_vs_ctrl__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano/Aux2h_vs_ctrl__nascent__fdr10.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/Aux2h_vs_ctrl__nascent__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/volcano_apeglm/DoxAux24h_vs_Dox__total__fdr05.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_metagene_report.html
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Thu Aug 13 20:37:59 2026]
+Finished jobid: 55 (Rule: all)
+22 of 22 steps (100%) done
+Complete log(s): /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/.snakemake/log/2026-08-13T203740.739716.snakemake.log

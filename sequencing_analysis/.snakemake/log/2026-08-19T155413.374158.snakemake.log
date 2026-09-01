@@ -1,0 +1,42 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-08-19 15:54:13
+  Workflow ID: 5bdcac0e-19db-480a-bd0d-c17f4cf58f1b
+  Platform: macOS-26.5.1-arm64-arm-64bit
+  Host: dhcp-78-97.caltech.edu
+  User: gmgao
+  Snakemake version: 9.25.1
+  Python version: 3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:34:53) [Clang 19.1.7 ]
+  Command: /opt/miniconda3/envs/bioinfo/bin/snakemake --snakefile metagene_analysis/workflow/Snakefile --configfile metagene_analysis/config/config.yaml --runtime-source-cache-path /tmp/spen-tertile-run3 --cores 4 --force /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_expression_tertile_report.html
+  Snakefile: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow/Snakefile
+  Base directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow
+  Run directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Working directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Config file(s): [PosixPath('/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml')]
+  Config MD5: 56916bf58e08e5cdedabe602f6c7eadf
+
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 4
+Rules claiming more threads will be scaled down.
+Job stats:
+job                          count
+-------------------------  -------
+expression_tertile_report        1
+total                            1
+
+Select jobs to execute...
+Execute 1 jobs...
+[Wed Aug 19 15:54:14 2026]
+localrule expression_tertile_report:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/de_results/normalized/DoxAux24h_vs_Dox__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/Aux2h_vs_ctrl__total__fdr05__all__features.tsv.gz, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/DoxAux24h_vs_Dox__total__fdr05__autosomes__features.tsv.gz, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/metagene/DoxAux24h_vs_Dox__total__fdr05__chrX__features.tsv.gz
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/report/SPEN_expression_tertile_report.html, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/expression_tertiles/nodox_all__tertile_distributions.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/expression_tertiles/nodox_all__expression_enrichment_joint.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/expression_tertiles/dox_autosomes__tertile_distributions.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/expression_tertiles/dox_autosomes__expression_enrichment_joint.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/expression_tertiles/dox_chrX__tertile_distributions.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/figures/expression_tertiles/dox_chrX__expression_enrichment_joint.png, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/expression_tertiles/tertile_cutoffs.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-20260812-metagene_analysis/tables/expression_tertiles/cross_context_correlations.tsv
+    jobid: 0
+    reason: Forced execution
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+[Wed Aug 19 15:54:30 2026]
+Finished jobid: 0 (Rule: expression_tertile_report)
+1 of 1 steps (100%) done
+Complete log(s): /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/.snakemake/log/2026-08-19T155413.374158.snakemake.log

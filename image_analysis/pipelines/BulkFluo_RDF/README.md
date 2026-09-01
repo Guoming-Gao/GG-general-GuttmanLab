@@ -2,6 +2,44 @@
 
 Lightweight per-hub RDF pipeline for paired SPEN/H3K27ac SACD images.
 
+## Four-color granule SACD workflow
+
+`BulkFluoRDF_pipeline_granuleSACD.ipynb` is the notebook-first workflow for
+four-color `*-SACD-MIP-YX.tif` datasets. It uses 405 only for crop context and
+segments granules from an equal-weight, independently normalized 488/561/647
+aggregate. Retained objects must have support from at least two RNA channels and
+an equivalent diameter strictly greater than 15 pixels (877.5 nm at the default
+58.5 nm/pixel sampling).
+
+`BulkFluoRDF_granuleSACD.py` provides the reusable implementation and CLI:
+
+```bash
+conda run -n smlm python BulkFluoRDF_granuleSACD.py check
+conda run -n smlm python BulkFluoRDF_granuleSACD.py run --config /path/to/BulkFluoRDF_granuleSACD_results/run_config.generated.yaml
+```
+
+The granule RDF uses the mask centroid as its origin, scales distance by the
+mask equivalent radius, measures through `r/R = 1.3`, and normalizes each RNA
+channel's annular mean by that channel's mean inside the granule. Outputs include
+four-channel `CYX` crops with 10-pixel bounding-box padding, label masks, all-FOV
+segmentation overlays, retained/rejected properties, per-granule RDF rows,
+aggregate mean/SEM curves, and a full-dataset acceptance summary.
+
+The granule workflow also writes a wide raw/normalized RDF table, three Pearson
+RDF correlations per granule (488–561, 488–647, and 561–647), correlation
+distributions, and pair-specific maximum/minimum representative folders. Each
+representative contains the four-channel TIFF and a three-curve RDF plot with
+all correlation coefficients annotated.
+
+The granule size-distribution plot reports equivalent diameter in micrometers and
+use the exact observed minimum-to-maximum range without horizontal padding.
+
+The aggregate RDF panels share one y-axis for direct comparison. A separate
+compact violin-plus-box correlation figures report paired Wilcoxon and paired
+t-test comparisons using `statannotations`. Brackets remain inside the axes;
+BH-significant comparisons show stars plus p-values, while nonsignificant
+comparisons show only `ns`.
+
 ## Terms
 
 - `object channel`: SPEN `*-SACD-left.tif`; Spotiflow detects SPEN hub centers.

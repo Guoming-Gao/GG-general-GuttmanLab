@@ -1,0 +1,42 @@
+Assuming unrestricted shared filesystem usage.
+
+SNAKEMAKE
+=========
+  Date: 2026-08-20 23:21:46
+  Workflow ID: 9a01d1b2-5841-4bd5-9735-af20cf5fafa4
+  Platform: macOS-26.5.1-arm64-arm-64bit
+  Host: dhcp-78-97.caltech.edu
+  User: gmgao
+  Snakemake version: 9.25.1
+  Python version: 3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:34:53) [Clang 19.1.7 ]
+  Command: /opt/miniconda3/envs/bioinfo/bin/snakemake --snakefile metagene_analysis/workflow/Snakefile --configfile metagene_analysis/config/config.yaml --cores 1 --rerun-incomplete --printshellcmds
+  Snakefile: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow/Snakefile
+  Base directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/workflow
+  Run directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Working directory: /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis
+  Config file(s): [PosixPath('/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml')]
+  Config MD5: 1aa7a72985a8dd7981d1490452dc01c5
+
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Job stats:
+job                    count
+-------------------  -------
+artifact_validation        1
+all                        1
+total                      2
+
+Select jobs to execute...
+Execute 1 jobs...
+[Thu Aug 20 23:21:46 2026]
+localrule artifact_validation:
+    input: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis/supporting_data/untreated_total_RNA/Aux2h_vs_ctrl__total.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis/supporting_data/validated_SPEN_CLAP_matrices/normalized/nodox.features.tsv, /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis/supporting_data/annotation/representative_transcripts.json, /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml
+    output: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis/report/SPEN_expression_dependence_report.html
+    log: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis/workflow_records/artifact_validation.log
+    jobid: 1
+    reason: Missing output files: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis/report/SPEN_expression_dependence_report.html
+    resources: tmpdir=/var/folders/99/zzxtlty93nzffj9nq54dd7wr0000gn/T
+Shell command: PYTHONPATH=/Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/src python -m spen_metagene.cli artifact-validation --output-root /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis --config /Users/gmgao/GGscripts/GG-general-GuttmanLab/sequencing_analysis/metagene_analysis/config/config.yaml > /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis/workflow_records/artifact_validation.log 2>&1
+Terminating processes on user request, this might take some time.

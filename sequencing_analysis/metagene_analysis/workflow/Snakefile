@@ -1,0 +1,313 @@
+from pathlib import Path
+import json
+
+configfile: "../config/config.yaml"
+ROOT=config["output_root"]
+PKG=Path(workflow.basedir).parent
+workdir: ROOT
+PY=f"PYTHONPATH={PKG}/src python -m spen_metagene.cli"
+RSCRIPT="/opt/miniconda3/envs/bioinfo/bin/Rscript"
+SAMPLES=list(config["clap_samples"])
+EBS_SAMPLES=[s for s in SAMPLES if config["clap_samples"][s]["assay"]=="CLAP"]
+GEOMS=["fixed","scaled","features"]
+CONTRASTS={
+  "Aux1h_vs_ctrl":("early","Aux1h","ctrl"),
+  "Aux2h_vs_ctrl":("early","Aux2h","ctrl"),
+  "DoxAux24h_vs_Dox":("late","DoxAux24h","Dox"),
+}
+READOUTS=["nascent","total"]
+HEADLINE_DISTS=[f"{ROOT}/figures/feature_distributions/{c}__{r}__{'autosomes' if c=='DoxAux24h_vs_Dox' else 'all'}__feature_distributions.png" for c in CONTRASTS for r in READOUTS]
+X_DISTS=[f"{ROOT}/figures/feature_distributions/DoxAux24h_vs_Dox__{r}__chrX__feature_distributions.png" for r in READOUTS]
+MATCHED_HEADLINE=[f"{ROOT}/figures/expression_matched/{c}__{r}__{'autosomes' if c=='DoxAux24h_vs_Dox' else 'all'}__expression_matched.png" for c in CONTRASTS for r in READOUTS]
+MATCHED_X=[f"{ROOT}/figures/expression_matched/DoxAux24h_vs_Dox__{r}__chrX__expression_matched.png" for r in READOUTS]
+EBS_STABILITY_TARGET=([f"{ROOT}/historical/ebs_10_vs_{config['historical']['ebs_stability_permutations']}_permutation_stability.tsv"]
+                      if config["historical"].get("run_ebs_stability",False) else [])
+
+rule all:
+    input:
+      f"{ROOT}/report/SPEN_expression_dependence_report.html"
+
+rule artifact_validation:
+    input:
+      total=f"{ROOT}/supporting_data/untreated_total_RNA/Aux2h_vs_ctrl__total.tsv",
+      features=f"{ROOT}/supporting_data/validated_SPEN_CLAP_matrices/normalized/nodox.features.tsv",
+      models=f"{ROOT}/supporting_data/annotation/representative_transcripts.json",
+      config=f"{PKG}/config/config.yaml"
+    output:
+      report=f"{ROOT}/report/SPEN_expression_dependence_report.html"
+    log:
+      f"{ROOT}/workflow_records/artifact_validation.log"
+    shell:
+      "{PY} artifact-validation --output-root {ROOT} --config {input.config} > {log} 2>&1"
+
+rule expression_tertile_report:
+    input:
+      early=f"{ROOT}/de_results/normalized/Aux2h_vs_ctrl__total.tsv",
+      nodox=f"{ROOT}/metagene/Aux2h_vs_ctrl__total__fdr05__all__features.tsv.gz"
+    output:
+      report=f"{ROOT}/report/SPEN_expression_tertile_report.html",
+      figures=expand(f"{ROOT}/figures/expression_tertiles/nodox_all__{{kind}}.png",kind=["tertile_distributions","expression_enrichment_joint"]),
+      cutoffs=f"{ROOT}/tables/expression_tertiles/tertile_cutoffs.tsv",
+      correlations=f"{ROOT}/tables/expression_tertiles/feature_correlations.tsv"
+    shell: "{PY} expression-tertiles --output-root {ROOT} --output {output.report} --seed 20260812 --bootstrap 100 --min-kde-n 30"
+
+rule manifest:
+    output: f"{ROOT}/inputs_manifest/input_manifest.tsv"
+    shell: "mkdir -p $(dirname {output}) && {PY} manifest --config {PKG}/config/config.yaml --output {output}"
+
+rule validate:
+    output: f"{ROOT}/inputs_manifest/validation.tsv"
+    shell: "{PY} validate --config {PKG}/config/config.yaml --output {output}"
+
+rule versions:
+    output: f"{ROOT}/inputs_manifest/software_versions.json"
+    shell: "{PY} versions --output {output}"
+
+rule config_snapshot:
+    input: f"{PKG}/config/config.yaml"
+    output: f"{ROOT}/inputs_manifest/config.snapshot.yaml"
+    shell: "mkdir -p $(dirname {output}) && cp {input} {output}"
+
+rule tests:
+    output:
+      xml=f"{ROOT}/tests/pytest.xml", log=f"{ROOT}/tests/pytest.log"
+    shell: "mkdir -p {ROOT}/tests && PYTHONPATH={PKG}/src python -m pytest {PKG}/tests -o cache_dir={ROOT}/tests/.pytest_cache --junitxml={output.xml} > {output.log} 2>&1"
+
+rule late_count:
+    input:
+      bam=lambda w: config["late_bams"][w.sample], gtf=config["gtf"], mask=config["tc_mask"]
+    output: f"{ROOT}/intermediate/expression/{{sample}}.tsv"
+    log: f"{ROOT}/logs/counts/{{sample}}.log"
+    threads: 1
+    shell: "mkdir -p $(dirname {output}) $(dirname {log}) && {PY} count-nascent --bam {input.bam} --gtf {input.gtf} --mask {input.mask} --label {wildcards.sample} --output {output} > {log} 2>&1"
+
+LATE_SAMPLES=list(config["late_bams"])
+rule prepare_counts:
+    input: expand(f"{ROOT}/intermediate/expression/{{sample}}.tsv",sample=LATE_SAMPLES)
+    output:
+      expand(f"{ROOT}/intermediate/count_matrices/{{experiment}}_{{readout}}_counts.tsv",experiment=["early","late"],readout=READOUTS),
+      expand(f"{ROOT}/intermediate/count_matrices/{{experiment}}_metadata.tsv",experiment=["early","late"]),
+      f"{ROOT}/intermediate/count_matrices/gene_annotation.tsv"
+    shell: "{PY} prepare-counts --expr-dir {config[prior_expr_dir]} --late-dir {ROOT}/intermediate/expression --output-dir {ROOT}/intermediate/count_matrices"
+
+rule deseq:
+    input:
+      counts=lambda w:f"{ROOT}/intermediate/count_matrices/{CONTRASTS[w.contrast][0]}_{w.readout}_counts.tsv",
+      meta=lambda w:f"{ROOT}/intermediate/count_matrices/{CONTRASTS[w.contrast][0]}_metadata.tsv"
+    output:
+      raw=f"{ROOT}/de_results/raw/{{contrast}}__{{readout}}.tsv",
+      norm=f"{ROOT}/de_results/normalized/{{contrast}}__{{readout}}.tsv",
+      session=f"{ROOT}/logs/deseq/{{contrast}}__{{readout}}.session.txt"
+    params:
+      treated=lambda w:CONTRASTS[w.contrast][1], reference=lambda w:CONTRASTS[w.contrast][2]
+    shell: "mkdir -p $(dirname {output.raw}) $(dirname {output.norm}) $(dirname {output.session}) && {RSCRIPT} {PKG}/scripts/run_deseq2.R {input.counts} {input.meta} {params.treated} {params.reference} {output.raw} 0.05 {output.norm} {output.session}"
+
+rule classify:
+    input:
+      de=f"{ROOT}/de_results/raw/{{contrast}}__{{readout}}.tsv",
+      ann=f"{ROOT}/intermediate/count_matrices/gene_annotation.tsv"
+    output: f"{ROOT}/gene_classes/{{contrast}}__{{readout}}.tsv"
+    params: tmp=lambda w:f"{ROOT}/intermediate/annotated_de/{w.contrast}__{w.readout}.tsv"
+    shell: "mkdir -p $(dirname {params.tmp}) $(dirname {output}) && {PY} merge-annotation --de {input.de} --annotation {input.ann} --output {params.tmp} && {PY} classify --input {params.tmp} --output {output} --delta {config[thresholds][lfc]}"
+
+rule volcano:
+    input: f"{ROOT}/gene_classes/{{contrast}}__{{readout}}.tsv"
+    output: f"{ROOT}/figures/volcano/{{contrast}}__{{readout}}__fdr05.png"
+    params:
+      classcol="class_fdr05", fdr=0.05,
+      title=lambda w:f"{w.contrast.replace('_',' ')} | {w.readout}"
+    shell: "{PY} volcano --input {input} --output {output} --class-col {params.classcol} --title '{params.title}' --delta {config[thresholds][lfc]} --fdr {params.fdr}"
+
+rule ma:
+    input: f"{ROOT}/gene_classes/{{contrast}}__{{readout}}.tsv"
+    output: f"{ROOT}/figures/ma/{{contrast}}__{{readout}}.png"
+    params: title=lambda w:f"{w.contrast.replace('_',' ')} | {w.readout}"
+    shell: "{PY} ma --input {input} --output {output} --class-col class_fdr05 --title '{params.title}'"
+
+rule summaries:
+    input: expand(f"{ROOT}/gene_classes/{{contrast}}__{{readout}}.tsv",contrast=CONTRASTS,readout=READOUTS)
+    output:
+      f"{ROOT}/tables/class_counts.tsv", f"{ROOT}/tables/fdr05_to_fdr10_changes.tsv", f"{ROOT}/tables/nascent_total_concordance.tsv"
+    params: classes_json=f"{ROOT}/intermediate/summary_classes.json"
+    run:
+      Path(params.classes_json).parent.mkdir(parents=True,exist_ok=True)
+      files={f"{c}__{r}":f"{ROOT}/gene_classes/{c}__{r}.tsv" for c in CONTRASTS for r in READOUTS}; Path(params.classes_json).write_text(json.dumps(files))
+      shell(f"{PY} summaries --classes-json {params.classes_json} --output-dir {ROOT}/tables")
+
+rule qc:
+    input:
+      clap=expand(f"{ROOT}/clap_matrices/normalized/{{context}}.{{geometry}}.tsv",context=["nodox","dox"],geometry=GEOMS),
+      expression=[f"{ROOT}/de_results/normalized/{x}" for x in ["Aux1h_vs_ctrl__nascent.tsv","Aux1h_vs_ctrl__total.tsv","DoxAux24h_vs_Dox__nascent.tsv","DoxAux24h_vs_Dox__total.tsv"]]
+    output:
+      figure=f"{ROOT}/figures/qc/replicate_qc.png",
+      clap=f"{ROOT}/tables/clap_replicate_qc.tsv",
+      expression=f"{ROOT}/tables/expression_sample_correlations.tsv"
+    shell: "{PY} qc --root {ROOT}"
+
+rule agreement:
+    input:
+      one=f"{ROOT}/gene_classes/Aux1h_vs_ctrl__{{readout}}.tsv",
+      two=f"{ROOT}/gene_classes/Aux2h_vs_ctrl__{{readout}}.tsv"
+    output:
+      f05=f"{ROOT}/gene_classes/early_agreement__{{readout}}.fdr05.tsv",
+      f10=f"{ROOT}/gene_classes/early_agreement__{{readout}}.fdr10.tsv"
+    params: prefix=lambda w:f"{ROOT}/gene_classes/early_agreement__{w.readout}"
+    shell: "{PY} agreement --one {input.one} --two {input.two} --output-prefix {params.prefix} --delta {config[thresholds][lfc]}"
+
+rule models:
+    input: config["gtf"]
+    output: f"{ROOT}/intermediate/annotation/representative_transcripts.json"
+    shell: "mkdir -p $(dirname {output}) && {PY} models --gtf {input} --output {output}"
+
+rule gene_covariates:
+    input: config["gtf"]
+    output: f"{ROOT}/intermediate/annotation/gene_covariates.tsv"
+    shell: "{PY} gene-covariates --gtf {input} --output {output}"
+
+rule count_clap:
+    input:
+      models=f"{ROOT}/intermediate/annotation/representative_transcripts.json",
+      bam=lambda w:config["clap_samples"][w.sample]["bam"]
+    output:
+      fixed=f"{ROOT}/clap_matrices/per_sample/{{sample}}.fixed.tsv.gz",
+      scaled=f"{ROOT}/clap_matrices/per_sample/{{sample}}.scaled.tsv.gz",
+      features=f"{ROOT}/clap_matrices/per_sample/{{sample}}.features.tsv.gz",
+      metrics=f"{ROOT}/clap_matrices/per_sample/{{sample}}.metrics.json"
+    params: prefix=lambda w:f"{ROOT}/clap_matrices/per_sample/{w.sample}"
+    log: f"{ROOT}/logs/clap/{{sample}}.log"
+    shell: "mkdir -p $(dirname {output.fixed}) $(dirname {log}) && {PY} count-clap --models {input.models} --bam {input.bam} --sample {wildcards.sample} --output-prefix {params.prefix} --min-mapq {config[thresholds][min_mapq]} > {log} 2>&1"
+
+rule clap_metadata:
+    output: f"{ROOT}/clap_matrices/sample_metadata.tsv"
+    run:
+      import pandas as pd
+      Path(output[0]).parent.mkdir(parents=True,exist_ok=True)
+      pd.DataFrame([{"sample":s,**{k:v for k,v in config["clap_samples"][s].items() if k!="bam"}} for s in SAMPLES]).to_csv(output[0],sep="\t",index=False)
+
+rule combine_clap:
+    input: lambda w:[f"{ROOT}/clap_matrices/per_sample/{s}.{w.geometry}.tsv.gz" for s in SAMPLES]
+    output: f"{ROOT}/clap_matrices/raw/all_samples.{{geometry}}.tsv.gz"
+    params: inputs=lambda w:" ".join(f"{ROOT}/clap_matrices/per_sample/{s}.{w.geometry}.tsv.gz" for s in SAMPLES), samples=" ".join(SAMPLES)
+    shell: "mkdir -p $(dirname {output}) && {PY} combine-clap --inputs {params.inputs} --samples {params.samples} --output {output}"
+
+rule normalize_clap:
+    input:
+      matrix=f"{ROOT}/clap_matrices/raw/all_samples.{{geometry}}.tsv.gz",
+      meta=f"{ROOT}/clap_matrices/sample_metadata.tsv"
+    output: f"{ROOT}/clap_matrices/normalized/{{context}}.{{geometry}}.tsv"
+    shell: "mkdir -p $(dirname {output}) && {RSCRIPT} {PKG}/scripts/normalize_clap.R {input.matrix} {input.meta} {wildcards.context} {config[thresholds][pseudocpm]} {output}"
+
+rule metagene_suite:
+    input:
+      signals=expand(f"{ROOT}/clap_matrices/normalized/{{context}}.{{geometry}}.tsv",context=["nodox","dox"],geometry=GEOMS),
+      classes=expand(f"{ROOT}/gene_classes/{{contrast}}__{{readout}}.tsv",contrast=CONTRASTS,readout=READOUTS),
+      agreements=expand(f"{ROOT}/gene_classes/early_agreement__{{readout}}.fdr{{fdr}}.tsv",readout=READOUTS,fdr=["05","10"]),
+      covariates=f"{ROOT}/intermediate/annotation/gene_covariates.tsv",
+      models=f"{ROOT}/intermediate/annotation/representative_transcripts.json"
+    output: f"{ROOT}/metagene/metagene_manifest.tsv"
+    params:
+      signals_json=f"{ROOT}/intermediate/metagene_signals.json", classes_json=f"{ROOT}/intermediate/metagene_classes.json", agreements_json=f"{ROOT}/intermediate/metagene_agreements.json"
+    run:
+      Path(params.signals_json).parent.mkdir(parents=True,exist_ok=True)
+      signals={f"{c}_{g}":f"{ROOT}/clap_matrices/normalized/{c}.{g}.tsv" for c in ["nodox","dox"] for g in GEOMS}
+      classes={f"{c}__{r}":f"{ROOT}/gene_classes/{c}__{r}.tsv" for c in CONTRASTS for r in READOUTS}
+      agreements={f"{r}__fdr{f}":f"{ROOT}/gene_classes/early_agreement__{r}.fdr{f}.tsv" for r in READOUTS for f in ["05","10"]}
+      Path(params.signals_json).write_text(json.dumps(signals)); Path(params.classes_json).write_text(json.dumps(classes)); Path(params.agreements_json).write_text(json.dumps(agreements))
+      shell(f"{PY} suite --signals-json {params.signals_json} --classes-json {params.classes_json} --agreements-json {params.agreements_json} --covariates {input.covariates} --models {input.models} --output-dir {ROOT}/metagene --bootstrap {config['metagene']['bootstrap_iterations']} --seed {config['metagene']['seed']}")
+
+rule feature_distribution:
+    input:
+      features=f"{ROOT}/metagene/{{contrast}}__{{readout}}__fdr05__{{subset}}__features.tsv.gz",
+      classes=f"{ROOT}/gene_classes/{{contrast}}__{{readout}}.tsv"
+    output:
+      png=f"{ROOT}/figures/feature_distributions/{{contrast}}__{{readout}}__{{subset}}__feature_distributions.png",
+      pdf=f"{ROOT}/figures/feature_distributions/{{contrast}}__{{readout}}__{{subset}}__feature_distributions.pdf",
+      table=f"{ROOT}/figures/feature_distributions/{{contrast}}__{{readout}}__{{subset}}__feature_distributions.tsv.gz"
+    params:
+      prefix=lambda w:f"{ROOT}/figures/feature_distributions/{w.contrast}__{w.readout}__{w.subset}__feature_distributions",
+      title=lambda w:f"{w.contrast.replace('_vs_',' vs ').replace('_',' ')} — {w.readout} RNA"
+    shell: "{PY} distribution-prototype --features {input.features} --classes {input.classes} --output-prefix {params.prefix} --title '{params.title}' --min-kde-n 30"
+
+rule expression_matched_distribution:
+    input:
+      features=f"{ROOT}/metagene/{{contrast}}__{{readout}}__fdr05__{{subset}}__features.tsv.gz",
+      classes=f"{ROOT}/gene_classes/{{contrast}}__{{readout}}.tsv",
+      unmatched=f"{ROOT}/figures/feature_distributions/{{contrast}}__{{readout}}__{{subset}}__feature_distributions.png"
+    output:
+      png=f"{ROOT}/figures/expression_matched/{{contrast}}__{{readout}}__{{subset}}__expression_matched.png",
+      pdf=f"{ROOT}/figures/expression_matched/{{contrast}}__{{readout}}__{{subset}}__expression_matched.pdf",
+      plotted=f"{ROOT}/figures/expression_matched/{{contrast}}__{{readout}}__{{subset}}__expression_matched.tsv.gz",
+      selected=f"{ROOT}/figures/expression_matched/{{contrast}}__{{readout}}__{{subset}}__expression_matched__selected_no_change.tsv",
+      bins=f"{ROOT}/figures/expression_matched/{{contrast}}__{{readout}}__{{subset}}__expression_matched__bin_diagnostics.tsv",
+      balance=f"{ROOT}/figures/expression_matched/{{contrast}}__{{readout}}__{{subset}}__expression_matched__balance.tsv",
+      effects=f"{ROOT}/figures/expression_matched/{{contrast}}__{{readout}}__{{subset}}__expression_matched__feature_effects.tsv"
+    params:
+      prefix=lambda w:f"{ROOT}/figures/expression_matched/{w.contrast}__{w.readout}__{w.subset}__expression_matched",
+      title=lambda w:f"{w.contrast.replace('_vs_',' vs ').replace('_',' ')} — {w.readout} RNA — expression matched"
+    shell: "{PY} expression-match --features {input.features} --classes {input.classes} --output-prefix {params.prefix} --title '{params.title}' --bin-width {config[expression_matching][bin_width_log10_basemean]} --seed {config[expression_matching][seed]} --min-kde-n {config[expression_matching][min_kde_n]}"
+
+rule expression_matched_report:
+    input:
+      matched=MATCHED_HEADLINE+MATCHED_X,
+      unmatched=HEADLINE_DISTS+X_DISTS
+    output: f"{ROOT}/report/SPEN_expression_matched_report.html"
+    shell: "{PY} matched-report --output-root {ROOT} --output {output}"
+
+rule historical:
+    output: f"{ROOT}/tables/historical_clap_summary.tsv"
+    shell: "mkdir -p $(dirname {output}) && {PY} historical --input-dir {config[prior_analysis]}/enrichment --output {output}"
+
+rule historical_profiles:
+    input:
+      models=f"{ROOT}/intermediate/annotation/representative_transcripts.json",
+      calls=expand(f"{config['prior_analysis']}/enrichment/{{sample}}_{{method}}.tsv",sample=EBS_SAMPLES,method=["CA","EBS"])
+    output:
+      figure=f"{ROOT}/historical/historical_peak_density_metagene.png",
+      overlap=f"{ROOT}/historical/historical_replicate_overlap.tsv",
+      curves=f"{ROOT}/historical/historical_peak_density_curves.tsv",
+      bins=f"{ROOT}/historical/historical_peak_gene_bins.tsv.gz"
+    shell: "{PY} historical-profiles --input-dir {config[prior_analysis]}/enrichment --models {input.models} --output-dir {ROOT}/historical"
+
+def paired_input(w):
+    entry=config["clap_samples"][w.sample]
+    return next(v["bam"] for v in config["clap_samples"].values()
+                if v["context"]==entry["context"] and v["replicate"]==entry["replicate"] and v["assay"]=="Input")
+
+rule ebs_stability_one:
+    input:
+      clap=lambda w:config["clap_samples"][w.sample]["bam"], input_bam=paired_input,
+      genes=config["refgene_bed"], jar=f"{config['jar_dir']}/EnrichmentBySample.jar"
+    output: f"{ROOT}/intermediate/historical_ebs_stability/{{sample}}.perm{config['historical']['ebs_stability_permutations']}.tsv"
+    log: f"{ROOT}/logs/historical_ebs_stability/{{sample}}.log"
+    params:
+      permutations=config["historical"]["ebs_stability_permutations"],
+      heap=config["historical"]["java_heap"]
+    shell: "mkdir -p $(dirname {output}) $(dirname {log}) && /opt/miniconda3/envs/bioinfo/bin/java -Xmx{params.heap} -jar {input.jar} {input.clap} {input.genes} {input.input_bam} 100 {params.permutations} > {output} 2> {log}"
+
+rule historical_ebs_stability:
+    input: expand(f"{ROOT}/intermediate/historical_ebs_stability/{{sample}}.perm{config['historical']['ebs_stability_permutations']}.tsv",sample=EBS_SAMPLES)
+    output: f"{ROOT}/historical/ebs_10_vs_{config['historical']['ebs_stability_permutations']}_permutation_stability.tsv"
+    shell: "{PY} ebs-stability --archived-dir {config[prior_analysis]}/enrichment --stability-dir {ROOT}/intermediate/historical_ebs_stability --permutations {config[historical][ebs_stability_permutations]} --output {output}"
+
+rule report:
+    input:
+      manifest=f"{ROOT}/metagene/metagene_manifest.tsv",
+      volcano=expand(f"{ROOT}/figures/volcano/{{contrast}}__{{readout}}__fdr05.png",contrast=CONTRASTS,readout=READOUTS),
+      history=f"{ROOT}/tables/historical_clap_summary.tsv",
+      history_profile=f"{ROOT}/historical/historical_peak_density_metagene.png",
+      history_overlap=f"{ROOT}/historical/historical_replicate_overlap.tsv",
+      qc=f"{ROOT}/figures/qc/replicate_qc.png",
+      provenance=f"{ROOT}/inputs_manifest/input_manifest.tsv",
+      audit=f"{ROOT}/tables/execution_audit.tsv",
+      distributions=HEADLINE_DISTS+X_DISTS
+    output: f"{ROOT}/report/SPEN_metagene_report.html"
+    shell: "mkdir -p $(dirname {output}) && {PY} report --output-root {ROOT} --output {output}"
+
+rule execution_audit:
+    input:
+      classes=f"{ROOT}/tables/class_counts.tsv",
+      validation=f"{ROOT}/inputs_manifest/validation.tsv",
+      tests=f"{ROOT}/tests/pytest.xml",
+      metagene=f"{ROOT}/metagene/metagene_manifest.tsv"
+    output: f"{ROOT}/tables/execution_audit.tsv"
+    shell: "{PY} audit --root {ROOT} --output {output}"

@@ -1,0 +1,72 @@
+output_root: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis
+legacy_output_root: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/SPEN-2026Aug-metagene_analysis/prior_exploration
+gtf: /Volumes/guttman/genomes/mm10/annotation/gencode.vM25.annotation.gtf
+refgene_bed: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/references/mm10_refGene.bed
+tc_mask: /Volumes/guttman/users/mrblanco/projects/moonlighting/enrichment_reanalysis/allelic/refs/snps_by_chrom.npz
+prior_report: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/gmgao/consolidated_report_moonlighting_4sU.html
+prior_expr_dir: /Volumes/guttman/users/mrblanco/projects/moonlighting/enrichment_reanalysis/allelic/results/expr
+prior_analysis: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis
+jar_dir: /Volumes/guttman/users/mguttman/jars/binding-analysis
+
+thresholds:
+  lfc: 0.2630344058337938
+  primary_fdr: 0.05
+  exploratory_fdr: 0.10
+  min_mapq: 20
+  pseudocpm: 0.1
+
+metagene:
+  bin_size: 100
+  tss_upstream: 2000
+  tss_downstream: 20000
+  scaled_bins: 100
+  flank: 2000
+  bootstrap_iterations: 100
+  permutation_iterations: 100
+  seed: 20260812
+
+expression_matching:
+  bin_width_log10_basemean: 0.1
+  seed: 20260812
+  min_kde_n: 30
+
+late_bams:
+  total__SHA_Dox_repA: /Volumes/guttman/users/mrblanco/projects/moonlighting/enrichment_reanalysis/align/total__SHA_Dox_repA/total__SHA_Dox_repA.genome.final.bam
+  total__SHA_Dox_repB: /Volumes/guttman/users/mrblanco/projects/moonlighting/enrichment_reanalysis/align/total__SHA_Dox_repB/total__SHA_Dox_repB.genome.final.bam
+  total__SHA_DoxAux24h_repA: /Volumes/guttman/users/mrblanco/projects/moonlighting/enrichment_reanalysis/align/total__SHA_DoxAux24h_repA/total__SHA_DoxAux24h_repA.genome.final.bam
+  total__SHA_DoxAux24h_repB: /Volumes/guttman/users/mrblanco/projects/moonlighting/enrichment_reanalysis/align/total__SHA_DoxAux24h_repB/total__SHA_DoxAux24h_repB.genome.final.bam
+
+clap_samples:
+  clap_endospen_1: {context: nodox, assay: CLAP, replicate: A, bam: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/clap_endospen_1/workup/alignments/clap_endospen_1.final.bam}
+  input_endospen_1: {context: nodox, assay: Input, replicate: A, bam: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/input_endospen_1/workup/alignments/input_endospen_1.final.bam}
+  clap_endospen_2: {context: nodox, assay: CLAP, replicate: B, bam: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/clap_endospen_2/workup/alignments/clap_endospen_2.final.bam}
+  input_endospen_2: {context: nodox, assay: Input, replicate: B, bam: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/input_endospen_2/workup/alignments/input_endospen_2.final.bam}
+  clap_doxendospen_1: {context: dox, assay: CLAP, replicate: A, bam: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/clap_doxendospen_1/workup/alignments/clap_doxendospen_1.final.bam}
+  input_doxendospen_1: {context: dox, assay: Input, replicate: A, bam: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/input_doxendospen_1/workup/alignments/input_doxendospen_1.final.bam}
+  clap_doxendospen_2: {context: dox, assay: CLAP, replicate: B, bam: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/clap_doxendospen_2/workup/alignments/clap_doxendospen_2.final.bam}
+  input_doxendospen_2: {context: dox, assay: Input, replicate: B, bam: /Volumes/guttman/projects/mrna-moonlighting-nuclear-index/pganalysis/input_doxendospen_2/workup/alignments/input_doxendospen_2.final.bam}
+
+historical:
+  run_jars: false
+  ebs_permutations: 10
+  run_ebs_stability: false
+  ebs_stability_permutations: 1000
+  java_heap: 12g
+
+artifact_validation:
+  huhclap_root: /Volumes/guttman/users/mkwu/250901_HUHCLAP
+  hg38_gtf: /Volumes/guttman/genomes/hg38/annotation/gencode.v47.annotation.gtf
+  ca_jar: /Volumes/guttman/users/mguttman/jars/binding-analysis/CLAPAnalysis.jar
+  window_bp: 100
+  bootstrap_iterations: 100
+  seed: 20260812
+  controls:
+    HnRNPC:
+      clap: [HnRNPC_1, HnRNPC_2]
+      input: [Input_HnRNPC_1, Inpu_HnRNPC_2]
+    PTBP1:
+      clap: [PTBP1_1, PTBP1_2]
+      input: [Input_PTBP1_1, Input_PTBP1_2]
+    GFP:
+      clap: [GFP_1, GFP_2]
+      input: [Input_GFP_1, Input_GFP_2]
