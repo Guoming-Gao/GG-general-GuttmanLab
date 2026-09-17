@@ -1,13 +1,15 @@
 {
   "version": 1,
   "repo_root": "/Users/gmgao/GGscripts/GG-general-GuttmanLab/image_analysis/pipelines/SACDpy",
-  "raw_root": "/Volumes/gmgaoSSD/Qing/DEFAULT_USER/20260811_CB_4color",
-  "output_root": "/Volumes/gmgaoSSD/Qing/DEFAULT_USER/20260811_CB_4color/SACDpy_results",
+  "raw_root": "/Volumes/gmgaoSSD/DEFAULT_USER/20260915_ONI-gmgao-exp_matched_SHA_dRRM_dIDR",
+  "output_root": "/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SACDfixed/20260915_ONI-gmgao-exp_matched_SHA_dRRM_dIDR",
   "initial_seconds_per_reconstruction": 10.0,
   "processing": {
     "position_folder": "pos_0",
     "glob_pattern": "*.tif",
-    "output_prefix_source": "movie_prefix",
+    "frame_mode": "simultaneous",
+    "output_prefix_source": "fov_folder",
+    "max_workers": 2,
     "pixel_nm": null,
     "fallback_pixel_nm": 117.0,
     "na": null,
@@ -28,27 +30,20 @@
     "sparse_iterations": 100,
     "channels": [
       {
-        "name": "405",
+        "name": "DAPI",
         "wavelength_nm": 405.0,
-        "metadata_wavelengths_nm": [405.0],
+        "metadata_wavelengths_nm": [
+          405.0
+        ],
         "camera_half": "left"
       },
       {
-        "name": "488",
-        "wavelength_nm": 488.0,
-        "metadata_wavelengths_nm": [488.0],
-        "camera_half": "left"
-      },
-      {
-        "name": "561",
-        "wavelength_nm": 561.0,
-        "metadata_wavelengths_nm": [561.0],
-        "camera_half": "left"
-      },
-      {
-        "name": "647",
+        "name": "SPEN_JFX650",
         "wavelength_nm": 647.0,
-        "metadata_wavelengths_nm": [640.0, 647.0],
+        "metadata_wavelengths_nm": [
+          640,
+          650
+        ],
         "camera_half": "right"
       }
     ]

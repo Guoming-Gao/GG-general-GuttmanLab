@@ -15,6 +15,7 @@ dependencies = [
     "tifffile",
     "rich",
     "PyWavelets",
+    "threadpoolctl",
 ]
 
 [project.optional-dependencies]
