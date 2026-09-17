@@ -6,12 +6,11 @@ import platform
 import re
 import shutil
 import sys
-from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
-from multiprocessing import get_context
 from pathlib import Path
 from statistics import median
 from time import perf_counter
@@ -21,6 +20,8 @@ import numpy as np
 import tifffile
 
 from .params import SACDParams
+from .execution import execute_tasks, initialize_worker, pooled_batch, worker_count
+from .progress import FOVEvents
 from .reconstruction import apply_intensity_transform, reconstruct
 
 
@@ -495,14 +496,7 @@ def _params_for_channel(fov: FOVPlan, channel: ChannelSpec, processing: dict) ->
 
 def _initialize_reconstruction_worker() -> None:
     """Keep each SACD worker single-threaded so processes do not oversubscribe the CPU."""
-    for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
-        os.environ[name] = "1"
-    try:
-        from threadpoolctl import threadpool_limits
-
-        threadpool_limits(limits=1)
-    except ImportError:
-        pass
+    initialize_worker()
 
 
 def _reconstruct_task(task: ReconstructionTask) -> ReconstructionResult:
@@ -547,35 +541,9 @@ def _execute_reconstruction_tasks(
     executor: ProcessPoolExecutor | None,
     max_workers: int,
 ) -> Iterable[ReconstructionResult]:
-    if executor is None or max_workers == 1:
-        for task in tasks:
-            yield _reconstruct_task(task)
-        return
-
-    iterator = iter(tasks)
-    pending: dict[Future[ReconstructionResult], ReconstructionTask] = {}
-    max_pending = max_workers * 2
-
-    def fill_queue() -> None:
-        while len(pending) < max_pending:
-            try:
-                task = next(iterator)
-            except StopIteration:
-                return
-            pending[executor.submit(_reconstruct_task, task)] = task
-
-    fill_queue()
-    try:
-        while pending:
-            done, _ = wait(pending, return_when=FIRST_COMPLETED)
-            for future in done:
-                pending.pop(future)
-                yield future.result()
-            fill_queue()
-    except BaseException:
-        for future in pending:
-            future.cancel()
-        raise
+    yield from execute_tasks(
+        _reconstruct_task, tasks, executor=executor, max_workers=max_workers,
+    )
 
 
 def process_fov(
@@ -624,9 +592,7 @@ def process_fov(
             partial.unlink()
 
     started = perf_counter()
-    max_workers = int(processing.get("max_workers", 2))
-    if max_workers < 1:
-        raise ValueError("processing.max_workers must be >= 1")
+    max_workers = worker_count(processing)
     channel_planes: list[list[np.ndarray | None]] = [
         [None for _ in fov.movies] for _ in fov.channels
     ]
@@ -667,6 +633,8 @@ def process_fov(
         for planes in channel_planes
     ]
     raw_references = [_require_uint16(image) for image in raw_max_mips]
+    if progress_callback is not None:
+        progress_callback({"event": "validation_started", "relative_fov": fov.relative_fov})
     output_pixel_um = fov.pixel_nm / 1000.0 / int(processing.get("mag", 2))
     raw_pixel_um = fov.pixel_nm / 1000.0
     for channel, paths, stack, raw_reference in zip(
@@ -1208,29 +1176,19 @@ def migrate_output_names(
     }
 
 
+@pooled_batch
 def run_batch(
     config: dict,
     config_path: str | Path,
     *,
     max_new_fovs: int | None = None,
     progress_callback: Callable[[dict], None] | None = None,
+    executor: ProcessPoolExecutor | None = None,
 ) -> list[dict]:
     plan = build_batch_plan(config)
     _prepare_provenance(plan, config, Path(config_path))
     processing = config["processing"]
     intensity_transform = str(processing.get("intensity_transform", "order_root"))
-    max_workers = int(processing.get("max_workers", 2))
-    if max_workers < 1:
-        raise ValueError("processing.max_workers must be >= 1")
-    executor = (
-        ProcessPoolExecutor(
-            max_workers=max_workers,
-            mp_context=get_context("spawn"),
-            initializer=_initialize_reconstruction_worker,
-        )
-        if max_workers > 1
-        else None
-    )
     manifest = _load_manifest(plan.output_root)
     completed_reconstructions = 0
     elapsed_processing = 0.0
@@ -1270,12 +1228,8 @@ def run_batch(
         if max_new_fovs is not None and newly_written >= max_new_fovs:
             break
 
+        step_callback = FOVEvents(progress_callback)
         try:
-            step_callback = progress_callback
-            if step_callback is None:
-                step_callback = lambda event: print(
-                    "SACD_STEP " + json.dumps(event, default=str), flush=True
-                )
             result = process_fov(
                 fov,
                 processing,
@@ -1283,10 +1237,6 @@ def run_batch(
                 executor=executor,
             )
             newly_written += result["status"] == "written"
-        except KeyboardInterrupt:
-            if executor is not None:
-                executor.shutdown(wait=False, cancel_futures=True)
-            raise
         except Exception as exc:
             result = _result_record(
                 fov,
@@ -1295,6 +1245,8 @@ def run_batch(
                 error=repr(exc),
                 intensity_transform=intensity_transform,
             )
+        if result["status"] == "failed":
+            result["failure_stage"] = step_callback.failure_stage
         results.append(result)
         manifest = _upsert_manifest(plan.output_root, manifest, result, plan.exclusions)
 
@@ -1325,8 +1277,6 @@ def run_batch(
         _append_log(plan.output_root, f"FOV_DONE {json.dumps(status, default=str)}")
         result["batch_status"] = status
         _emit(progress_callback, result)
-    if executor is not None:
-        executor.shutdown(wait=True, cancel_futures=True)
     return results
 
 

@@ -28,7 +28,8 @@
     "sparsity": 1.0,
     "sparse_iterations": 100,
     "time_interval_source": "metadata",
-    "nominal_time_interval_s": null
+    "nominal_time_interval_s": null,
+    "max_workers": 2
   },
   "datasets": [
     {

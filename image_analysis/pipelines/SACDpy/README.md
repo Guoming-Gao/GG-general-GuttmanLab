@@ -58,6 +58,27 @@ under `tests/`.
 
 ## Validation and Notebooks
 
+The multicolor z-stack, multicolor single-plane, and timelapse z-stack notebooks
+default to `processing.max_workers = 2`. Set the visible `max_workers` notebook
+setting to `1` for serial execution. FOVs remain sequential; independent
+z/channel, channel, or time/z reconstructions within each FOV share a persistent
+spawn-based process pool. Each worker uses one numerical-library thread and the
+queue is bounded to twice the worker count. Memory demand grows with the number
+of concurrent reconstructions; core count alone is not a suitable worker limit.
+
+All five notebooks use Rich progress with counts, elapsed time, and ETA where
+the stage has a known total. Single-image batch and Dox analysis remain serial.
+The three parallel runners expose `progress_callback`; notebooks connect it to
+`sacdpy.progress.PipelineProgress`. Dox reconstruction, repackaging, PNG refresh,
+and Spotiflow entry points accept the same optional callback. Model loading and
+other stages without measurable totals use indeterminate progress.
+
+Reconstruction completion and output validation are reported separately.
+Resumed FOVs advance immediately; failed work is not counted as successful.
+Changing worker count does not invalidate compatible existing results. On
+interruption, queued work is cancelled and running jobs are allowed to settle
+before the pool exits; this can take up to the duration of a reconstruction.
+
 - Validation report: `SACDpy_validation_report.md`
 - Batch single-image notebook: `SACDpy_pipeline-batch_sinlgeSACD.ipynb`
 - Canonical timelapse z-stack notebook: `SACDpy_pipeline-batch_timelapse_zstack_SACD.ipynb`

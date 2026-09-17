@@ -30,28 +30,38 @@
       {
         "name": "405",
         "wavelength_nm": 405.0,
-        "metadata_wavelengths_nm": [405.0],
+        "metadata_wavelengths_nm": [
+          405.0
+        ],
         "camera_half": "left"
       },
       {
         "name": "488",
         "wavelength_nm": 488.0,
-        "metadata_wavelengths_nm": [488.0],
+        "metadata_wavelengths_nm": [
+          488.0
+        ],
         "camera_half": "left"
       },
       {
         "name": "561",
         "wavelength_nm": 561.0,
-        "metadata_wavelengths_nm": [561.0],
+        "metadata_wavelengths_nm": [
+          561.0
+        ],
         "camera_half": "left"
       },
       {
         "name": "647",
         "wavelength_nm": 647.0,
-        "metadata_wavelengths_nm": [640.0, 647.0],
+        "metadata_wavelengths_nm": [
+          640.0,
+          647.0
+        ],
         "camera_half": "right"
       }
-    ]
+    ],
+    "max_workers": 2
   },
   "selected_fov_folders": [],
   "exclude_fovs": {},

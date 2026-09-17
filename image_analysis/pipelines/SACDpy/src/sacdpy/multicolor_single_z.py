@@ -16,6 +16,8 @@ import tifffile
 
 from .multicolor_zstack import select_channel_frames, write_imagej_tiff
 from .params import SACDParams
+from .execution import execute_tasks, pooled_batch, worker_count
+from .progress import FOVEvents
 from .reconstruction import reconstruct
 
 
@@ -363,11 +365,23 @@ def _params_for_channel(fov: FOVPlan, channel: ChannelSpec, processing: dict) ->
     )
 
 
+def _reconstruct_channel(task):
+    path, frame_range, camera_half, params, index = task
+    started = perf_counter()
+    raw = tifffile.imread(path)
+    selected = select_channel_frames(raw, frame_range, camera_half)
+    sacd = reconstruct(selected, params)
+    if sacd.ndim != 2:
+        raise ValueError(f"Expected one 2D SACD image, got {sacd.shape} for {path}")
+    return index, np.asarray(sacd, dtype=np.float32), _require_uint16(np.max(selected, axis=0)), tuple(raw.shape), perf_counter() - started
+
+
 def process_fov(
     fov: FOVPlan,
     processing: dict,
     *,
     progress_callback: Callable[[dict], None] | None = None,
+    executor=None,
 ) -> dict:
     intensity_transform = str(processing.get("intensity_transform", "order_root"))
     existing = [path for path in fov.all_outputs if path.exists()]
@@ -391,17 +405,17 @@ def process_fov(
             partial.unlink()
 
     started = perf_counter()
-    raw = tifffile.imread(fov.movie.path)
-    sacd_images: list[np.ndarray] = []
-    time_mips: list[np.ndarray] = []
-    for index, channel in enumerate(fov.channels):
-        reconstruction_started = perf_counter()
-        selected = select_channel_frames(raw, fov.movie.frame_ranges[index], channel.camera_half)
-        time_mips.append(_require_uint16(np.max(selected, axis=0)))
-        sacd = reconstruct(selected, _params_for_channel(fov, channel, processing))
-        if sacd.ndim != 2:
-            raise ValueError(f"Expected one 2D SACD image, got {sacd.shape} for {fov.movie.path}")
-        sacd_images.append(np.asarray(sacd, dtype=np.float32))
+    sacd_images = [None] * len(fov.channels)
+    time_mips = [None] * len(fov.channels)
+    tasks = tuple((fov.movie.path, fov.movie.frame_ranges[i], channel.camera_half,
+                   _params_for_channel(fov, channel, processing), i)
+                  for i, channel in enumerate(fov.channels))
+    for completed, (index, sacd, raw_mip, input_shape, runtime_s) in enumerate(
+        execute_tasks(_reconstruct_channel, tasks, executor=executor, max_workers=worker_count(processing)), 1
+    ):
+        channel = fov.channels[index]
+        sacd_images[index] = sacd
+        time_mips[index] = raw_mip
         _emit(
             progress_callback,
             {
@@ -409,12 +423,14 @@ def process_fov(
                 "relative_fov": fov.relative_fov,
                 "z_index": fov.movie.z_index,
                 "channel": channel.name,
-                "completed_in_fov": index + 1,
+                "completed_in_fov": completed,
                 "total_in_fov": fov.reconstruction_count,
-                "runtime_s": perf_counter() - reconstruction_started,
+                "runtime_s": runtime_s,
             },
         )
 
+    if progress_callback is not None:
+        progress_callback({"event": "validation_started", "relative_fov": fov.relative_fov})
     output_pixel_um = fov.pixel_nm / 1000.0 / int(processing.get("mag", 2))
     raw_pixel_um = fov.pixel_nm / 1000.0
     for paths, sacd, time_mip in zip(partial_outputs, sacd_images, time_mips, strict=True):
@@ -449,7 +465,7 @@ def process_fov(
         "written",
         perf_counter() - started,
         shapes=shapes,
-        input_shape=raw.shape,
+        input_shape=input_shape,
         intensity_transform=intensity_transform,
     )
 
@@ -521,12 +537,14 @@ def validate_fov_outputs(
     )
 
 
+@pooled_batch
 def run_batch(
     config: dict,
     config_source: str = "notebook settings cell",
     *,
     max_new_fovs: int | None = None,
     progress_callback: Callable[[dict], None] | None = None,
+    executor=None,
 ) -> list[dict]:
     plan = build_batch_plan(config)
     _prepare_provenance(plan, config, config_source)
@@ -564,7 +582,7 @@ def run_batch(
                 validate_fov_outputs(fov, intensity_transform=intensity_transform, mag=int(processing.get("mag", 2)))
             except (FileNotFoundError, ValueError):
                 previous = None
-        if previous is not None:
+        if previous and previous.get("status") in {"written", "skipped_existing"}:
             result = {**previous, "status": "resumed_manifest"}
             results.append(result)
             completed_reconstructions += fov.reconstruction_count
@@ -573,11 +591,9 @@ def run_batch(
         if max_new_fovs is not None and newly_written >= max_new_fovs:
             break
 
+        step_callback = FOVEvents(progress_callback)
         try:
-            step_callback = progress_callback
-            if step_callback is None:
-                step_callback = lambda event: print("SACD_STEP " + json.dumps(event, default=str), flush=True)
-            result = process_fov(fov, processing, progress_callback=step_callback)
+            result = process_fov(fov, processing, progress_callback=step_callback, executor=executor)
             newly_written += result["status"] == "written"
         except Exception as exc:
             result = _result_record(
@@ -587,6 +603,8 @@ def run_batch(
                 error=repr(exc),
                 intensity_transform=intensity_transform,
             )
+        if result["status"] == "failed":
+            result["failure_stage"] = step_callback.failure_stage
         results.append(result)
         manifest = _upsert_manifest(plan.output_root, manifest, result, plan.exclusions)
 

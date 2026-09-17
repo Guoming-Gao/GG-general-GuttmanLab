@@ -16,6 +16,7 @@ from sacdpy.continuous_batch import (
     load_config,
     preflight_summary,
     process_fov,
+    run_batch,
     validate_output_pair,
 )
 from sacdpy.discrete_timelapse import TimelapseGroup
@@ -126,6 +127,30 @@ class ContinuousBatchTests(unittest.TestCase):
         status = {"last_result": dict(result)}
         result["batch_status"] = status
         self.assertIn('"batch_status"', json.dumps(result))
+
+    def test_three_workers_match_serial_stack_and_mip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_root = root / "raw"
+            self._write_grid(raw_root / "FOV")
+            rng = np.random.default_rng(3)
+            for path in sorted(raw_root.rglob("*.tif")):
+                tifffile.imwrite(path, rng.integers(100, 400, (4, 130, 130), dtype=np.uint16), photometric="minisblack")
+            configs = [self._config(raw_root, root / name) for name in ("serial", "parallel")]
+            configs[0]["processing"]["max_workers"] = 1
+            configs[1]["processing"]["max_workers"] = 3
+            config_path = root / "config.json"
+            config_path.write_text("{}")
+            events = []
+            for config in configs:
+                results = run_batch(config, config_path, progress_callback=events.append)
+                self.assertEqual(results[0]["status"], "written", results)
+            a, b = [build_batch_plan(config).fovs[0] for config in configs]
+            for ap, bp in ((a.stack_output, b.stack_output), (a.mip_output, b.mip_output)):
+                np.testing.assert_array_equal(tifffile.imread(ap), tifffile.imread(bp))
+            self.assertEqual(sum(e.get("event") == "reconstruction_done" for e in events), 8)
+            configs[1]["processing"]["max_workers"] = 1
+            self.assertEqual(run_batch(configs[1], config_path, progress_callback=events.append)[0]["status"], "resumed_manifest")
 
 
 if __name__ == "__main__":

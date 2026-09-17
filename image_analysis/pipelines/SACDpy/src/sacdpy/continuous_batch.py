@@ -27,6 +27,8 @@ from .discrete_timelapse import (
     write_timelapse_tiff,
 )
 from .params import SACDParams
+from .execution import execute_tasks, pooled_batch, worker_count
+from .progress import FOVEvents
 from .reconstruction import reconstruct
 from .tiffio import read_tiff_stack
 
@@ -186,12 +188,14 @@ def preflight_summary(plan: BatchPlan) -> dict:
     }
 
 
+@pooled_batch
 def run_batch(
     config: dict,
     config_path: str | Path,
     *,
     max_new_fovs: int | None = None,
     progress_callback: Callable[[dict], None] | None = None,
+    executor=None,
 ) -> list[dict]:
     plan = build_batch_plan(config)
     repo_root = Path(config.get("repo_root", Path.cwd()))
@@ -236,8 +240,9 @@ def run_batch(
         if max_new_fovs is not None and newly_written >= max_new_fovs:
             break
 
+        step_callback = FOVEvents(progress_callback)
         try:
-            result = process_fov(fov, defaults)
+            result = process_fov(fov, defaults, executor=executor, progress_callback=step_callback)
             newly_written += result["status"] == "written"
         except Exception as exc:
             result = _result_record(
@@ -247,6 +252,8 @@ def run_batch(
                 error=repr(exc),
                 intensity_transform=str(defaults.get("intensity_transform", "order_root")),
             )
+        if result["status"] == "failed":
+            result["failure_stage"] = step_callback.failure_stage
         results.append(result)
         _upsert_manifest(fov.result_dir, result)
 
@@ -279,7 +286,16 @@ def run_batch(
     return results
 
 
-def process_fov(fov: FOVPlan, defaults: dict) -> dict:
+def _reconstruct_plane(task):
+    path, params, time_position, z_position = task
+    raw = read_tiff_stack(path)
+    sacd = reconstruct(raw, params)
+    if sacd.ndim != 2:
+        raise ValueError(f"Expected a 2D reconstruction, got {sacd.shape}")
+    return time_position, z_position, np.asarray(sacd, dtype=np.float32), tuple(raw.shape)
+
+
+def process_fov(fov: FOVPlan, defaults: dict, *, executor=None, progress_callback=None) -> dict:
     intensity_transform = str(defaults.get("intensity_transform", "order_root"))
     final_paths = (fov.stack_output, fov.mip_output)
     existing = [path for path in final_paths if path.exists()]
@@ -323,20 +339,25 @@ def process_fov(fov: FOVPlan, defaults: dict) -> dict:
         sparse_iterations=int(defaults.get("sparse_iterations", 100)),
     )
     started = perf_counter()
-    sacd_times: list[np.ndarray] = []
+    planes = [[None for _ in fov.group.z_indices] for _ in fov.group.time_indices]
     input_shape = None
-    for time_index in fov.group.time_indices:
-        sacd_z: list[np.ndarray] = []
-        for z_index in fov.group.z_indices:
-            raw = read_tiff_stack(fov.group.files[(time_index, z_index)])
-            input_shape = tuple(raw.shape)
-            sacd = reconstruct(raw, params)
-            if sacd.ndim != 2:
-                raise ValueError(f"Expected a 2D reconstruction, got {sacd.shape}")
-            sacd_z.append(sacd)
-        sacd_times.append(np.stack(sacd_z, axis=0))
+    tasks = tuple((fov.group.files[(t, z)], params, ti, zi)
+                  for ti, t in enumerate(fov.group.time_indices)
+                  for zi, z in enumerate(fov.group.z_indices))
+    for completed, (ti, zi, sacd, input_shape) in enumerate(
+        execute_tasks(_reconstruct_plane, tasks, executor=executor, max_workers=worker_count(defaults)), 1
+    ):
+        planes[ti][zi] = sacd
+        if progress_callback is not None:
+            progress_callback({"event": "reconstruction_done", "dataset_name": fov.dataset_name,
+                               "relative_fov": fov.relative_fov, "time_index": fov.group.time_indices[ti],
+                               "z_index": fov.group.z_indices[zi], "completed_in_fov": completed,
+                               "total_in_fov": fov.movie_count})
 
-    stack = np.stack(sacd_times, axis=0).astype(np.float32, copy=False)
+    stack = np.stack([np.stack(z_planes) for z_planes in planes]).astype(np.float32, copy=False)
+    if progress_callback is not None:
+        progress_callback({"event": "validation_started", "relative_fov": fov.relative_fov,
+                           "dataset_name": fov.dataset_name})
     mip = np.max(stack, axis=1).astype(np.float32, copy=False)
     pixel_um = fov.pixel_nm / 1000.0 / params.mag
     write_timelapse_tiff(

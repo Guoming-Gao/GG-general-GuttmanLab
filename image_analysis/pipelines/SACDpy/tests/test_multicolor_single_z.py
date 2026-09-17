@@ -28,6 +28,7 @@ class MulticolorSingleZTests(unittest.TestCase):
             "raw_root": str(raw_root),
             "output_root": str(output_root),
             "processing": {
+                "max_workers": 1,
                 "position_folder": "pos_0",
                 "glob_pattern": "*.tif",
                 "fallback_pixel_nm": 117.0,
@@ -108,6 +109,45 @@ class MulticolorSingleZTests(unittest.TestCase):
             self.assertEqual(preflight_summary(plan)["outputs"], 6)
             self.assertEqual(fov.output_for("AF647").sacd.name, "FOV-10__AF647-SACD.tif")
             self.assertEqual(fov.output_for("AF647").mip.name, "FOV-10__AF647-MIP.tif")
+
+    def test_three_workers_match_serial_and_resume_ignores_worker_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_root = root / "raw"
+            path = self._write_fov(raw_root)
+            raw = np.random.default_rng(7).integers(100, 400, (12, 130, 260), dtype=np.uint16)
+            md = self._metadata((4, 4, 4))
+            md["ROI"] = [0, 0, 260, 130]
+            tifffile.imwrite(path, raw, photometric="minisblack", description=json.dumps(md))
+            configs = [self._config(raw_root, root / name) for name in ("serial", "parallel")]
+            configs[1]["processing"]["max_workers"] = 3
+            for config in configs:
+                results = run_batch(config, progress_callback=lambda _: None)
+                self.assertEqual(results[0]["status"], "written", results)
+            plans = [build_batch_plan(config).fovs[0] for config in configs]
+            for a, b in zip(plans[0].all_outputs, plans[1].all_outputs, strict=True):
+                np.testing.assert_array_equal(tifffile.imread(a), tifffile.imread(b))
+            configs[1]["processing"]["max_workers"] = 1
+            self.assertEqual(run_batch(configs[1], progress_callback=lambda _: None)[0]["status"], "resumed_manifest")
+
+    def test_failed_manifest_is_retried(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_fov(root / "raw")
+            config = self._config(root / "raw", root / "out")
+            with patch("sacdpy.multicolor_single_z.reconstruct", side_effect=ValueError("failed worker")):
+                self.assertEqual(run_batch(config, progress_callback=lambda _: None)[0]["status"], "failed")
+            with patch("sacdpy.multicolor_single_z.reconstruct", return_value=np.ones((6, 8), np.float32)):
+                self.assertEqual(run_batch(config, progress_callback=lambda _: None)[0]["status"], "written")
+    def test_validation_failure_has_separate_stage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._write_fov(root / "raw")
+            config = self._config(root / "raw", root / "out")
+            with patch("sacdpy.multicolor_single_z.reconstruct", return_value=np.ones((6, 8), np.float32)), patch("sacdpy.multicolor_single_z.validate_output_set", side_effect=ValueError("invalid TIFF")):
+                result = run_batch(config, progress_callback=lambda _: None)[0]
+            self.assertEqual(result["status"], "failed")
+            self.assertEqual(result["failure_stage"], "output_validation_or_publication")
 
     def test_process_routes_channels_and_writes_only_two_calibrated_yx_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

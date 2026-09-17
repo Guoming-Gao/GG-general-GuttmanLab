@@ -181,24 +181,8 @@ def run_batch_reconstruction(
 
     progress_context = nullcontext()
     if show_progress:
-        from rich.progress import (
-            BarColumn,
-            MofNCompleteColumn,
-            Progress,
-            SpinnerColumn,
-            TextColumn,
-            TimeElapsedColumn,
-            TimeRemainingColumn,
-        )
-
-        progress_context = Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            MofNCompleteColumn(),
-            TimeElapsedColumn(),
-            TimeRemainingColumn(),
-        )
+        from .progress import make_progress
+        progress_context = make_progress()
 
     with progress_context as progress:
         task_id = None

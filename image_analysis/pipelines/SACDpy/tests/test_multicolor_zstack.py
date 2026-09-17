@@ -282,10 +282,10 @@ class MulticolorZStackTests(unittest.TestCase):
             process_fov(serial_fov, serial_config["processing"])
 
             parallel_config = self._config(raw_root, root / "parallel")
-            parallel_config["processing"]["max_workers"] = 2
+            parallel_config["processing"]["max_workers"] = 3
             parallel_fov = build_batch_plan(parallel_config).fovs[0]
             with ProcessPoolExecutor(
-                max_workers=2,
+                max_workers=3,
                 mp_context=multiprocessing.get_context("spawn"),
             ) as executor:
                 process_fov(
@@ -303,6 +303,32 @@ class MulticolorZStackTests(unittest.TestCase):
                     np.testing.assert_array_equal(
                         tifffile.imread(serial_path), tifffile.imread(parallel_path)
                     )
+
+    def test_simultaneous_three_worker_outputs_match_serial(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_root = root / "raw"
+            rng = np.random.default_rng(42)
+            for z in (0, 1):
+                path = raw_root / "FOV" / "pos_0" / f"dual_posXY0_channels_t0_posZ{z}.tif"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                metadata = self._metadata(z)
+                metadata.update({"laserProgram": {"steps": []}, "LaserActive": [True, False, False, True], "LaserPowerPercent": [1.0, 0.0, 0.0, 12.0]})
+                raw = rng.integers(100, 400, (4, 130, 260), dtype=np.uint16)
+                tifffile.imwrite(path, raw, photometric="minisblack", description=json.dumps(metadata))
+            configs = [self._config(raw_root, root / name) for name in ("serial", "parallel")]
+            config_path = root / "config.json"
+            config_path.write_text("{}")
+            for config, workers in zip(configs, (1, 3), strict=True):
+                processing = config["processing"]
+                processing["max_workers"] = workers
+                processing["frame_mode"] = "simultaneous"
+                processing["channels"] = [processing["channels"][0], processing["channels"][-1]]
+                results = run_batch(config, config_path, progress_callback=lambda _: None)
+                self.assertEqual(results[0]["status"], "written", results)
+            a, b = [build_batch_plan(config).fovs[0] for config in configs]
+            for ap, bp in zip(a.all_outputs, b.all_outputs, strict=True):
+                np.testing.assert_array_equal(tifffile.imread(ap), tifffile.imread(bp))
 
     def test_manifest_resume_rejects_missing_intensity_provenance(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

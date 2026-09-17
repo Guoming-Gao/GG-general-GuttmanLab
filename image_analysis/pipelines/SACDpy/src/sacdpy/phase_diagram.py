@@ -20,6 +20,7 @@ from scipy.ndimage import distance_transform_edt
 
 from .discrete_timelapse import read_oni_metadata
 from .params import SACDParams
+from .progress import report_progress, progress_items, progress_message, stage, report_event
 from .reconstruction import reconstruct
 
 
@@ -467,7 +468,8 @@ def _export_nucleus_crops(
     fov_token = parse_fov_token(plan.fov_name)
     nuclei_dir.mkdir(parents=True, exist_ok=True)
 
-    for nucleus_id in (int(value) for value in np.unique(labels) if value > 0):
+    nucleus_ids = [int(value) for value in np.unique(labels) if value > 0]
+    for nucleus_id in progress_items(nucleus_ids, "Export nucleus crops"):
         nucleus_mask = labels == nucleus_id
         y0, y1, x0, x1 = get_bbox_with_padding(
             nucleus_mask,
@@ -869,6 +871,7 @@ def _remove_superseded_nucleus_files(
                 path.unlink()
 
 
+@report_progress
 def process_phase_fov(plan: PhaseFOVPlan, config: PhaseDiagramConfig, model: Any) -> dict[str, Any]:
     final_paths = _fov_output_paths(config, plan)
     if final_paths["complete"].exists() and not config.overwrite:
@@ -930,6 +933,7 @@ def process_phase_fov(plan: PhaseFOVPlan, config: PhaseDiagramConfig, model: Any
     raw_spen_mip: np.ndarray | None = None
     input_shape: tuple[int, ...] | None = None
 
+    stage("Reconstruct channels and z planes", total=2 * len(plan.z_indices))
     for ordinal, z_index in enumerate(plan.z_indices, start=1):
         input_file = plan.files[z_index]
         raw = tifffile.imread(input_file)
@@ -939,10 +943,10 @@ def process_phase_fov(plan: PhaseFOVPlan, config: PhaseDiagramConfig, model: Any
         right_mean = np.mean(right, axis=0, dtype=np.float32)
         raw_hoechst_mip = left_mean if raw_hoechst_mip is None else np.maximum(raw_hoechst_mip, left_mean)
         raw_spen_mip = right_mean if raw_spen_mip is None else np.maximum(raw_spen_mip, right_mean)
-        print(f"  {plan.fov_name}: z{z_index} ({ordinal}/{len(plan.z_indices)}) Hoechst", flush=True)
         hoechst_z.append(reconstruct(left, hoechst_params))
-        print(f"  {plan.fov_name}: z{z_index} ({ordinal}/{len(plan.z_indices)}) SPEN", flush=True)
+        stage("Reconstruct channels and z planes", completed=2 * ordinal - 1, total=2 * len(plan.z_indices))
         spen_z.append(reconstruct(right, spen_params))
+        stage("Reconstruct channels and z planes", completed=2 * ordinal, total=2 * len(plan.z_indices))
 
     assert raw_hoechst_mip is not None and raw_spen_mip is not None
     hoechst_stack = np.stack(hoechst_z).astype(np.float32, copy=False)
@@ -957,9 +961,10 @@ def process_phase_fov(plan: PhaseFOVPlan, config: PhaseDiagramConfig, model: Any
     _write_imagej(stage_paths["raw_hoechst_mip"], raw_hoechst_mip, axes="YX", pixel_size_um=raw_pixel_um)
     _write_imagej(stage_paths["raw_spen_mip"], raw_spen_mip, axes="YX", pixel_size_um=raw_pixel_um)
 
-    print(f"  {plan.fov_name}: CellposeSAM", flush=True)
+    progress_message(f"  {plan.fov_name}: CellposeSAM", flush=True)
     labels = run_cellpose_nuclei(hoechst_mip, model, config)
     _write_imagej(stage_paths["nuclei_labels"], labels, axes="YX", pixel_size_um=output_pixel_um)
+    stage("Export nucleus crops")
     nucleus_records, excluded_records = _export_nucleus_crops(
         plan,
         config,
@@ -1055,7 +1060,7 @@ def _load_cellpose_model(config: PhaseDiagramConfig) -> Any:
     except ImportError as exc:
         raise RuntimeError("Cellpose is required; run with the conda-smlm kernel/environment") from exc
     gpu = False if config.cellpose_device == "cpu" else bool(core.use_gpu())
-    print(f"Loading CellposeSAM (gpu={gpu})", flush=True)
+    progress_message(f"Loading CellposeSAM (gpu={gpu})", flush=True)
     return models.CellposeModel(gpu=gpu)
 
 
@@ -1309,6 +1314,7 @@ def review_limits_from_manifest_tiffs(
     return (vmin, vmax), int(values.size)
 
 
+@report_progress
 def rerender_existing_nucleus_pngs(
     config: PhaseDiagramConfig,
     *,
@@ -1339,6 +1345,7 @@ def rerender_existing_nucleus_pngs(
         str(value["fov_record"]["fov"]): float(value["fov_record"]["output_pixel_nm"]) / 1000.0
         for value in completions.values()
     }
+    stage("Verify source TIFFs and compute display limits")
     tif_hashes_before = {
         Path(record["review_tif"]): _sha256_file(Path(record["review_tif"]))
         for record in records
@@ -1348,7 +1355,7 @@ def rerender_existing_nucleus_pngs(
         config.review_lower_percentile,
         config.review_upper_percentile,
     )
-    print(
+    progress_message(
         f"Pooled P{config.review_lower_percentile:g}/P{config.review_upper_percentile:g} "
         f"LogNorm limits: {display_limits[0]:.12g}, {display_limits[1]:.12g} "
         f"from {pooled_pixel_count:,} full-mask pixels",
@@ -1361,7 +1368,7 @@ def rerender_existing_nucleus_pngs(
     replacement_pairs: list[tuple[Path, Path]] = []
     staged_records: list[dict[str, Any]] = []
     try:
-        for index, record in enumerate(records, start=1):
+        for index, record in enumerate(progress_items(records, "Refresh nucleus PNGs"), start=1):
             review_tif = Path(record["review_tif"])
             final_png = Path(record["review_png"])
             staged_png = stage_png / record["pooled_condition"] / final_png.name
@@ -1388,8 +1395,9 @@ def rerender_existing_nucleus_pngs(
             updated["review_normalization"] = "global_log"
             staged_records.append(updated)
             if index % 100 == 0 or index == len(records):
-                print(f"Staged nucleus PNG {index}/{len(records)}", flush=True)
+                progress_message(f"Staged nucleus PNG {index}/{len(records)}", flush=True, update_stage=False)
 
+        stage("Validate and publish refreshed PNGs")
         staged_manifest = stage_metadata / "nucleus_manifest.csv"
         _write_csv(staged_manifest, staged_records)
         replacement_pairs.append((staged_manifest, manifest_path))
@@ -1482,6 +1490,7 @@ def rerender_existing_nucleus_pngs(
     return display_limits
 
 
+@report_progress
 def repackage_existing_nuclei(
     config: PhaseDiagramConfig,
     *,
@@ -1494,11 +1503,12 @@ def repackage_existing_nuclei(
         raise FileNotFoundError(f"No completed FOV checkpoints found under {config.output_root}")
     original_text = {path: path.read_text() for path in completion_paths}
     original_completions = [json.loads(original_text[path]) for path in completion_paths]
+    stage("Determine global nucleus filters")
     area_cutoff_px, display_limits, filter_metadata = determine_global_nucleus_filters(
         config,
         original_completions,
     )
-    print(
+    progress_message(
         "Global nucleus filters: "
         f"area >= {area_cutoff_px:g} SACD px, "
         f"exclude_border={config.exclude_border_nuclei}, "
@@ -1523,7 +1533,7 @@ def repackage_existing_nuclei(
         else work_root / f"nuclei-global-repackage-{uuid.uuid4().hex[:8]}"
     )
     if resumable_attempts:
-        print(f"Resuming staged nucleus repackaging from {attempt}", flush=True)
+        progress_message(f"Resuming staged nucleus repackaging from {attempt}", flush=True)
     stage_nuclei = attempt / "nuclei"
     stage_plot = attempt / "phase_diagram-SPEN_core_mean-vs-dispersion.png"
     staged_records: list[dict[str, Any]] = []
@@ -1533,7 +1543,7 @@ def repackage_existing_nuclei(
     seen_names: set[tuple[str, str]] = set()
 
     for index, (completion_path, completion) in enumerate(
-        zip(completion_paths, original_completions, strict=True),
+        progress_items(list(zip(completion_paths, original_completions, strict=True)), "Repackage FOV nuclei"),
         start=1,
     ):
         fov_record = completion["fov_record"]
@@ -1593,12 +1603,14 @@ def repackage_existing_nuclei(
         updates_by_path.append((completion_path, updated))
         staged_records.extend(records)
         staged_excluded.extend(excluded)
-        print(
+        progress_message(
             f"Repackaged FOV {index}/{len(completion_paths)}: {fov_name} "
             f"({len(records)} retained, {len(excluded)} excluded)",
             flush=True,
+            update_stage=False,
         )
 
+    stage("Validate and publish repackaged nuclei")
     if expected_nuclei is not None and len(staged_records) + len(staged_excluded) != expected_nuclei:
         raise AssertionError(
             f"Expected {expected_nuclei} segmented nuclei, staged "
@@ -1679,6 +1691,7 @@ def rebuild_manifests_from_completions(config: PhaseDiagramConfig) -> tuple[list
     return completions, failures
 
 
+@report_progress
 def run_phase_dataset(
     config: PhaseDiagramConfig,
     *,
@@ -1704,20 +1717,23 @@ def run_phase_dataset(
     config.output_root.mkdir(parents=True, exist_ok=True)
     _write_json(config.output_root / "manifests" / "run_config.json", _config_json(config))
     pending = [plan for plan in plans if config.overwrite or not _fov_output_paths(config, plan)["complete"].exists()]
+    stage("Load segmentation model")
     if pending and model is None:
         model = _load_cellpose_model(config)
 
     completions: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
     total_started = perf_counter()
-    for index, plan in enumerate(plans, start=1):
-        print(f"\nFOV {index}/{len(plans)}: {plan.fov_name}", flush=True)
+    for index, plan in enumerate(progress_items(plans, "Dox FOVs", overall=True), start=1):
+        progress_message(f"\nFOV {index}/{len(plans)}: {plan.fov_name}", flush=True)
         try:
             completion = process_phase_fov(plan, config, model)
+            if completion["status"] == "skipped_existing":
+                report_event({"status": "skipped_existing", "relative_fov": plan.fov_name})
             completions.append(completion)
             consolidate_manifests(config, completions, failures)
             elapsed = perf_counter() - total_started
-            print(
+            progress_message(
                 f"Completed {plan.fov_name}: status={completion['status']}, "
                 f"nuclei={len(completion['nucleus_records'])}, elapsed={elapsed / 60:.1f} min",
                 flush=True,
@@ -1726,9 +1742,10 @@ def run_phase_dataset(
             failure = {"fov": plan.fov_name, "condition": plan.condition, "error_type": type(exc).__name__, "error": str(exc)}
             failures.append(failure)
             consolidate_manifests(config, completions, failures)
-            print(f"FAILED {plan.fov_name}: {type(exc).__name__}: {exc}", flush=True)
+            progress_message(f"FAILED {plan.fov_name}: {type(exc).__name__}: {exc}", flush=True)
             if stop_on_error:
                 raise
+            report_event({"status": "failed", "relative_fov": plan.fov_name, "error": str(exc)})
     consolidate_manifests(config, completions, failures)
     return completions, failures
 
@@ -1790,7 +1807,7 @@ def main(argv: list[str] | None = None) -> int:
             config.output_root,
             device=args.spotiflow_device,
         )
-        print(
+        progress_message(
             f"Spotiflow hybrid quantified {len(nucleus_rows)} nuclei and "
             f"{len(puncta_rows)} SPEN puncta",
             flush=True,
@@ -1801,14 +1818,14 @@ def main(argv: list[str] | None = None) -> int:
             config,
             expected_retained_nuclei=args.expected_retained_nuclei,
         )
-        print(
+        progress_message(
             f"Refreshed nucleus PNGs at shared LogNorm limits {limits[0]:.12g}..{limits[1]:.12g}",
             flush=True,
         )
         return 0
     if args.consolidate_only:
         completions, failures = rebuild_manifests_from_completions(config)
-        print(f"Consolidated: {len(completions)} completed, {len(failures)} failed", flush=True)
+        progress_message(f"Consolidated: {len(completions)} completed, {len(failures)} failed", flush=True)
         return 1 if failures else 0
     if args.repackage_nuclei_only:
         completions, failures = repackage_existing_nuclei(
@@ -1820,7 +1837,7 @@ def main(argv: list[str] | None = None) -> int:
             raise AssertionError(
                 f"Expected {args.expected_retained_nuclei} retained nuclei, found {total_nuclei}"
             )
-        print(
+        progress_message(
             f"Repackaged: {len(completions)} FOVs, {total_nuclei} nuclei, {len(failures)} failures",
             flush=True,
         )
@@ -1840,7 +1857,7 @@ def main(argv: list[str] | None = None) -> int:
         fov_names=fov_names,
         stop_on_error=args.stop_on_error,
     )
-    print(f"Finished: {len(completions)} completed, {len(failures)} failed", flush=True)
+    progress_message(f"Finished: {len(completions)} completed, {len(failures)} failed", flush=True)
     return 1 if failures else 0
 
 

@@ -24,6 +24,8 @@ import numpy as np
 import tifffile
 from scipy import ndimage
 from scipy.spatial import cKDTree
+
+from .progress import report_progress, progress_items, progress_message, stage
 from skimage import filters
 from skimage.feature import blob_log
 from skimage.measure import label as connected_components
@@ -1024,6 +1026,7 @@ def _move_to_backup(
     return backup
 
 
+@report_progress
 def apply_spotiflow_hybrid(
     records: list[dict[str, Any]],
     output_root: str | Path,
@@ -1048,6 +1051,7 @@ def apply_spotiflow_hybrid(
     protected_nucleus_paths = [row["review_tif"] for row in records]
     if len(set(protected_nucleus_paths)) != expected_nuclei:
         raise AssertionError("Nucleus manifest does not contain unique review TIFF paths")
+    stage("Validate protected inputs")
     protected_before = phase_dataset_invariants(
         output_root,
         nucleus_paths=protected_nucleus_paths,
@@ -1064,6 +1068,7 @@ def apply_spotiflow_hybrid(
                 f"{protected_before[family]['count']}, expected {expected}"
             )
 
+    stage("Load Spotiflow model")
     model, model_metadata = load_spotiflow_general(cache_dir=cache_dir)
     attempt = output_root / ".work" / f"spotiflow-hybrid-{uuid.uuid4().hex[:8]}"
     stage_masks = attempt / "puncta_masks"
@@ -1082,7 +1087,7 @@ def apply_spotiflow_hybrid(
     staged_png_paths: list[Path] = []
     started = datetime.now(timezone.utc)
     try:
-        for index, source in enumerate(records, start=1):
+        for index, source in enumerate(progress_items(records, "Spotiflow nuclei"), start=1):
             review = tifffile.imread(source["review_tif"])
             if review.ndim != 3 or review.shape[0] != 3:
                 raise ValueError(f"Invalid review TIFF: {source['review_tif']}")
@@ -1220,13 +1225,15 @@ def apply_spotiflow_hybrid(
                     }
                 )
             if index % 25 == 0 or index == len(records):
-                print(
+                progress_message(
                     f"Spotiflow hybrid {index}/{len(records)}: "
                     f"{len(seed_rows):,} retained seeds, "
                     f"{len(puncta_rows):,} puncta",
                     flush=True,
+                    update_stage=False,
                 )
 
+        stage("Render Spotiflow QC and prepare manifests")
         if len(qc_cells) != 70:
             raise AssertionError(f"Expected 70 QC cells, found {len(qc_cells)}")
         qc_order = {
@@ -1289,7 +1296,7 @@ def apply_spotiflow_hybrid(
         if len(list((stage_qc / "montages").glob("*.png"))) != 7:
             raise AssertionError("Spotiflow QC must contain seven montage pages")
         rows_by_key = {row["nucleus_key"]: row for row in nucleus_rows}
-        for source in records:
+        for source in progress_items(records, "Validate Spotiflow outputs"):
             row = rows_by_key[source["nucleus_key"]]
             staged = (
                 stage_masks
@@ -1385,6 +1392,7 @@ def apply_spotiflow_hybrid(
             / "qc"
             / "phase_diagram-SPEN_core_mean-vs-dispersion.png",
         ]
+        stage("Publish Spotiflow outputs")
         backup_root = attempt / "rollback"
         committed_files: list[tuple[Path, Path | None]] = []
         committed_dirs: list[tuple[Path, Path | None]] = []
