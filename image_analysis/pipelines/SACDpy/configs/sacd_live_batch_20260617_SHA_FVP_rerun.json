@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "repo_root": "/Users/gmgao/GGscripts/GG-general-GuttmanLab/image_analysis/pipelines/SACDpy",
+  "output_root": "/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SACDlive",
+  "initial_seconds_per_movie": 10.09,
+  "processing": {
+    "output_prefix_source": "fov_folder",
+    "position_folder": "pos_0",
+    "glob_pattern": "*.tif",
+    "channel_name": "647",
+    "incomplete_grid_policy": "error",
+    "wavelength_nm": 647.0,
+    "pixel_nm": null,
+    "fallback_pixel_nm": 117.0,
+    "na": null,
+    "fallback_na": 1.45,
+    "mag": 2,
+    "iter1": 7,
+    "iter2": 8,
+    "ac_order": 2,
+    "intensity_transform": "order_root",
+    "subfactor": 0.8,
+    "ifbackground": false,
+    "backgroundfactor": 2.0,
+    "ifregistration": false,
+    "ifsparsedecon": false,
+    "fidelity": 100.0,
+    "tcontinuity": 0.1,
+    "sparsity": 1.0,
+    "sparse_iterations": 100,
+    "time_interval_source": "metadata",
+    "nominal_time_interval_s": null,
+    "max_workers": 2
+  },
+  "datasets": [
+    {
+      "raw_root": "/Volumes/guttman/primarydata/imaging_rawdata/20260617_ONI-gmgao-SPEN_SACDlive_SPT-SHA_FVP",
+      "exclude_fovs": {
+        "SHA-FVP2h-SPEN_JFX650-200ms_45s_7f-FOV": "Failed acquisition: 2x5 grid instead of neighboring 7x5",
+        "SHA-before-SPEN_JFX650-200ms_45s_7f-FOV-5": "Failed acquisition: 2x5 grid instead of neighboring 7x5"
+      },
+      "result_name": "20260617_ONI-gmgao-SPEN_SACDlive-SHA_bef_FVP_rec"
+    }
+  ]
+}

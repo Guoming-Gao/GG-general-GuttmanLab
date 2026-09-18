@@ -10,6 +10,12 @@ Example::
     python cli_sacd_nuclei.py /path/to/SACD_dataset
     python cli_sacd_nuclei.py /path/to/SACD_dataset --rebuild --columns 8
 
+For a guided workflow, open SACD_nuclei_pipeline.ipynb with the Cellpose kernel.
+Every run writes all_nuclei_montage.tif, exp_matched_nuclei_montage.tif, and
+exp_matched_nuclei_montage-sorted.tif. The last sorts masked mean SPEN high to
+low within each condition; ties use natural FOV order and the original mask ID.
+Rich provides optional progress displays; --no-progress uses plain text.
+
 Inputs: <FOV>__DAPI-SACD-MIP-YX.tif and matching <FOV>__<channel>-SACD-MIP-YX.tif.
 Outputs default to <input>/individual nucleus. TIFF channels are DAPI, other
 SACD channels (alphabetical), then Nucleus mask (0/1). Fluorescence pixels are
@@ -18,8 +24,8 @@ pixel values; Image > Overlay > Hide Overlay hides the labels. The CSV uses
 zero-based coordinates with exclusive upper bounds and zero-based tile indices.
 Masks smaller than --min-nucleus-area (default 10000 pixels) are excluded.
 Edge-touching nuclei with bounding-box aspect ratio >1.2 are also excluded.
-The expression-matched montage retains eligible SHA nuclei and eligible dRRM/
-dIDR nuclei within the inclusive SHA masked mean-SPEN range.
+Expression matching includes every condition within the inclusive masked mean-SPEN
+range of --reference-condition (default SHA), after size/boundary filtering.
 A 2-pixel edge tolerance accounts for Cellpose masks that stop just inside the
 image boundary; --edge-margin controls this tolerance (0 means exact contact).
 Masks are cached with source fingerprints and inference settings; --rebuild
@@ -31,6 +37,7 @@ from __future__ import annotations
 import argparse
 import csv
 import importlib.metadata
+import io
 import json
 import math
 import os
@@ -64,13 +71,25 @@ class PipelineProgress:
         self.tasks = {}
         self.stages = {}
         self.last_text = {}
+        self.notebook = False
+        self.display_handle = None
+        self.last_refresh = 0.
         if enabled:
             try:
                 from rich.progress import (Progress, SpinnerColumn, TextColumn, BarColumn,
                                            MofNCompleteColumn, TimeElapsedColumn, TimeRemainingColumn)
+                from rich.console import Console
+                try:
+                    from IPython import get_ipython
+                    self.notebook = type(get_ipython()).__name__ == 'ZMQInteractiveShell'
+                except ImportError:
+                    pass
+                # Rich's Output widget can block headless notebook execution.
+                # Use display-id HTML updates in notebooks, and normal Rich in CLI.
+                console = Console(force_jupyter=False, file=io.StringIO()) if self.notebook else None
                 self.progress = Progress(SpinnerColumn(), TextColumn('{task.description}'),
                                          BarColumn(), MofNCompleteColumn(), TimeElapsedColumn(),
-                                         TimeRemainingColumn(), auto_refresh=False)
+                                         TimeRemainingColumn(), auto_refresh=False, console=console)
             except ImportError:
                 pass
 
@@ -93,13 +112,28 @@ class PipelineProgress:
         description = event['description']
         completed, total = event.get('completed', 0), event.get('total')
         if self.progress:
+            changed = self.stages.get(key) != stage
             if key not in self.tasks:
                 self.tasks[key] = self.progress.add_task(description, total=total)
             elif self.stages.get(key) != stage:
-                self.progress.reset(self.tasks[key], total=total, description=description)
+                # Rich reset(total=None) preserves the previous total. Recreate
+                # the task so TIFF writes and failures really are indeterminate.
+                self.progress.remove_task(self.tasks[key])
+                self.tasks[key] = self.progress.add_task(description, total=total)
             self.progress.update(self.tasks[key], description=description, completed=completed)
             self.stages[key] = stage
             self.progress.refresh()
+            if self.notebook and (changed or completed == total or time.monotonic()-self.last_refresh > 0.25):
+                from rich.console import Console
+                from IPython.display import HTML, display
+                console = Console(record=True, force_jupyter=False, width=110, file=io.StringIO())
+                console.print(self.progress.get_renderable())
+                frame = HTML(console.export_html(inline_styles=True))
+                if self.display_handle is None:
+                    self.display_handle = display(frame, display_id=True)
+                else:
+                    self.display_handle.update(frame)
+                self.last_refresh = time.monotonic()
         elif self.last_text.get(key) != description:
             print(description, flush=True)
             self.last_text[key] = description
@@ -114,14 +148,14 @@ def emit(callback, description, *, stage='stage', task='stage', completed=0, tot
         print(description, flush=True)
 
 
-def expression_sorted_rows(rows):
+def expression_sorted_rows(rows, condition_order=None):
     """Return matched rows by condition, descending mean SPEN, then natural FOV/ID."""
     for row in rows:
         row['expression_rank_within_condition'] = ''
         for coordinate in ('row', 'column', 'y', 'x'):
             row[f'sorted_montage_{coordinate}'] = ''
     selected = sorted((r for r in rows if r['expression_matched']),
-                      key=lambda r: (natural(r['condition']), -r['mean_spen_intensity'],
+                      key=lambda r: (condition_order_key(r['condition'], condition_order), -r['mean_spen_intensity'],
                                      natural(r['fov']), r['mask_label']))
     ranks = Counter()
     for row in selected:
@@ -132,6 +166,12 @@ def expression_sorted_rows(rows):
 
 def natural(value):
     return [int(s) if s.isdigit() else s.lower() for s in re.split(r'(\d+)', str(value))]
+
+
+def condition_order_key(name, order=None):
+    """Requested conditions first; remaining names follow in natural order."""
+    order = order or []
+    return (order.index(name) if name in order else len(order), natural(name))
 
 
 def condition(fov):
@@ -149,6 +189,7 @@ def calibration(tif):
 
 
 def discover(root):
+    """Pair float32 SACD MIPs and validate common channels and spatial calibration."""
     groups = []
     expected_channels = None
     expected_cal = None
@@ -258,6 +299,7 @@ def physical_pixel_area(cal):
 
 
 def measure_and_filter(rows, masks, spen, minimum_area, pixel_area_um2):
+    """Measure original SPEN mask pixels and apply size/boundary export filters."""
     for row in rows:
         region = np.s_[row['y0']:row['y1'], row['x0']:row['x1']]
         selected = masks[region] == row['mask_label']
@@ -276,22 +318,23 @@ def measure_and_filter(rows, masks, spen, minimum_area, pixel_area_um2):
             row[f'matched_montage_{coordinate}'] = ''
 
 
-def match_expression(rows):
+def match_expression(rows, reference_condition="SHA"):
+    """Gate every condition by the eligible reference population's inclusive range."""
     reference = [r['mean_spen_intensity'] for r in rows
-                 if r['condition'] == 'SHA' and r['included']]
+                 if r['condition'] == reference_condition and r['included']]
     if not reference:
-        raise ValueError('No eligible SHA nuclei remain after boundary and size filtering')
+        available = ', '.join(sorted({r['condition'] for r in rows}, key=natural)) or '(none)'
+        raise ValueError(f'No eligible nuclei for reference condition {reference_condition!r} '
+                         f'after boundary and size filtering. Available conditions: {available}')
     low, high = min(reference), max(reference)
     for row in rows:
         reason = ''
         if not row['included']:
             reason = 'failed_boundary_or_size_filter'
-        elif row['condition'] not in ('SHA', 'dRRM', 'dIDR'):
-            reason = 'not_expression_matching_condition'
         elif row['mean_spen_intensity'] < low:
-            reason = 'below_SHA_mean_spen_min'
+            reason = f'below_{reference_condition}_mean_spen_min'
         elif row['mean_spen_intensity'] > high:
-            reason = 'above_SHA_mean_spen_max'
+            reason = f'above_{reference_condition}_mean_spen_max'
         row['expression_matched'] = not reason
         row['expression_exclusion_reason'] = reason
     return [low, high]
@@ -303,7 +346,7 @@ def save_size_histogram(output, rows, minimum_area):
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    conditions = sorted({r['condition'] for r in rows}, key=natural)
+    conditions = list(dict.fromkeys(r['condition'] for r in rows))
     maximum = max((r['area_pixels'] for r in rows), default=minimum_area)
     zoom_max = max(15000, minimum_area*1.5)
     bins = np.linspace(0, max(maximum, minimum_area)*1.05, 31)
@@ -390,6 +433,8 @@ def parser():
                    help='Post-segmentation minimum mask area in pixels (default: 10000)')
     p.add_argument('--spen-channel', default='SPEN_JFX650',
                    help='Channel used for masked mean expression (default: SPEN_JFX650)')
+    p.add_argument('--reference-condition', default='SHA',
+                   help='Condition whose eligible nuclei define the expression range (default: SHA)')
     p.add_argument('--flow-threshold', type=float, default=0.4)
     p.add_argument('--cellprob-threshold', type=float, default=0.)
     p.add_argument('--padding', type=int, default=10)
@@ -397,6 +442,8 @@ def parser():
                    help='Exclude edge-touching masks above this bounding-box ratio (default: 1.2)')
     p.add_argument('--edge-margin', type=int, default=2,
                    help='Boundary tolerance in pixels for slightly inset Cellpose masks (default: 2)')
+    p.add_argument('--condition-order', nargs='+', default=None,
+                   help='Condition blocks in this order; unlisted conditions follow naturally')
     p.add_argument('--columns', type=int, default=10)
     p.add_argument('--device', choices=['auto', 'cpu', 'mps', 'cuda'], default='auto')
     p.add_argument('--trial', action='store_true', help='One FOV per condition; subsequent full run reuses masks')
@@ -417,13 +464,24 @@ def preflight(args):
     if args.spen_channel not in channels:
         raise ValueError(f'Missing SPEN channel: {args.spen_channel}')
     pixel_area_um2 = physical_pixel_area(cal)
+    requested_order = args.condition_order or []
+    available_conditions = {g['condition'] for g in groups}
+    if len(set(requested_order)) != len(requested_order):
+        raise ValueError('Condition order contains duplicate names')
+    unknown = set(requested_order) - available_conditions
+    if unknown:
+        raise ValueError(f'Unknown condition-order names: {sorted(unknown)}; '
+                         f'available: {sorted(available_conditions, key=natural)}')
+    groups.sort(key=lambda g: (condition_order_key(g['condition'], requested_order), natural(g['fov'])))
     if args.trial:
         seen = set()
         groups = [g for g in groups if g['condition'] not in seen and not seen.add(g['condition'])]
     if args.limit:
         groups = groups[:args.limit]
-    if not any(g['condition'] == 'SHA' for g in groups):
-        raise ValueError('No SHA reference FOVs selected; expression matching requires SHA')
+    available = sorted({g['condition'] for g in groups}, key=natural)
+    if args.reference_condition not in available:
+        raise ValueError(f'Reference condition {args.reference_condition!r} is absent from selected FOVs. '
+                         f'Available conditions: {", ".join(available)}')
     output = (args.output or root/'individual nucleus').expanduser().resolve()
     inference = {k: getattr(args, k) for k in ('diameter', 'min_size', 'flow_threshold', 'cellprob_threshold')}
     inference.update(model='cpsam', cellpose_version=importlib.metadata.version('cellpose'))
@@ -527,8 +585,8 @@ def run(args, progress_callback=None):
         emit(progress_callback, f'FOVs | cached {sum(x["cached"] for x in summaries)} | last retained {kept}',
              task='fovs', completed=i, total=len(groups))
         atomic_json(output/'progress.json', summaries)
-    expression_range = match_expression(rows)
-    sorted_rows = expression_sorted_rows(rows)
+    expression_range = match_expression(rows, args.reference_condition)
+    sorted_rows = expression_sorted_rows(rows, args.condition_order)
     layout = build_montage(output, rows, labels, cal, args.columns, progress_callback=progress_callback)
     matched_layout = build_montage(output, rows, labels, cal, args.columns,
                                    'exp_matched_nuclei_montage.tif',
@@ -552,11 +610,13 @@ def run(args, progress_callback=None):
     counts = {c: {'retained': sum(r['included'] for r in rows if r['condition'] == c),
                   'expression_matched': sum(r['expression_matched'] for r in rows if r['condition'] == c),
                   'excluded': sum(not r['included'] for r in rows if r['condition'] == c)}
-              for c in sorted({r['condition'] for r in rows}, key=natural)}
+              for c in dict.fromkeys(g['condition'] for g in groups)}
     settings.update(status='complete', montage=layout, matched_montage=matched_layout, sorted_montage=sorted_layout,
-                    sha_mean_spen_range=expression_range, counts_by_condition=counts,
+                    reference_mean_spen_range=expression_range, counts_by_condition=counts,
                     expression_matched=sum(r['expression_matched'] for r in rows), fovs=summaries,
                     retained=sum(r['included'] for r in rows), excluded=sum(not r['included'] for r in rows))
+    if args.reference_condition == 'SHA':
+        settings['sha_mean_spen_range'] = expression_range
     atomic_json(output/'run_settings.json', settings)
     emit(progress_callback, f'Complete: {settings["retained"]} nuclei, {settings["expression_matched"]} expression-matched',
          stage='complete', completed=1, total=1)

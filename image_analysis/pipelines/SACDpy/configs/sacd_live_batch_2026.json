@@ -4,6 +4,7 @@
   "output_root": "/Volumes/guttman/users/gmgao/Imaging_ProcessedData/SPEN/SACDlive",
   "initial_seconds_per_movie": 10.09,
   "processing": {
+    "output_prefix_source": "fov_folder",
     "position_folder": "pos_0",
     "glob_pattern": "*.tif",
     "channel_name": "647",
@@ -48,7 +49,7 @@
         "dSPEN_FL-undiff_bef_FVP-SPEN_JF646-100ms_30s_16f-FOV-1": "Failed acquisition: final time point contains only z0"
       },
       "output_prefix_aliases": {
-        "SHA-postFVP-60min-SPEN_JF646-200ms_30s_16f-remember to rename contents": "ONI-gmgao-SPEN_SACDlive-FVP_SHA-postFVP-60min-SPEN_JF646-200ms_30s_16f"
+        "SHA-postFVP-60min-SPEN_JF646-200ms_30s_16f-remember to rename contents": "SHA-postFVP-60min-SPEN_JF646-200ms_30s_16f"
       }
     },
     {

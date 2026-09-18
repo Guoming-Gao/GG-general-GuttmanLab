@@ -24,9 +24,11 @@ from .discrete_timelapse import (
     infer_time_interval_s,
     infer_z_spacing_um,
     output_paths_for_group,
+    parse_timelapse_filename,
     write_timelapse_tiff,
 )
 from .params import SACDParams
+from .output_naming import manifest_record, resolve_recorded_paths, reserve_paths, COMPLETED_STATUSES
 from .execution import execute_tasks, pooled_batch, worker_count
 from .progress import FOVEvents
 from .reconstruction import reconstruct
@@ -80,6 +82,9 @@ def load_config(path: str | Path) -> dict:
 
 def build_batch_plan(config: dict) -> BatchPlan:
     defaults = config["processing"]
+    prefix_source = defaults.get("output_prefix_source", "fov_folder")
+    if prefix_source not in {"fov_folder", "movie_prefix"}:
+        raise ValueError("processing.output_prefix_source must be fov_folder or movie_prefix")
     output_root = Path(config["output_root"])
     fovs: list[FOVPlan] = []
     exclusions: list[dict[str, str]] = []
@@ -130,8 +135,8 @@ def build_batch_plan(config: dict) -> BatchPlan:
                 exclusions.append(_exclusion(raw_root, relative, policy_result.status))
                 continue
             group = policy_result.group
-            if relative in aliases:
-                group = replace(group, prefix=aliases[relative])
+            prefix = folder.name if prefix_source == "fov_folder" else group.prefix
+            group = replace(group, prefix=str(aliases.get(relative, prefix)))
 
             first_file = next(iter(group.files.values()))
             pixel_nm = defaults.get("pixel_nm")
@@ -171,6 +176,34 @@ def build_batch_plan(config: dict) -> BatchPlan:
     return BatchPlan(tuple(fovs), tuple(exclusions), tuple(legacy))
 
 
+def resolve_resume_plan(plan: BatchPlan, config: dict) -> BatchPlan:
+    """Select verified manifest paths for completed FOVs without changing any files."""
+    resolved = []
+    owners = {}
+    transform = str(config["processing"].get("intensity_transform", "order_root"))
+    for fov in plan.fovs:
+        record = manifest_record(fov.result_dir, fov.relative_fov)
+        raw_prefix = parse_timelapse_filename(next(iter(fov.group.files.values()))).prefix
+        legacy = output_paths_for_group(replace(fov.group, prefix=raw_prefix), fov.result_dir)
+        canonical = (fov.stack_output, fov.mip_output)
+        recorded = (record.get("stack_output"), record.get("mip_output")) if record else ()
+        if recorded and not all(isinstance(p, str) and p for p in recorded):
+            recorded = ()
+        selected = resolve_recorded_paths(canonical, legacy, record, recorded, {
+            "relative_fov": fov.relative_fov, "source_folder": str(fov.fov_folder),
+            "dataset_name": fov.dataset_name, "time_indices": list(fov.group.time_indices),
+            "z_indices": list(fov.group.z_indices), "movie_count": fov.movie_count,
+            "intensity_transform": transform,
+        }, dataset_name=fov.raw_root.name)
+        if record and record.get("status") in COMPLETED_STATUSES and all(p.exists() for p in selected):
+            shapes = validate_output_pair(*selected, intensity_transform=transform)
+            if shapes["stack_shape"][:2] != [len(fov.group.time_indices), len(fov.group.z_indices)]:
+                raise ValueError(f"Recorded output grid does not match {fov.relative_fov}")
+        reserve_paths(owners, (*canonical, *selected), (str(fov.result_dir), fov.relative_fov))
+        resolved.append(replace(fov, stack_output=selected[0], mip_output=selected[1]))
+    return replace(plan, fovs=tuple(resolved))
+
+
 def preflight_summary(plan: BatchPlan) -> dict:
     by_dataset: dict[str, dict[str, int]] = {}
     for fov in plan.fovs:
@@ -197,7 +230,7 @@ def run_batch(
     progress_callback: Callable[[dict], None] | None = None,
     executor=None,
 ) -> list[dict]:
-    plan = build_batch_plan(config)
+    plan = resolve_resume_plan(build_batch_plan(config), config)
     repo_root = Path(config.get("repo_root", Path.cwd()))
     config_path = Path(config_path)
     _prepare_provenance(config, config_path, plan, repo_root)
@@ -214,7 +247,7 @@ def run_batch(
         previous = next(
             (item for item in manifest["fovs"] if item.get("relative_fov") == fov.relative_fov), None
         )
-        if previous and previous.get("status") in {"written", "skipped_existing"}:
+        if previous and previous.get("status") in COMPLETED_STATUSES:
             expected_transform = str(defaults.get("intensity_transform", "order_root"))
             observed_transform = previous.get("intensity_transform")
             if observed_transform != expected_transform:
@@ -231,7 +264,7 @@ def run_batch(
                 )
             except (FileNotFoundError, ValueError):
                 previous = None
-        if previous and previous.get("status") in {"written", "skipped_existing"}:
+        if previous and previous.get("status") in COMPLETED_STATUSES:
             completed_movies += fov.movie_count
             result = {**previous, "status": "resumed_manifest"}
             results.append(result)

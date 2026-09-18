@@ -7,7 +7,7 @@ import re
 import shutil
 import sys
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
@@ -20,6 +20,7 @@ import numpy as np
 import tifffile
 
 from .params import SACDParams
+from .output_naming import manifest_record, resolve_recorded_paths, reserve_paths, COMPLETED_STATUSES
 from .execution import execute_tasks, initialize_worker, pooled_batch, worker_count
 from .progress import FOVEvents
 from .reconstruction import apply_intensity_transform, reconstruct
@@ -387,6 +388,49 @@ def build_batch_plan(config: dict) -> BatchPlan:
         )
 
     return BatchPlan(raw_root, output_root, tuple(fovs), tuple(exclusions))
+
+
+def resolve_resume_plan(plan: BatchPlan, config: dict) -> BatchPlan:
+    """Resolve completed legacy names from provenance, without migration or writes."""
+    resolved = []
+    owners = {}
+    processing = config["processing"]
+    transform = str(processing.get("intensity_transform", "order_root"))
+    for fov in plan.fovs:
+        record = manifest_record(fov.output_root, fov.relative_fov)
+        legacy = tuple(p for output in output_paths(fov.output_root, fov.movies[0].prefix, fov.channels)
+                       for p in output.all) + legacy_ome_paths(fov)
+        recorded = ()
+        if record:
+            try:
+                recorded = tuple(record["outputs"][channel.name][role]
+                                 for channel in fov.channels for role in ("stack", "mip", "raw_max_mip"))
+            except (KeyError, TypeError):
+                pass
+            if not all(isinstance(p, str) and p for p in recorded):
+                recorded = ()
+        selected = resolve_recorded_paths(fov.all_outputs, legacy, record, recorded, {
+            "relative_fov": fov.relative_fov, "source_folder": str(fov.fov_folder),
+            "z_indices": list(fov.z_indices), "channels": [asdict(c) for c in fov.channels],
+            "frame_ranges_zero_based_end_exclusive": [list(r) for r in fov.movies[0].frame_ranges],
+            "reconstruction_count": fov.reconstruction_count,
+            "intensity_transform": transform, "output_format": "separate_imagej_tiff_v1",
+        }, dataset_name=fov.raw_root.name)
+        outputs = tuple(ChannelOutputPaths(channel.name, *selected[i * 3:i * 3 + 3])
+                        for i, channel in enumerate(fov.channels))
+        resumed_fov = replace(fov, outputs=outputs)
+        if record and record.get("status") in COMPLETED_STATUSES and all(p.exists() for p in selected):
+            mag = int(processing.get("mag", 2))
+            shapes = validate_fov_outputs(resumed_fov, intensity_transform=transform, mag=mag)
+            _, height, width = fov.movies[0].shape
+            for channel in fov.channels:
+                observed = shapes["output_shapes"][channel.name]
+                if (observed["stack_shape"] != [len(fov.z_indices), height * mag, width // 2 * mag]
+                        or observed["raw_max_mip_shape"] != [height, width // 2]):
+                    raise ValueError(f"Recorded output shapes do not match {fov.relative_fov}/{channel.name}")
+        reserve_paths(owners, (*fov.all_outputs, *selected), fov.relative_fov)
+        resolved.append(resumed_fov)
+    return replace(plan, fovs=tuple(resolved))
 
 
 def _validate_consistent_movies(movies: tuple[MovieInfo, ...]) -> None:
@@ -819,7 +863,7 @@ def validate_dataset_outputs(
     progress_callback: Callable[[dict], None] | None = None,
 ) -> list[dict]:
     """Independently validate every new-format file in a configured dataset."""
-    plan = build_batch_plan(config)
+    plan = resolve_resume_plan(build_batch_plan(config), config)
     processing = config["processing"]
     intensity_transform = str(processing.get("intensity_transform", "order_root"))
     mag = int(processing.get("mag", 2))
@@ -1185,7 +1229,7 @@ def run_batch(
     progress_callback: Callable[[dict], None] | None = None,
     executor: ProcessPoolExecutor | None = None,
 ) -> list[dict]:
-    plan = build_batch_plan(config)
+    plan = resolve_resume_plan(build_batch_plan(config), config)
     _prepare_provenance(plan, config, Path(config_path))
     processing = config["processing"]
     intensity_transform = str(processing.get("intensity_transform", "order_root"))
@@ -1200,9 +1244,7 @@ def run_batch(
             (item for item in manifest["fovs"] if item.get("relative_fov") == fov.relative_fov),
             None,
         )
-        if previous and previous.get("status") in {
-            "written", "skipped_existing", "migrated_order_root"
-        }:
+        if previous and previous.get("status") in COMPLETED_STATUSES:
             if previous.get("intensity_transform") != intensity_transform:
                 raise ValueError(
                     f"Existing FOV {fov.relative_fov} uses intensity_transform="
@@ -1217,9 +1259,7 @@ def run_batch(
                 )
             except (FileNotFoundError, ValueError):
                 previous = None
-        if previous and previous.get("status") in {
-            "written", "skipped_existing", "migrated_order_root"
-        }:
+        if previous and previous.get("status") in COMPLETED_STATUSES:
             result = {**previous, "status": "resumed_manifest"}
             results.append(result)
             completed_reconstructions += fov.reconstruction_count

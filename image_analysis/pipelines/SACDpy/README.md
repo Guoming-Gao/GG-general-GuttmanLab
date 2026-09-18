@@ -79,6 +79,20 @@ Changing worker count does not invalidate compatible existing results. On
 interruption, queued work is cancelled and running jobs are allowed to settle
 before the pool exits; this can take up to the duration of a reconstruction.
 
+Timelapse and multicolor z-stack outputs default to the descriptive FOV folder
+name, without the parent dataset prefix. Explicit `output_prefix_aliases` still
+override this name; channel, position, and axis suffixes are preserved. For
+example, `long_dataset_SHA-FOV-10-SACDpy-647-posXY0-TZYX.tif` becomes
+`SHA-FOV-10-SACDpy-647-posXY0-TZYX.tif` for newly processed FOVs.
+
+Both runners and their notebook preflights use `resolve_resume_plan` to retain
+completed, manifest-recorded legacy filenames. This read-only check verifies
+FOV identity, intensity provenance, and TIFF outputs. It rejects conflicting
+old/new variants, orphan legacy outputs, and incomplete legacy sets before
+writing provenance or reconstructing anything. No automatic rename or migration
+is performed. `build_batch_plan` alone describes the canonical new filenames;
+wrap it with `resolve_resume_plan(plan, config)` when inspecting resumable paths.
+
 - Validation report: `SACDpy_validation_report.md`
 - Batch single-image notebook: `SACDpy_pipeline-batch_sinlgeSACD.ipynb`
 - Canonical timelapse z-stack notebook: `SACDpy_pipeline-batch_timelapse_zstack_SACD.ipynb`
