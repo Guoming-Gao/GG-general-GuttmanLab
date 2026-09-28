@@ -101,3 +101,36 @@ def test_serial_stage_callbacks_inherit_and_reset():
     assert events[-1]["completed"] == events[-1]["total"] == 2
     stage("outside")
     assert len(events) == 4
+
+
+def test_notebook_progress_updates_html_without_starting_widget_renderer():
+    console = Console(file=StringIO(), force_jupyter=True, width=160)
+    progress = PipelineProgress(3, console=console)
+    with patch("IPython.display.display") as display, patch.object(progress.progress, "start") as start:
+        with progress:
+            progress({"event": "reconstruction_done", "relative_fov": "<FOV>",
+                      "completed_in_fov": 1, "total_in_fov": 3})
+            progress({"event": "validation_started", "relative_fov": "<FOV>"})
+            html = display.return_value.update.call_args.args[0].data
+            assert "&lt;FOV&gt;" in html
+            assert "validating outputs" in html
+            progress({"status": "written", "relative_fov": "<FOV>"})
+        start.assert_not_called()
+        display.assert_called_once()
+        assert display.call_args.kwargs == {"display_id": True}
+        assert display.return_value.update.call_count >= 4
+        assert "outputs validated" in display.return_value.update.call_args.args[0].data
+        assert progress._display is None
+        assert progress.progress.tasks[progress.overall].completed == 1
+
+
+def test_notebook_interruption_keeps_partial_progress_visible():
+    progress = PipelineProgress(3, console=Console(file=StringIO(), force_jupyter=True, width=160))
+    with patch("IPython.display.display") as display:
+        with pytest.raises(KeyboardInterrupt):
+            with progress:
+                progress({"event": "stage", "description": "Reading images", "completed": 1, "total": 3})
+                raise KeyboardInterrupt()
+        assert "Interrupted" in display.return_value.update.call_args.args[0].data
+        assert progress.cancelled
+        assert progress.progress.tasks[progress.overall].completed == 0

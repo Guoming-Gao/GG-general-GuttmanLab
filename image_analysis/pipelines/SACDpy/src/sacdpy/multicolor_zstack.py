@@ -38,6 +38,7 @@ class ChannelSpec:
     wavelength_nm: float
     camera_half: str
     metadata_wavelengths_nm: tuple[float, ...]
+    frame_range: tuple[int, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -163,7 +164,16 @@ def _channel_specs(config: dict) -> tuple[ChannelSpec, ...]:
             raise ValueError(f"camera_half for channel {name} must be left or right")
         wavelength = float(entry["wavelength_nm"])
         accepted = tuple(float(value) for value in entry.get("metadata_wavelengths_nm", [wavelength]))
-        channels.append(ChannelSpec(name, wavelength, camera_half, accepted))
+        frame_range = entry.get("frame_range")
+        if frame_range is not None:
+            if (not isinstance(frame_range, (list, tuple)) or len(frame_range) != 2
+                    or any(type(value) is not int for value in frame_range)
+                    or not 0 <= frame_range[0] < frame_range[1]):
+                raise ValueError(f"Invalid frame_range for channel {name}: {frame_range}")
+            frame_range = tuple(frame_range)
+        if config.get("processing", {}).get("frame_mode") == "explicit" and frame_range is None:
+            raise ValueError(f"Explicit mode requires frame_range for channel {name}")
+        channels.append(ChannelSpec(name, wavelength, camera_half, accepted, frame_range))
     return tuple(channels)
 
 
@@ -207,14 +217,52 @@ def read_movie_info(
     steps = metadata.get("laserProgram", {}).get("steps")
     if not isinstance(wavelengths, list) or not isinstance(steps, list):
         raise ValueError(f"Missing LaserWavelength_nm or laserProgram.steps metadata: {path}")
-    if frame_mode not in {"auto", "sequential", "simultaneous"}:
-        raise ValueError("processing.frame_mode must be auto, sequential, or simultaneous")
+    if frame_mode not in {"auto", "sequential", "simultaneous", "explicit"}:
+        raise ValueError("processing.frame_mode must be auto, sequential, simultaneous, or explicit")
     resolved_mode = frame_mode
+    # ONI can retain a saved program even when it was disabled during acquisition.
+    program_disabled = metadata.get("laserProgramActive") is False
     if resolved_mode == "auto":
-        resolved_mode = "sequential" if steps else "simultaneous"
+        resolved_mode = "sequential" if steps and not program_disabled else "simultaneous"
 
     frame_ranges: list[tuple[int, int]] = []
-    if resolved_mode == "sequential":
+    if resolved_mode == "explicit":
+        blocks = {}
+        start = 0
+        for step in steps:
+            repeats = step.get("nRepeats") if isinstance(step, dict) else None
+            if type(repeats) is not int or repeats <= 0:
+                raise ValueError(f"Invalid laser-program nRepeats: {path}")
+            blocks[(start, start + repeats)] = step
+            start += repeats
+        if start != page_count:
+            raise ValueError(
+                f"Laser-program repeats total {start}, but TIFF contains {page_count} page(s): {path}"
+            )
+        for spec in channel_tuple:
+            bounds = spec.frame_range
+            if (bounds is None or len(bounds) != 2
+                    or any(type(value) is not int for value in bounds)
+                    or not 0 <= bounds[0] < bounds[1] <= page_count):
+                raise ValueError(f"Invalid explicit frame_range for channel {spec.name}: {path}")
+            if bounds not in blocks:
+                raise ValueError(f"frame_range for {spec.name} must match a laser-program block: {path}")
+            indices = [i for i, value in enumerate(wavelengths)
+                       if any(np.isclose(float(value), allowed) for allowed in spec.metadata_wavelengths_nm)]
+            if not indices:
+                raise ValueError(f"Channel {spec.name} wavelength absent from metadata: {path}")
+            states = blocks[bounds].get("states")
+            if not isinstance(states, list) or not states:
+                raise ValueError(f"Missing illumination states for channel {spec.name}: {path}")
+            for state in states:
+                values = state.get("values") if isinstance(state, dict) else None
+                if (not isinstance(values, list) or len(values) != len(wavelengths)
+                        or state.get("record") is not True
+                        or not all(isinstance(v, (int, float)) and np.isfinite(v) for v in values)
+                        or not any(values[i] > 0 for i in indices)):
+                    raise ValueError(f"Invalid or inactive illumination state for channel {spec.name}: {path}")
+            frame_ranges.append(bounds)
+    elif resolved_mode == "sequential":
         if len(steps) != len(channel_tuple):
             raise ValueError(
                 f"Sequential mode expected {len(channel_tuple)} laser step(s), got "
@@ -241,8 +289,12 @@ def read_movie_info(
                 f"Laser-program repeats total {start}, but TIFF contains {page_count} page(s): {path}"
             )
     else:
-        if steps:
-            raise ValueError(f"Simultaneous mode requires an empty laser program: {path}")
+        if steps and not program_disabled:
+            raise ValueError(
+                "Simultaneous mode requires an empty or explicitly disabled laser program "
+                f"(laserProgramActive={metadata.get('laserProgramActive', 'missing')!r}, "
+                f"stored_steps={len(steps)}): {path}"
+            )
         active = metadata.get("LaserActive")
         if not isinstance(active, list) or len(active) != len(wavelengths):
             raise ValueError(f"Simultaneous mode requires LaserActive metadata: {path}")

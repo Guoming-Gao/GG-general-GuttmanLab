@@ -30,6 +30,54 @@ from sacdpy.multicolor_zstack import (
 
 
 class MulticolorZStackTests(unittest.TestCase):
+    def test_explicit_shared_blocks_and_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self._config(root / "raw", root / "out")
+            config["processing"]["frame_mode"] = "explicit"
+            for channel, bounds in zip(config["processing"]["channels"],
+                                       ([0, 25], [25, 50], [50, 75], [0, 25])):
+                channel["frame_range"] = bounds
+            path = root / "raw" / "FOV" / "pos_0" / "sample_FOV_posXY0_channels_t0_posZ0.tif"
+            raw = self._write_movie(path, 0, repeats=(25, 25, 25))
+            metadata = self._metadata(0, (25, 25, 25))
+            for step, powers in zip(metadata["laserProgram"]["steps"],
+                                    ([1, 0, 0, 12], [0, 15, 0, 0], [0, 0, 15, 0])):
+                step["states"] = [{"record": True, "values": powers}]
+
+            def write():
+                tifffile.imwrite(path, raw, photometric="minisblack", description=json.dumps(metadata))
+
+            write()
+            plan = build_batch_plan(config)
+            movie = plan.fovs[0].movies[0]
+            self.assertEqual(movie.frame_ranges, ((0, 25), (25, 50), (50, 75), (0, 25)))
+            for channel, bounds in zip(plan.fovs[0].channels, movie.frame_ranges):
+                half = slice(0, 4) if channel.camera_half == "left" else slice(4, 8)
+                np.testing.assert_array_equal(select_channel_frames(raw, bounds, channel.camera_half),
+                                              raw[bounds[0]:bounds[1], :, half])
+            for bounds in ([0, 0], [-1, 25], [0, 25.0], [False, 25], [0], None,
+                           [0, 76], [1, 25]):
+                with self.subTest(bounds=bounds):
+                    config["processing"]["channels"][0]["frame_range"] = bounds
+                    with self.assertRaises(ValueError):
+                        build_batch_plan(config)
+            config["processing"]["channels"][0]["frame_range"] = [0, 25]
+            metadata["laserProgram"]["steps"][0]["states"][0]["values"][3] = 0
+            write()
+            with self.assertRaisesRegex(ValueError, "illumination"):
+                build_batch_plan(config)
+            metadata["laserProgram"]["steps"][0]["states"][0]["values"][3] = 12
+            metadata["LaserWavelength_nm"][3] = 700
+            write()
+            with self.assertRaisesRegex(ValueError, "wavelength"):
+                build_batch_plan(config)
+            metadata["LaserWavelength_nm"][3] = 640
+            raw = raw[:40]
+            write()
+            with self.assertRaisesRegex(ValueError, "TIFF contains"):
+                build_batch_plan(config)
+
     def _config(self, raw_root: Path, output_root: Path) -> dict:
         return {
             "version": 1,
@@ -220,6 +268,42 @@ class MulticolorZStackTests(unittest.TestCase):
                     _channel_specs(config),
                     frame_mode="simultaneous",
                 )
+
+    def test_disabled_saved_program_uses_full_movie_and_preserves_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "dual_posXY0_channels_t0_posZ0.tif"
+            raw = np.arange(25 * 3 * 8, dtype=np.uint16).reshape(25, 3, 8)
+            config = self._config(root, root / "out")
+            config["processing"]["channels"] = [config["processing"]["channels"][i] for i in (0, 3)]
+            channels = _channel_specs(config)
+            saved = [{"nRepeats": 1, "states": [{"record": True, "values": [0, 0, 0, 0]}]}]
+            for steps in ([], saved):
+                for mode in ("simultaneous", "auto"):
+                    for flags in ([True, False, False, True], [False] * 4):
+                        with self.subTest(steps=steps, mode=mode, flags=flags):
+                            metadata = self._metadata(0)
+                            metadata.update(laserProgramActive=False, laserProgram={"steps": steps},
+                                            LaserActive=flags, LaserPowerPercent=[1, 0, 0, 12])
+                            tifffile.imwrite(path, raw, photometric="minisblack", description=json.dumps(metadata))
+                            info = read_movie_info(path, channels, frame_mode=mode)
+                            self.assertEqual(info.frame_ranges, ((0, 25), (0, 25)))
+                            self.assertEqual(info.metadata, metadata)
+                            for channel, bounds, half in zip(channels, info.frame_ranges, (slice(0, 4), slice(4, 8))):
+                                np.testing.assert_array_equal(select_channel_frames(raw, bounds, channel.camera_half),
+                                                              raw[:, :, half])
+            for flag in (True, None, 0, "false"):
+                with self.subTest(flag=flag):
+                    metadata["laserProgram"] = {"steps": saved}
+                    if flag is None:
+                        metadata.pop("laserProgramActive", None)
+                    else:
+                        metadata["laserProgramActive"] = flag
+                    tifffile.imwrite(path, raw, photometric="minisblack", description=json.dumps(metadata))
+                    with self.assertRaisesRegex(ValueError, "laserProgramActive=.*stored_steps=1"):
+                        read_movie_info(path, channels, frame_mode="simultaneous")
+                    with self.assertRaisesRegex(ValueError, "Sequential mode expected"):
+                        read_movie_info(path, channels, frame_mode="auto")
 
     def test_process_routes_channels_and_writes_calibrated_imagej_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

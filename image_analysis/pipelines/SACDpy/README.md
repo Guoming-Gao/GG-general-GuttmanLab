@@ -58,6 +58,15 @@ under `tests/`.
 
 ## Validation and Notebooks
 
+For multicolor z-stack acquisitions, `processing.frame_mode: "simultaneous"`
+accepts stored ONI laser-program steps when `laserProgramActive` is explicitly
+`false`: the saved program was disabled, so both configured camera channels use
+the full movie. `auto` mode also selects simultaneous acquisition in this case.
+If the activation flag is true or absent, nonempty programs retain the existing
+sequential interpretation in `auto` and are rejected in `simultaneous` mode.
+Wavelength and illumination checks still apply; explicit and sequential modes
+are unchanged. Original acquisition metadata is preserved.
+
 The multicolor z-stack, multicolor single-plane, and timelapse z-stack notebooks
 default to `processing.max_workers = 2`. Set the visible `max_workers` notebook
 setting to `1` for serial execution. FOVs remain sequential; independent

@@ -1,6 +1,10 @@
 """Parent-process Rich rendering and optional callbacks for serial analysis stages."""
 from contextvars import ContextVar
 from functools import wraps
+from io import StringIO
+from time import monotonic
+
+from rich.console import Console
 
 from rich.progress import (
     BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn,
@@ -43,9 +47,34 @@ class PipelineProgress:
         self.description = description
         self.current_key = None
         self.stage_names = {}
+        self._notebook = self.progress.console.is_jupyter
+        self._display = None
+        self._last_display = 0.0
+
+    def _refresh_notebook(self, *, force=False):
+        if not self._notebook or self._display is None:
+            return
+        now = monotonic()
+        if not force and now - self._last_display < 0.2:
+            return
+        from IPython.display import HTML
+
+        # Render ordinary HTML, bypassing Rich Live's ipywidgets.Output dependency.
+        console = Console(file=StringIO(), record=True, force_jupyter=False,
+                          width=self.progress.console.width)
+        console.print(self.progress.get_renderable())
+        html = console.export_html(inline_styles=True, code_format="<pre>{code}</pre>")
+        self._display.update(HTML(html))
+        self._last_display = now
 
     def __enter__(self):
-        self.progress.start()
+        if self._notebook:
+            from IPython.display import HTML, display
+
+            self._display = display(HTML(""), display_id=True)
+            self._refresh_notebook(force=True)
+        else:
+            self.progress.start()
         return self
 
     def __exit__(self, kind, value, traceback):
@@ -56,7 +85,11 @@ class PipelineProgress:
             self.progress.update(self.current, description="Finished", total=1, completed=1)
         if kind is None and self.progress.tasks[self.overall].total is None:
             self.progress.update(self.overall, total=1, completed=1)
-        self.progress.stop()
+        if self._notebook:
+            self._refresh_notebook(force=True)
+            self._display = None
+        else:
+            self.progress.stop()
 
     def __call__(self, event):
         key = (event.get("dataset_name", ""), event.get("relative_fov", ""))
@@ -72,6 +105,7 @@ class PipelineProgress:
                 description += f" | resumed FOVs {self.resumed} | failed FOVs {self.failed}"
             self.progress.update(task, description=description,
                                  total=event.get("total"), completed=event.get("completed", 0), visible=True)
+            self._refresh_notebook()
             return
         if kind == "reconstruction_done":
             if key != self.current_key:
@@ -102,6 +136,7 @@ class PipelineProgress:
         elif event.get("status") == "written":
             self.progress.update(self.current, description=f"{name}: outputs validated", total=1, completed=1, visible=True)
         self.progress.update(self.overall, description=f"{self.description} | resumed FOVs {self.resumed} | failed FOVs {self.failed} | unfinished jobs {self.failed_work}")
+        self._refresh_notebook(force=kind == "validation_started" or "status" in event)
 
 
 _callback = ContextVar("sacd_progress_callback", default=None)
