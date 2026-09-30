@@ -1,0 +1,7 @@
+{
+  "gtf": "/path/to/mm10.refGene.gtf.gz",
+  "fasta": "/path/to/mm10.fa",
+  "blast_db": "/path/to/mm10_blastdb",
+  "blastn": "/path/to/blastn",
+  "output_parent": "/path/to/smiFISH probe sets"
+}
