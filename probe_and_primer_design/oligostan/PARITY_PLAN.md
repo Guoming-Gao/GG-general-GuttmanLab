@@ -52,3 +52,7 @@ notebook**. The original R script's automatic dG37 optimization, RepeatMasker
 behavior and runtime/peak-memory benchmark remain separate gates and are not
 claimed equivalent. The user requested that the two Python package copies be
 kept identical instead of repeating a Python-vs-Python comparison after sync.
+
+The BLAST-first minimum-span selector and coverage report are Python add-on
+modules downstream of the core Oligostan design. Their behavior is audited
+separately and is not part of the R parity claim above.

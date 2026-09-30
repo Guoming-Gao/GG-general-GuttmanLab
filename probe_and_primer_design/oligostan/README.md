@@ -6,11 +6,29 @@ its core directly.
 
 Use the sibling notebook
 [`Mouse_smiFISH_exon_intron_pipeline.ipynb`](../Mouse_smiFISH_exon_intron_pipeline.ipynb)
-from a Python environment with Biopython, NumPy, pandas and Rich. Its BLAST
+from a Python environment with Biopython, NumPy, pandas, Rich and Matplotlib. Its BLAST
 step invokes the `blastn` executable and mm10 database configured locally;
 the notebook can run in any kernel containing those Python packages.
-The selected probe sets, hit audit and manifest are saved under a new run
-folder in the configured `output_parent` directory.
+The selected probe sets, hit audit, genomic coverage PDF and manifest are saved
+under a new run folder in the configured `output_parent` directory.
+
+## BLAST-first minimum-span add-on
+
+`minimum_span.py` adds compact set selection after the Oligostan design and
+BLAST stages. The complete quality-tier-eligible candidate pool is generated
+across all annotated tiles, with no default 600-probe intron stop. Every
+candidate is BLAST checked in batches. The add-on receives the **full**
+BLAST-passing table directly, not a 40-probe preselection. For each available
+gene/region, it compares all consecutive 30-probe windows in genomic order
+and takes the smallest inclusive genomic span. Filter tier and Oligostan
+score only break equal-span ties. Fewer than 30 passing probes are reported as
+a shortfall; unverified probes are never used. The core Oligostan R parity
+claim does not extend to this Python-only selection mode.
+
+`coverage_report.py` writes `coverage_summary.csv`, `coverage_report.pdf`, and
+one PNG per set with mm10 genomic-coordinate ticks. The seven-gene workflow
+contains 12 SPEN-target exon/intron sets and a Malat1 exon-only control;
+Malat1 has no intron in the chosen mm10 RefGene annotation.
 
 Copy `mouse_smifish.example.json` to `.smifish-local.json` in the directory
 containing this package, then replace every placeholder with a local path.
@@ -48,8 +66,8 @@ not been established as equivalent.
   antisense oligo. The workflow independently checks that every candidate is
   the reverse complement of its recorded target sequence.
 - The project package's GC 0.4–0.6 and PNAS 1/2/4 settings are the baseline.
-  If a set needs more candidates, the workflow relaxes A content, then A
-  runs and GC, then the remaining PNAS rule. Each selected oligo records its
+  Additional candidates receive documented relaxed quality tiers; all tiers
+  are BLAST checked for the minimum-span mode. Each selected oligo records its
   quality tier. Repeat masking is off for the R parity baseline; dustmasker
   is not equivalent to RepeatMasker.
 - Local BLAST uses `blastn-short`, word size 7, both strands, E-value 1,
@@ -57,7 +75,7 @@ not been established as equivalent.
   full-length hit at its intended locus and no other alignment covering at
   least 80% of the oligo at at least 90% identity. The hit audit is retained,
   including weaker hits returned by BLAST.
-- The output aims for 40 probes and requires 30 when possible. Any shortfall
+- The output selects 30 probes when possible. Any shortfall
   is visible in `set_summary.csv`; unverified candidates never pad a set.
   Order sheets are marked `REVIEW` because BLAST and sequence filters do not
   establish experimental hybridization performance.

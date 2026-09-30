@@ -20,9 +20,10 @@ from Bio.Seq import Seq
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from .config import DEFAULT_SETTINGS, FLAP_SEQUENCES
+from .minimum_span import expected_sets, select_minimum_span_sets
 from .oligostan_core import get_probes_from_rna_dg37, process_probes_for_output
 
-GENES = ("Spen", "Arid5b", "Jarid2", "Sfmbt2", "Sfmbt1", "Mdm4")
+GENES = ("Spen", "Arid5b", "Jarid2", "Sfmbt2", "Sfmbt1", "Mdm4", "Malat1")
 DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / ".smifish-local.json"
 CONFIG_KEYS = ("gtf", "fasta", "blast_db", "blastn", "output_parent")
 ATTR = re.compile(r'(\w+) "([^"]+)"')
@@ -199,16 +200,18 @@ def quality_tier(metric):
     return None
 
 
-def generate_candidates(models, fasta=None, intron_pool=600):
-    """Run the integrated Oligostan port separately within exon/intron tiles."""
+def generate_candidates(models, fasta=None, intron_pool=None):
+    """Design across all eligible tiles; an optional cap is exploratory only."""
     reference = FastaIndex(fasta)
     params = {**DEFAULT_SETTINGS, "use_dustmasker": False}
     rows = []
-    jobs = [(m, region) for m in models.values() for region in ("exon", "intron")]
+    jobs = [(m, region) for m in models.values() for region in ("exon", "intron") if m[region]]
+    total_tiles = sum(len(tile_intervals(m[region])) for m, region in jobs)
     with progress() as bar:
-        task = bar.add_task("Designing exon and intron candidates", total=len(jobs))
+        task = bar.add_task("Designing exon and intron candidates", total=total_tiles)
         for model, region in jobs:
             count = 0
+            bar.update(task, description=f"Designing {model['gene']} {region}")
             for tile_start, tile_end in tile_intervals(model[region]):
                 plus = reference.fetch(model["chrom"], tile_start, tile_end)
                 target = plus if model["strand"] == "+" else str(Seq(plus).reverse_complement())
@@ -264,9 +267,9 @@ def generate_candidates(models, fasta=None, intron_pool=600):
                         "HybFlpZ": oligo + FLAP_SEQUENCES["Z"],
                     })
                     count += 1
-                if region == "intron" and count >= intron_pool:
+                bar.advance(task)
+                if region == "intron" and intron_pool is not None and count >= intron_pool:
                     break
-            bar.advance(task)
     frame = pd.DataFrame(rows)
     if frame.empty:
         raise RuntimeError("No candidates passed even the loosest configured quality tier")
@@ -282,7 +285,8 @@ BLAST_COLUMNS = ("probe_id", "subject", "identity", "alignment_length", "mismatc
 
 
 def blast_verify(candidates, blastn=None, database=None,
-                 threads=8, min_offtarget_coverage=0.8, min_offtarget_identity=90.0):
+                 threads=8, min_offtarget_coverage=0.8, min_offtarget_identity=90.0,
+                 show_progress=True):
     """Require a full exact intended hit and no strong off-target BLAST hit.
 
     A strong off-target covers >=80% of the probe at >=90% identity. Shorter or
@@ -307,12 +311,15 @@ def blast_verify(candidates, blastn=None, database=None,
                    "-word_size", "7", "-dust", "no", "-soft_masking", "false",
                    "-evalue", "1", "-max_target_seqs", "500", "-max_hsps", "50",
                    "-num_threads", str(threads)]
-        with progress() as bar:
-            task = bar.add_task("BLAST verifying all candidates", total=1)
+        if show_progress:
+            with progress() as bar:
+                task = bar.add_task("BLAST verifying candidates", total=1)
+                result = subprocess.run(command, text=True, capture_output=True)
+                bar.advance(task)
+        else:
             result = subprocess.run(command, text=True, capture_output=True)
-            if result.returncode:
-                raise RuntimeError(f"blastn failed: {result.stderr[-2000:]}")
-            bar.advance(task)
+        if result.returncode:
+            raise RuntimeError(f"blastn failed: {result.stderr[-2000:]}")
         if output_tsv.stat().st_size:
             hits = pd.read_csv(output_tsv, sep="\t", names=BLAST_COLUMNS)
         else:
@@ -355,66 +362,34 @@ def blast_verify(candidates, blastn=None, database=None,
     return verified, hits, command
 
 
-def adaptive_blast_verify(candidates, minimum=MIN_PROBES_PER_SET, **kwargs):
-    """BLAST stronger tiers first and relax only sets still below minimum."""
+def adaptive_blast_verify(candidates, batch_size=3000, **kwargs):
+    """BLAST every filtered candidate in bounded batches before selection.
+
+    The name is retained for existing callers; there is no tier-based early stop.
+    """
+    if batch_size < 1 or candidates.empty:
+        raise ValueError("BLAST needs candidates and a positive batch_size")
     all_verified, all_hits, commands = [], [], []
-    short = {(gene, region) for gene in GENES for region in ("exon", "intron")}
-    for tier_index, tier in enumerate(QUALITY_TIERS):
-        subset = candidates[
-            (candidates.quality_tier == tier_index) &
-            candidates[["gene", "region"]].apply(tuple, axis=1).isin(short)
-        ]
-        if subset.empty:
-            continue
-        print(f"BLAST tier {tier_index}: {tier['name']} ({len(subset)} candidates; {len(short)} sets still need 30)")
-        verified, hits, command = blast_verify(subset, **kwargs)
-        all_verified.append(verified)
-        all_hits.append(hits)
-        commands.append(command)
-        combined = pd.concat(all_verified, ignore_index=True)
-        counts = combined[combined.blast_verified].groupby(["gene", "region"]).size()
-        short = {key for key in short if counts.get(key, 0) < minimum}
-        if not short:
-            break
-    if not all_verified:
-        raise RuntimeError("No candidates available for BLAST")
+    with progress() as bar:
+        task = bar.add_task("BLAST verifying complete candidate pool", total=len(candidates))
+        for start in range(0, len(candidates), batch_size):
+            batch = candidates.iloc[start:start + batch_size]
+            verified, hits, command = blast_verify(batch, show_progress=False, **kwargs)
+            all_verified.append(verified)
+            all_hits.append(hits)
+            commands.append(command)
+            bar.advance(task, len(batch))
     return pd.concat(all_verified, ignore_index=True), pd.concat(all_hits, ignore_index=True), commands
 
 
-def select_sets(verified, minimum=MIN_PROBES_PER_SET, target_count=40):
-    """Prefer dispersed high-score verified oligos within each gene/region."""
-    selected = []
-    summaries = []
-    for gene in GENES:
-        for region in ("exon", "intron"):
-            pool = verified[(verified.gene == gene) & (verified.region == region) & verified.blast_verified].copy()
-            pool = pool.sort_values(["quality_tier", "dGScore", "start"],
-                                    ascending=[True, False, True])
-            chosen = []
-            # First pass spreads picks across the target span; later passes fill gaps.
-            for separation in (250, 100, 32, 0):
-                for row in pool.itertuples(index=False):
-                    if row.probe_id in {x.probe_id for x in chosen}:
-                        continue
-                    if all(row.chrom != x.chrom or row.start > x.end+separation or x.start > row.end+separation for x in chosen):
-                        chosen.append(row)
-                    if len(chosen) >= target_count:
-                        break
-                if len(chosen) >= target_count:
-                    break
-            selected.extend(chosen)
-            summaries.append({"gene": gene, "region": region,
-                              "blast_tested_count": int(((verified.gene == gene) & (verified.region == region)).sum()),
-                              "blast_verified_count": len(pool), "selected_count": len(chosen),
-                              "minimum_requested": minimum, "meets_minimum": len(chosen) >= minimum})
-    ids = {x.probe_id for x in selected}
-    result = verified[verified.probe_id.isin(ids)].copy()
-    result["set_id"] = result.gene + "_" + result.region + "_mm10"
-    return result, pd.DataFrame(summaries)
+def select_sets(verified, models, minimum=MIN_PROBES_PER_SET):
+    """Compatibility name for the BLAST-first minimum-span add-on."""
+    return select_minimum_span_sets(verified, models, probes_per_set=minimum)
 
 
 def write_outputs(models, candidates, verified, hits, selected, summary, blast_command,
-                  output_parent=None, run_name=None, reference_paths=None):
+                  output_parent=None, run_name=None, reference_paths=None,
+                  intron_pool=None):
     if output_parent is None or reference_paths is None:
         config = load_run_config()
         output_parent = config["output_parent"] if output_parent is None else output_parent
@@ -422,29 +397,28 @@ def write_outputs(models, candidates, verified, hits, selected, summary, blast_c
     parent = Path(output_parent)
     if not parent.is_dir():
         raise FileNotFoundError(f"Output parent does not exist: {parent}")
-    name = run_name or f"mouse_exon_intron_oligostan_mm10_{datetime.now():%Y%m%d_%H%M%S}"
+    name = run_name or f"SPEN_targets_with_Malat1_control_mm10_{datetime.now():%Y%m%d_%H%M%S}"
     root = parent / name
     root.mkdir(exist_ok=False)
     with progress() as bar:
-        task = bar.add_task("Writing audited probe sets", total=12)
+        task = bar.add_task("Writing audited probe sets", total=len(summary))
         candidates.to_csv(root/"all_design_candidates.csv", index=False)
         verified.to_csv(root/"all_candidates_blast_status.csv", index=False)
         hits.to_csv(root/"blast_hits.tsv", sep="\t", index=False)
         selected.to_csv(root/"all_selected_blast_verified.csv", index=False)
         summary.to_csv(root/"set_summary.csv", index=False)
-        for gene in GENES:
-            for region in ("exon", "intron"):
-                subset = selected[(selected.gene == gene) & (selected.region == region)].sort_values("start")
-                subdir = root / gene / region
-                subdir.mkdir(parents=True)
-                subset.to_csv(subdir/"selected_blast_verified.csv", index=False)
-                with (subdir/"selected_probes.fa").open("w") as out:
-                    for row in subset.itertuples(index=False):
-                        out.write(f">{row.probe_id} {gene} {region} {row.chrom}:{row.start}-{row.end}\n{row.probe_seq}\n")
-                pd.DataFrame({"Name": [f"{gene}_{region}_{i:02d}" for i in range(1,len(subset)+1)],
-                              "Sequence": subset.HybFlpX.to_list(), "Scale": ["25nm"]*len(subset),
-                              "Purification": ["STD"]*len(subset)}).to_csv(subdir/"order_FlapX_REVIEW.csv", index=False)
-                bar.advance(task)
+        for gene, region in expected_sets(models):
+            subset = selected[(selected.gene == gene) & (selected.region == region)].sort_values("start")
+            subdir = root / gene / region
+            subdir.mkdir(parents=True)
+            subset.to_csv(subdir/"selected_blast_verified.csv", index=False)
+            with (subdir/"selected_probes.fa").open("w") as out:
+                for row in subset.itertuples(index=False):
+                    out.write(f">{row.probe_id} {gene} {region} {row.chrom}:{row.start}-{row.end}\n{row.probe_seq}\n")
+            pd.DataFrame({"Name": [f"{gene}_{region}_{i:02d}" for i in range(1,len(subset)+1)],
+                          "Sequence": subset.HybFlpX.to_list(), "Scale": ["25nm"]*len(subset),
+                          "Purification": ["STD"]*len(subset)}).to_csv(subdir/"order_FlapX_REVIEW.csv", index=False)
+            bar.advance(task)
     manifest = {
         "status": "BLAST verified Python Oligostan candidates; full mouse Spen R parity passed for matched fixed -32 and masking-off settings",
         "genome_build": "mm10/GRCm38", "gtf": str(reference_paths["gtf"]),
@@ -452,8 +426,16 @@ def write_outputs(models, candidates, verified, hits, selected, summary, blast_c
         "blast_command": blast_command,
         "blast_acceptance": "100% full-length exact intended genomic hit and no other BLAST alignment covering >=80% of the probe at >=90% identity; blastn-short word size 7, dust off, E-value 1, up to 500 subjects and 50 HSPs per subject",
         "quality_tiers": QUALITY_TIERS,
+        "selection_mode": "BLAST-first minimum genomic span of 30 probes from the full verified pool",
+        "candidate_pool_complete": intron_pool is None,
+        "intron_pool": intron_pool,
+        "candidate_count": len(candidates), "blast_tested_count": len(verified),
+        "blast_verified_count": int(verified.blast_verified.sum()),
+        "selected_probe_count": len(selected), "set_count": len(summary),
         "source_transcripts": {gene: model["transcript_id"] for gene,model in models.items()},
         "reference": "https://bitbucket.org/muellerflorian/fish_quant/src/master/Oligostan/Oligostan.r",
     }
     (root/"manifest.json").write_text(json.dumps(manifest, indent=2)+"\n")
+    from .coverage_report import write_coverage_report
+    write_coverage_report(root, models, selected, summary)
     return root

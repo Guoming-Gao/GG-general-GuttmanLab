@@ -4,26 +4,34 @@ import argparse
 from pathlib import Path
 
 import pandas as pd
+from Bio import SeqIO
 from Bio.Seq import Seq
 
-from .mouse_smifish import FastaIndex, GENES, load_models, load_run_config, quality_tier
+from .mouse_smifish import FastaIndex, load_models, load_run_config, quality_tier
+from .minimum_span import expected_sets, select_minimum_span_sets
 
 
 def audit(root, config_path=None):
     root = Path(root)
     config = load_run_config(config_path)
     selected = pd.read_csv(root / "all_selected_blast_verified.csv")
+    verified = pd.read_csv(root / "all_candidates_blast_status.csv")
     hits = pd.read_csv(root / "blast_hits.tsv", sep="\t")
     summary = pd.read_csv(root / "set_summary.csv")
     reference = FastaIndex(config["fasta"])
     models = load_models(config["gtf"])
-    assert len(summary) == 12
-    assert set(summary.gene) == set(GENES)
-    assert set(summary.region) == {"exon", "intron"}
+    assert set(zip(summary.gene, summary.region)) == set(expected_sets(models))
+    assert len(summary) == len(expected_sets(models))
     assert selected.probe_id.is_unique and selected.probe_seq.is_unique
     assert selected.blast_verified.all()
     assert selected.blast_target_exact.all()
     assert not selected.blast_strong_offtarget.any()
+    exact_target_ids = set(hits.loc[hits.expected_locus & hits.full_exact, "probe_id"])
+    strong_offtarget_ids = set(hits.loc[hits.strong_offtarget, "probe_id"])
+    expected_selected, expected_summary = select_minimum_span_sets(verified, models, probes_per_set=30)
+    assert set(selected.probe_id) == set(expected_selected.probe_id)
+    for col in ("selected_count", "blast_tested_count", "blast_verified_count", "genomic_span_bp"):
+        assert summary[col].fillna(-1).tolist() == expected_summary[col].fillna(-1).tolist(), col
     for row in selected.itertuples(index=False):
         plus = reference.fetch(row.chrom, int(row.start), int(row.end))
         sense = plus if row.target_strand == "+" else str(Seq(plus).reverse_complement())
@@ -31,14 +39,25 @@ def audit(root, config_path=None):
         assert row.probe_seq == str(Seq(sense).reverse_complement()), row.probe_id
         assert any(row.start >= start and row.end <= end for start, end in models[row.gene][row.region]), row.probe_id
         assert row.quality_tier == quality_tier(row._asdict()), row.probe_id
-        intended = hits[(hits.probe_id == row.probe_id) & hits.expected_locus & hits.full_exact]
-        assert not intended.empty, row.probe_id
-        assert hits[(hits.probe_id == row.probe_id) & hits.strong_offtarget].empty, row.probe_id
+        assert row.probe_id in exact_target_ids, row.probe_id
+        assert row.probe_id not in strong_offtarget_ids, row.probe_id
     for s in summary.itertuples(index=False):
         table = pd.read_csv(root / s.gene / s.region / "selected_blast_verified.csv")
         assert len(table) == s.selected_count
         assert s.selected_count == int(((selected.gene == s.gene) & (selected.region == s.region)).sum())
         assert s.meets_minimum == (s.selected_count >= s.minimum_requested)
+        order = pd.read_csv(root / s.gene / s.region / "order_FlapX_REVIEW.csv")
+        assert order.Sequence.tolist() == table.sort_values("start").HybFlpX.tolist()
+        fasta = list(SeqIO.parse(root / s.gene / s.region / "selected_probes.fa", "fasta"))
+        assert len(fasta) == s.selected_count
+        if s.selected_count:
+            subset = selected[(selected.gene == s.gene) & (selected.region == s.region)]
+            assert s.genomic_span_bp == int(subset.end.max() - subset.start.min() + 1)
+    coverage = pd.read_csv(root / "coverage_summary.csv")
+    assert len(coverage) == len(summary)
+    assert coverage["genomic_span_bp"].fillna(-1).tolist() == summary["genomic_span_bp"].fillna(-1).tolist()
+    assert (root / "coverage_report.pdf").stat().st_size > 0
+    assert len(list((root / "coverage_plots").glob("*.png"))) == len(summary)
     return summary
 
 
