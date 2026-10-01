@@ -20,6 +20,7 @@ from Bio.Seq import Seq
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from .config import DEFAULT_SETTINGS, FLAP_SEQUENCES
+from .filters import is_ok_4_homopolymer, longest_homopolymer_run
 from .minimum_span import expected_sets, select_minimum_span_sets
 from .oligostan_core import get_probes_from_rna_dg37, process_probes_for_output
 
@@ -200,10 +201,14 @@ def quality_tier(metric):
     return None
 
 
-def generate_candidates(models, fasta=None, intron_pool=None):
+def generate_candidates(models, fasta=None, intron_pool=None, max_homopolymer_length=None):
     """Design across all eligible tiles; an optional cap is exploratory only."""
     reference = FastaIndex(fasta)
     params = {**DEFAULT_SETTINGS, "use_dustmasker": False}
+    max_homopolymer_length = (DEFAULT_SETTINGS["max_homopolymer_length"]
+                              if max_homopolymer_length is None else max_homopolymer_length)
+    if max_homopolymer_length < 1:
+        raise ValueError("max_homopolymer_length must be positive")
     rows = []
     jobs = [(m, region) for m in models.values() for region in ("exon", "intron") if m[region]]
     total_tiles = sum(len(tile_intervals(m[region])) for m, region in jobs)
@@ -232,6 +237,8 @@ def generate_candidates(models, fasta=None, intron_pool=None):
                     params["fixed_dg37_value"], **params,
                 )
                 for (size, score, pos, oligo), metric in zip(probes, metrics):
+                    if not is_ok_4_homopolymer(oligo, max_homopolymer_length):
+                        continue
                     tier = quality_tier(metric)
                     if tier is None:
                         continue
@@ -251,6 +258,7 @@ def generate_candidates(models, fasta=None, intron_pool=None):
                         "genome_build": "mm10/GRCm38", "chrom": model["chrom"],
                         "start": start, "end": end, "target_strand": model["strand"],
                         "target_seq": target_seq, "probe_seq": oligo,
+                        "max_homopolymer_run": longest_homopolymer_run(oligo),
                         "probe_length": size, "dGScore": score,
                         "dG37": metric["dG37"], "GCpc": metric["GCpc"],
                         "GCFilter": metric["GCFilter"], "PNASFilter": metric["PNASFilter"],
@@ -389,7 +397,7 @@ def select_sets(verified, models, minimum=MIN_PROBES_PER_SET):
 
 def write_outputs(models, candidates, verified, hits, selected, summary, blast_command,
                   output_parent=None, run_name=None, reference_paths=None,
-                  intron_pool=None):
+                  intron_pool=None, max_homopolymer_length=None):
     if output_parent is None or reference_paths is None:
         config = load_run_config()
         output_parent = config["output_parent"] if output_parent is None else output_parent
@@ -397,6 +405,8 @@ def write_outputs(models, candidates, verified, hits, selected, summary, blast_c
     parent = Path(output_parent)
     if not parent.is_dir():
         raise FileNotFoundError(f"Output parent does not exist: {parent}")
+    max_homopolymer_length = (DEFAULT_SETTINGS["max_homopolymer_length"]
+                              if max_homopolymer_length is None else max_homopolymer_length)
     name = run_name or f"SPEN_targets_with_Malat1_control_mm10_{datetime.now():%Y%m%d_%H%M%S}"
     root = parent / name
     root.mkdir(exist_ok=False)
@@ -426,6 +436,8 @@ def write_outputs(models, candidates, verified, hits, selected, summary, blast_c
         "blast_command": blast_command,
         "blast_acceptance": "100% full-length exact intended genomic hit and no other BLAST alignment covering >=80% of the probe at >=90% identity; blastn-short word size 7, dust off, E-value 1, up to 500 subjects and 50 HSPs per subject",
         "quality_tiers": QUALITY_TIERS,
+        "max_homopolymer_length": max_homopolymer_length,
+        "homopolymer_filter": "Probe sequence only; reject A/T/C/G runs longer than the maximum",
         "selection_mode": "BLAST-first minimum genomic span of 30 probes from the full verified pool",
         "candidate_pool_complete": intron_pool is None,
         "intron_pool": intron_pool,

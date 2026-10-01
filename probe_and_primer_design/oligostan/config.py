@@ -7,6 +7,7 @@ DEFAULT_SETTINGS = {
     "distance_min_inter_sonde": 2,
     "min_gc": 0.4,
     "max_gc": 0.6,
+    "max_homopolymer_length": 4,  # Python smiFISH workflow add-on; runs of five fail
     "max_masked_percent": 0.1,  # For dustmasker filter
     "min_probe_per_transcript": 0,
     "pnas_filter_option": [1, 2, 4],

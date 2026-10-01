@@ -17,7 +17,11 @@ under a new run folder in the configured `output_parent` directory.
 `minimum_span.py` adds compact set selection after the Oligostan design and
 BLAST stages. The complete quality-tier-eligible candidate pool is generated
 across all annotated tiles, with no default 600-probe intron stop. Every
-candidate is BLAST checked in batches. The add-on receives the **full**
+retained candidate is BLAST checked in batches. Before BLAST, the workflow
+rejects any probe sequence with five or more consecutive A, T, C, or G bases,
+matching the neighboring RT-probe designer's max-four-base rule. This rule
+applies to every quality tier; each candidate records its longest run, and
+the run manifest records the limit. The add-on receives the **full**
 BLAST-passing table directly, not a 40-probe preselection. For each available
 gene/region, it compares all consecutive 30-probe windows in genomic order
 and takes the smallest inclusive genomic span. Filter tier and Oligostan
@@ -38,6 +42,8 @@ FASTA needs a `.fai` index and the BLAST database needs a `.njs` file.
 The notebook, CLI (`python -m oligostan.run_mouse_smifish`), and audit command
 (`python -m oligostan.audit_run RUN_DIR`) read this config by default.
 Each command also accepts `--config`.
+The CLI's `--max-homopolymer-length` defaults to 4; a new run records the
+chosen value in `manifest.json` and the audit checks it against every probe.
 
 The validation script checks the supplied human RNU1 fixture and can compare
 mouse Spen to R output. The optional `--source-checkout` parameter compares a
@@ -67,7 +73,8 @@ not been established as equivalent.
   the reverse complement of its recorded target sequence.
 - The project package's GC 0.4–0.6 and PNAS 1/2/4 settings are the baseline.
   Additional candidates receive documented relaxed quality tiers; all tiers
-  are BLAST checked for the minimum-span mode. Each selected oligo records its
+  retain the max-four-base homopolymer rule and are BLAST checked for the
+  minimum-span mode. Each selected oligo records its
   quality tier. Repeat masking is off for the R parity baseline; dustmasker
   is not equivalent to RepeatMasker.
 - Local BLAST uses `blastn-short`, word size 7, both strands, E-value 1,

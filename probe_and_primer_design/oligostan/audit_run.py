@@ -1,23 +1,44 @@
 """Independently audit an exported mouse smiFISH run before ordering."""
 
 import argparse
+import json
 from pathlib import Path
 
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 
+from .filters import is_ok_4_homopolymer, longest_homopolymer_run
 from .mouse_smifish import FastaIndex, load_models, load_run_config, quality_tier
 from .minimum_span import expected_sets, select_minimum_span_sets
+
+
+def audit_homopolymers(frame, max_len, table_name):
+    """Reject a table containing probes beyond the recorded run-length limit."""
+    if "max_homopolymer_run" not in frame:
+        raise AssertionError(f"{table_name} lacks max_homopolymer_run")
+    for row in frame.itertuples(index=False):
+        actual = longest_homopolymer_run(row.probe_seq)
+        if (actual != row.max_homopolymer_run or actual > max_len or
+                not is_ok_4_homopolymer(row.probe_seq, max_len)):
+            raise AssertionError(f"{table_name}: homopolymer check failed for {row.probe_id}")
 
 
 def audit(root, config_path=None):
     root = Path(root)
     config = load_run_config(config_path)
     selected = pd.read_csv(root / "all_selected_blast_verified.csv")
+    candidates = pd.read_csv(root / "all_design_candidates.csv")
     verified = pd.read_csv(root / "all_candidates_blast_status.csv")
     hits = pd.read_csv(root / "blast_hits.tsv", sep="\t")
     summary = pd.read_csv(root / "set_summary.csv")
+    manifest = json.loads((root / "manifest.json").read_text())
+    max_homopolymer_length = int(manifest["max_homopolymer_length"])
+    assert max_homopolymer_length >= 1
+    for name, frame in (("candidates", candidates), ("BLAST status", verified),
+                        ("selected", selected)):
+        audit_homopolymers(frame, max_homopolymer_length, name)
+    assert set(candidates.probe_id) == set(verified.probe_id)
     reference = FastaIndex(config["fasta"])
     models = load_models(config["gtf"])
     assert set(zip(summary.gene, summary.region)) == set(expected_sets(models))

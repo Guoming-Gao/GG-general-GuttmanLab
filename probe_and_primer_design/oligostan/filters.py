@@ -70,6 +70,26 @@ def is_it_ok_4_c_spec_stack(seq):
     return True
 
 
+def longest_homopolymer_run(seq):
+    """Length of the longest identical-base run in a probe sequence."""
+    if not seq:
+        return 0
+    seq = seq.upper()
+    longest = current = 1
+    for previous, base in zip(seq, seq[1:]):
+        current = current + 1 if base == previous else 1
+        longest = max(longest, current)
+    return longest
+
+
+def is_ok_4_homopolymer(seq, max_len=4):
+    """Match the RT designer: reject A/T/C/G runs longer than max_len."""
+    if max_len < 1:
+        raise ValueError("max_len must be positive")
+    seq = seq.upper()
+    return not any(base * (max_len + 1) in seq for base in "ATCG")
+
+
 def is_ok_4_gc_filter(seq, min_gc=0.4, max_gc=0.6):
     """GC content filter matching R script logic"""
     gc_content = gc_fraction(seq.upper())

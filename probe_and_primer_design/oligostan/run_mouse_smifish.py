@@ -3,6 +3,7 @@
 import argparse
 from pathlib import Path
 
+from .config import DEFAULT_SETTINGS
 from .mouse_smifish import (
     adaptive_blast_verify, generate_candidates, load_models, load_run_config,
     write_outputs,
@@ -17,11 +18,15 @@ def main():
     parser.add_argument("--run-name", help="Name of a new output subfolder")
     parser.add_argument("--intron-pool", type=int, help="Exploratory intron candidate cap; omit for complete search")
     parser.add_argument("--blast-batch-size", type=int, default=3000)
+    parser.add_argument("--max-homopolymer-length", type=int,
+                        default=DEFAULT_SETTINGS["max_homopolymer_length"],
+                        help="Maximum identical-base run in a probe sequence (default: 4)")
     parser.add_argument("--threads", type=int, default=8)
     args = parser.parse_args()
     config = load_run_config(args.config)
     models = load_models(config["gtf"])
-    candidates = generate_candidates(models, fasta=config["fasta"], intron_pool=args.intron_pool)
+    candidates = generate_candidates(models, fasta=config["fasta"], intron_pool=args.intron_pool,
+                                     max_homopolymer_length=args.max_homopolymer_length)
     verified, hits, command = adaptive_blast_verify(
         candidates, blastn=config["blastn"], database=config["blast_db"],
         threads=args.threads, batch_size=args.blast_batch_size)
@@ -29,7 +34,8 @@ def main():
     output = write_outputs(models, candidates, verified, hits, selected, summary, command,
                            output_parent=args.output_parent or config["output_parent"],
                            reference_paths=config, intron_pool=args.intron_pool,
-                           run_name=args.run_name)
+                           run_name=args.run_name,
+                           max_homopolymer_length=args.max_homopolymer_length)
     print(summary.to_string(index=False))
     print(f"Saved run: {output}")
     if not summary.meets_minimum.all():
